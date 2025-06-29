@@ -1,0 +1,9 @@
+# Dossier de logs généré automatiquement
+/Logs/
+
+# Fichiers de configuration utilisateur spécifiques (si ajoutés plus tard)
+*.user
+
+# Fichiers temporaires
+*.tmp
+*~
