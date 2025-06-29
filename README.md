@@ -1,5 +1,7 @@
 # WindowsAutoConfig ⚙️
 
+![WindowsAutoConfig Banner](WindowsAutoConfig.png)
+
 **Your autopilot for dedicated Windows workstations. Set it up once, and let your system manage itself reliably.**
 
 ![License](https://img.shields.io/badge/License-GPLv3-blue.svg)
