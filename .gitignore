@@ -3,6 +3,7 @@
 
 # Fichiers de configuration utilisateur spécifiques (si ajoutés plus tard)
 *.user
+.env
 
 # Fichiers temporaires
 *.tmp

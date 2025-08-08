@@ -1,3 +1,4 @@
 @echo off
-echo Test Tache SYSTEM %TIME% %DATE% > "E:\Bureau\SYSTEM_TASK_TEST.txt"
 
+REM Lance le script PowerShell qui ferme l'application en la ciblant par son titre.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Close-AppByTitle.ps1"

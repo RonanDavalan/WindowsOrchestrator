@@ -1,21 +1,38 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 #Requires -RunAsAdministrator
 
 <#
 .SYNOPSIS
-    Automated SYSTEM configuration script for Windows.
+    Script de configuration SYSTEME automatisee pour Windows.
 .DESCRIPTION
-    Reads parameters from config.ini and applies SYSTEM configurations.
-    Manages the rotation of its own logs and the user script's logs.
-    Manages a scheduled action before system reboot, targeting the
-    autologon user for %USERPROFILE% in PreRebootActionCommand.
-    Sends its own Gotify notification.
+    Lit les parametres depuis config.ini, applique les configurations SYSTEME, et journalise ses actions dans la langue de l'OS.
+    Cette version restaure la logique de résolution de chemin critique pour l'action pré-redémarrage.
 .NOTES
-    Author: Ronan Davalan & Gemini 2.5-pro
-    Version: See the project's global configuration (config.ini or documentation)
+    Auteur: Ronan Davalan & Gemini
+    Version: i18n - Corrigée
 #>
 
-# --- Log Rotation Function ---
+# --- START I18N BLOCK ---
+$lang = @{}
+try {
+    # Détermination robuste du répertoire du script
+    if ($MyInvocation.MyCommand.CommandType -eq 'ExternalScript') { $PSScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition } 
+    else { try { $PSScriptRoot = Split-Path -Parent $script:MyInvocation.MyCommand.Path -ErrorAction Stop } catch { $PSScriptRoot = Get-Location } }
+    
+    $i18nPath = Join-Path $PSScriptRoot "i18n"
+    
+    # Charge les chaînes de caractères pour la langue de l'OS actuelle.
+    # N'échoue pas si le fichier de langue est introuvable (le script utilisera les messages par défaut en anglais).
+    $lang = Import-LocalizedData -BindingVariable 'lang' -BaseDirectory $i18nPath -FileName "strings.psd1" -ErrorAction SilentlyContinue
+
+} catch {
+    # Cette erreur est capturée pour être journalisée plus tard, une fois les logs initialisés.
+    $i18nLoadingError = $_.Exception.Message
+}
+# --- END I18N BLOCK ---
+
+
+#region CORE FUNCTIONS
 function Rotate-LogFile {
     [CmdletBinding()]
     param(
@@ -43,13 +60,12 @@ function Rotate-LogFile {
     }
 }
 
-# --- Get-IniContent (must be defined early for rotation) ---
 function Get-IniContent {
     [CmdletBinding()] param ([Parameter(Mandatory=$true)][string]$FilePath)
     $ini = @{}; $currentSection = ""
     if (-not (Test-Path -Path $FilePath -PathType Leaf)) { return $null }
     try {
-        Get-Content $FilePath -ErrorAction Stop | ForEach-Object {
+        Get-Content $FilePath -Encoding UTF8 -ErrorAction Stop | ForEach-Object {
             $line = $_.Trim()
             if ([string]::IsNullOrWhiteSpace($line) -or $line.StartsWith("#") -or $line.StartsWith(";")) { return }
             if ($line -match "^\[(.+)\]$") { $currentSection = $matches[1].Trim(); $ini[$currentSection] = @{} }
@@ -63,12 +79,13 @@ function Get-IniContent {
     } catch { return $null }
     return $ini
 }
+#endregion
 
-# --- Global Configuration & Early Log Initialization ---
-$ScriptIdentifier = "AllSysConfig-Systeme"
+
+#region GLOBAL CONFIG & EARLY LOGS SETUP
+$ScriptIdentifier = "AllSysConfig-System"
 $ScriptInternalBuild = "Build-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
-if ($MyInvocation.MyCommand.CommandType -eq 'ExternalScript') { $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition }
-else { try { $ScriptDir = Split-Path -Parent $script:MyInvocation.MyCommand.Path -ErrorAction Stop } catch { $ScriptDir = Get-Location } }
+$ScriptDir = $PSScriptRoot
 
 $TargetLogDir = Join-Path -Path $ScriptDir -ChildPath "Logs"
 $LogDirToUse = $ScriptDir
@@ -95,31 +112,67 @@ $ConfigFile = Join-Path -Path $ScriptDir -ChildPath "config.ini"
 $Global:ActionsEffectuees = [System.Collections.Generic.List[string]]::new()
 $Global:ErreursRencontrees = [System.Collections.Generic.List[string]]::new()
 $Global:Config = $null
+#endregion
 
-# --- Utility Functions (Write-Log, Add-Action, Add-Error, Get-ConfigValue) ---
+
+#region UTILITY FUNCTIONS
 function Write-Log {
-    [CmdletBinding()] param ([string]$Message, [ValidateSet("INFO","WARN","ERROR","DEBUG")][string]$Level="INFO", [switch]$NoConsole)
+    [CmdletBinding()]
+    param (
+        [string]$DefaultMessage, 
+        [string]$MessageId, 
+        [object[]]$MessageArgs, 
+        [ValidateSet("INFO","WARN","ERROR","DEBUG")][string]$Level="INFO", 
+        [switch]$NoConsole
+    )
     process {
-        $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"; $logEntry = "$timestamp [$Level] - $Message"
+        $formattedMessage = if ($lang -and $lang.ContainsKey($MessageId)) { try { $lang[$MessageId] -f $MessageArgs } catch { $DefaultMessage } } else { $DefaultMessage }
+        $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"; $logEntry = "$timestamp [$Level] - $formattedMessage"
+        
         $LogParentDir = Split-Path $LogFile -Parent
         if (-not (Test-Path -Path $LogParentDir -PathType Container)) { try { New-Item -Path $LogParentDir -ItemType Directory -Force -ErrorAction Stop | Out-Null } catch {}}
-        try { Add-Content -Path $LogFile -Value $logEntry -ErrorAction Stop }
+        
+        try { 
+            Add-Content -Path $LogFile -Value $logEntry -Encoding UTF8 -ErrorAction Stop
+        }
         catch {
             $fallbackLogDir = "C:\ProgramData\StartupScriptLogs"
             if (-not (Test-Path $fallbackLogDir)) { try { New-Item $fallbackLogDir -ItemType Directory -Force -EA Stop | Out-Null } catch {}}
             $fallbackLogFile = Join-Path $fallbackLogDir "config_systeme_ps_FATAL_LOG_ERROR.txt"
-            $fallbackMessage = "$timestamp [FATAL_LOG_ERROR] - Error writing to '$LogFile': $($_.Exception.Message). Original: $logEntry"
-            Write-Host $fallbackMessage -ForegroundColor Red; try { Add-Content $fallbackLogFile $fallbackMessage -EA Stop } catch {}
+            $fallbackMessage = "$timestamp [FATAL_LOG_ERROR] - Could not write to '$LogFile': $($_.Exception.Message). Original: $logEntry"
+            Write-Host $fallbackMessage -ForegroundColor Red; try { Add-Content $fallbackLogFile $fallbackMessage -Encoding UTF8 -EA Stop } catch {}
         }
+
         if (-not $NoConsole -and ($Host.Name -eq "ConsoleHost" -or $PSEdition -eq "Core")) { Write-Host $logEntry }
     }
 }
-function Add-Action { param([string]$ActionMessage) $Global:ActionsEffectuees.Add($ActionMessage); Write-Log -Message "ACTION: $ActionMessage" -Level "INFO" -NoConsole }
-function Add-Error {
-    [CmdletBinding()] param ([Parameter(Mandatory=$true,Position=0)][string]$Message)
-    $detailedErrorMessage = $Message; if ([string]::IsNullOrWhiteSpace($detailedErrorMessage)) { if ($global:Error.Count -gt 0) { $lastError = $global:Error[0]; $detailedErrorMessage = "Unspecified PowerShell error: $($lastError.Exception.Message) - Stack: $($lastError.ScriptStackTrace) - Invocation: $($lastError.InvocationInfo.Line)"} else { $detailedErrorMessage = "Unspecified error and no PowerShell info available." } }
-    $Global:ErreursRencontrees.Add($detailedErrorMessage); Write-Log -Message "ERROR CAPTURED: $detailedErrorMessage" -Level "ERROR"
+
+function Add-Action {
+    param([string]$DefaultActionMessage, [string]$ActionId, [object[]]$ActionArgs)
+    $formattedMessage = if ($lang -and $lang.ContainsKey($ActionId)) { try { $lang[$ActionId] -f $ActionArgs } catch { $DefaultActionMessage } } else { $DefaultActionMessage }
+    $Global:ActionsEffectuees.Add($formattedMessage)
+    Write-Log -DefaultMessage "ACTION: $formattedMessage" -Level "INFO" -NoConsole
 }
+
+function Add-Error {
+    [CmdletBinding()]
+    param ([string]$DefaultErrorMessage, [string]$ErrorId, [object[]]$ErrorArgs)
+    
+    $formattedMessage = if ($lang -and $lang.ContainsKey($ErrorId)) { try { $lang[$ErrorId] -f $ErrorArgs } catch { $DefaultErrorMessage } } else { $DefaultErrorMessage }
+    
+    $detailedErrorMessage = $formattedMessage
+    if ([string]::IsNullOrWhiteSpace($detailedErrorMessage)) {
+        if ($global:Error.Count -gt 0) { 
+            $lastError = $global:Error[0]
+            $detailedErrorMessage = "Unspecified PowerShell error: $($lastError.Exception.Message) - Stack: $($lastError.ScriptStackTrace)"
+        } else { 
+            $detailedErrorMessage = "Unspecified error and no PowerShell error info."
+        }
+    }
+    $Global:ErreursRencontrees.Add($detailedErrorMessage)
+    Write-Log -DefaultMessage "CAPTURED ERROR: $detailedErrorMessage" -MessageId "Log_CapturedError" -MessageArgs $detailedErrorMessage -Level "ERROR"
+}
+
 function Get-ConfigValue {
     param([string]$Section, [string]$Key, [object]$DefaultValue=$null, [System.Type]$Type=([string]), [bool]$KeyMustExist=$false)
     $value = $null; $keyExists = $false; if ($null -ne $Global:Config) { $keyExists = $Global:Config.ContainsKey($Section) -and $Global:Config[$Section].ContainsKey($Key); if ($keyExists) { $value = $Global:Config[$Section][$Key] } }
@@ -127,347 +180,151 @@ function Get-ConfigValue {
     if (-not $keyExists) { if ($null -ne $DefaultValue) { return $DefaultValue }; if ($Type -eq ([bool])) { return $false }; if ($Type -eq ([int])) { return 0 }; return $null }
     if ([string]::IsNullOrWhiteSpace($value) -and $Type -eq ([bool])) { if ($null -ne $DefaultValue) { return $DefaultValue }; return $false }
     try { return [System.Convert]::ChangeType($value, $Type) }
-    catch { Add-Error "Invalid config value for [$($Section)]$($Key): '$value'. Expected type '$($Type.Name)'. Using default/empty value."; if ($null -ne $DefaultValue) { return $DefaultValue }; if ($Type -eq ([bool])) { return $false }; if ($Type -eq ([int])) { return 0 }; return $null }
+    catch { 
+        Add-Error -DefaultErrorMessage "Invalid config value for [$($Section)]$($Key): '$value'. Expected type '$($Type.Name)'. Default/empty value used." -ErrorId "Error_InvalidConfigValue" -ErrorArgs $Section, $Key, $value, $Type.Name
+        if ($null -ne $DefaultValue) { return $DefaultValue }; if ($Type -eq ([bool])) { return $false }; if ($Type -eq ([int])) { return 0 }; return $null 
+    }
 }
-# --- END Utility Functions ---
+#endregion
 
-# --- Main Script Start ---
+
+# --- SCRIPT MAIN BODY ---
 try {
     $Global:Config = Get-IniContent -FilePath $ConfigFile
-    if (-not $Global:Config) { $tsInitErr = Get-Date -F "yyyy-MM-dd HH:mm:ss"; try { Add-Content $LogFile "$tsInitErr [ERROR] - Unable to read '$ConfigFile'. Aborting." } catch {}; throw "Critical failure: config.ini."}
-
-    if ($rotationEnabledByConfig) {
-        $maxSysLogs = Get-ConfigValue -Section "Logging" -Key "MaxSystemLogsToKeep" -Type ([int]) -DefaultValue $DefaultMaxLogs; if($maxSysLogs -lt 1){Write-Log "MaxSystemLogsToKeep ($maxSysLogs) is invalid." -L WARN} Write-Log "System log rotation active. Max(cfg):$maxSysLogs. Init($DefaultMaxLogs)." -L INFO
-        $maxUserLogs = Get-ConfigValue -Section "Logging" -Key "MaxUserLogsToKeep" -Type ([int]) -DefaultValue $DefaultMaxLogs; if($maxUserLogs -lt 1){Write-Log "MaxUserLogsToKeep ($maxUserLogs) is invalid." -L WARN} Write-Log "User log rotation active. Max(cfg):$maxUserLogs. Init($DefaultMaxLogs)." -L INFO
-    } else { Write-Log "Log rotation disabled. Initial ($DefaultMaxLogs) if applicable." -L INFO }
-
-    Write-Log -Message "Starting $ScriptIdentifier ($ScriptInternalBuild)..."
-    $networkReady = $false; Write-Log "Checking network connectivity..."; for ($i = 0; $i -lt 6; $i++) { if (Test-NetConnection -ComputerName "8.8.8.8" -Port 53 -InformationLevel Quiet -WarningAction SilentlyContinue) { Write-Log "Network connectivity detected."; $networkReady = $true; break }; if ($i -lt 5) { Write-Log "Network unavailable, trying again in 10s..."; Start-Sleep -Seconds 10 }}; if (-not $networkReady) { Write-Log "Network not established. Gotify might fail." -Level "WARN" }
-    Write-Log "Executing configured SYSTEM actions..."
-
-    # Determine target user for configurations that require it (Autologon, PreRebootAction %USERPROFILE%)
-    $targetUsernameForConfiguration = Get-ConfigValue -Section "SystemConfig" -Key "AutoLoginUsername"
-    if ([string]::IsNullOrWhiteSpace($targetUsernameForConfiguration)) {
-        Write-Log "AutoLoginUsername not specified. Attempting to read DefaultUserName from Registry." -L INFO
-        try {
-            $winlogonKeyForDefaultUser = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
-            $regDefaultUser = (Get-ItemProperty -Path $winlogonKeyForDefaultUser -Name DefaultUserName -ErrorAction SilentlyContinue).DefaultUserName
-            if (-not [string]::IsNullOrWhiteSpace($regDefaultUser)) {
-                $targetUsernameForConfiguration = $regDefaultUser
-                Write-Log "Registry DefaultUserName used as target user: $targetUsernameForConfiguration." -L INFO
-            } else { Write-Log "Registry DefaultUserName not found or empty. No default target user." -L WARN }
-        } catch { Write-Log "Error reading DefaultUserName from Registry: $($_.Exception.Message)" -L WARN }
-    } else { Write-Log "AutoLoginUsername from config.ini used as target user: $targetUsernameForConfiguration." -L INFO }
-
-    # --- Manage Fast Startup ---
-    $disableFastStartup = Get-ConfigValue -Section "SystemConfig" -Key "DisableFastStartup" -Type ([bool]) -KeyMustExist $true
-    if ($disableFastStartup -is [pscustomobject] -and $disableFastStartup.Undefined) { Write-Log "Param 'DisableFastStartup' not specified." -L INFO }
-    else {
-        $powerRegPath = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power"
-        if (-not(Test-Path $powerRegPath)){ Add-Error "Power Reg key not found: $powerRegPath" }
-        else {
-            $currentHiberboot = (Get-ItemProperty -Path $powerRegPath -Name HiberbootEnabled -ErrorAction SilentlyContinue).HiberbootEnabled
-            if($disableFastStartup){ Write-Log "Cfg: Disabling FastStartup."
-                if($currentHiberboot -ne 0){ try{Set-ItemProperty $powerRegPath HiberbootEnabled 0 -Force -EA Stop;Add-Action "FastStartup disabled."}catch{Add-Error "Failed to disable FastStartup: $($_.Exception.Message)"} }
-                else{ Write-Log "FastStartup already disabled." -L INFO;Add-Action "FastStartup checked (already disabled)." }
-            } else { Write-Log "Cfg: Enabling FastStartup."
-                if($currentHiberboot -ne 1){ try{Set-ItemProperty $powerRegPath HiberbootEnabled 1 -Force -EA Stop;Add-Action "FastStartup enabled."}catch{Add-Error "Failed to enable FastStartup: $($_.Exception.Message)"} }
-                else{ Write-Log "FastStartup already enabled." -L INFO;Add-Action "FastStartup checked (already enabled)." }
-            }
-        }
+    if (-not $Global:Config) { 
+        $tsInitErr = Get-Date -F "yyyy-MM-dd HH:mm:ss"
+        try { Add-Content -Path $LogFile -Value "$tsInitErr [ERROR] - Cannot read '$ConfigFile'. Halting." -Encoding UTF8 } catch {}
+        throw "Critical failure: config.ini."
     }
 
-    # --- Disable machine sleep ---
-    if (Get-ConfigValue "SystemConfig" "DisableSleep" -Type ([bool]) -DefaultValue $false) { Write-Log "Disabling machine sleep..."; try {
-        powercfg /change standby-timeout-ac 0 | Out-Null; powercfg /change standby-timeout-dc 0 | Out-Null
-        powercfg /change hibernate-timeout-ac 0 | Out-Null; powercfg /change hibernate-timeout-dc 0 | Out-Null
-        Add-Action "Machine sleep (S3/S4) disabled." } catch { Add-Error "Failed to disable machine sleep: $($_.Exception.Message)" }}
+    if ($i18nLoadingError) { Add-Error -DefaultErrorMessage "A critical error occurred while loading language files: $i18nLoadingError" -ErrorId "Error_LanguageFileLoad" -ErrorArgs $i18nLoadingError }
 
-    # --- Disable screen sleep ---
-    if (Get-ConfigValue "SystemConfig" "DisableScreenSleep" -Type ([bool]) -DefaultValue $false) { Write-Log "Disabling screen sleep..."; try {
-        powercfg /change monitor-timeout-ac 0 | Out-Null; powercfg /change monitor-timeout-dc 0 | Out-Null
-        Add-Action "Screen sleep disabled." } catch { Add-Error "Failed to disable screen sleep: $($_.Exception.Message)" }}
+    Write-Log -DefaultMessage "Starting $ScriptIdentifier ($ScriptInternalBuild)..." -MessageId "Log_StartingScript" -MessageArgs $ScriptIdentifier, $ScriptInternalBuild
+    $networkReady = $false; Write-Log -DefaultMessage "Checking network connectivity..." -MessageId "Log_CheckingNetwork"; for ($i = 0; $i -lt 6; $i++) { if (Test-NetConnection -ComputerName "8.8.8.8" -Port 53 -InformationLevel Quiet -WarningAction SilentlyContinue) { Write-Log -DefaultMessage "Network connectivity detected." -MessageId "Log_NetworkDetected"; $networkReady = $true; break }; if ($i -lt 5) { Write-Log -DefaultMessage "Network unavailable, retrying in 10s..." -MessageId "Log_NetworkRetry"; Start-Sleep -Seconds 10 }}; if (-not $networkReady) { Write-Log -DefaultMessage "Network not established. Gotify may fail." -MessageId "Log_NetworkFailed" -Level "WARN" }
+    Write-Log -DefaultMessage "Executing configured SYSTEM actions..." -MessageId "Log_ExecutingSystemActions"
 
-    # --- Manage AutoLogin ---
-    $enableAutoLogin = Get-ConfigValue "SystemConfig" "EnableAutoLogin" -Type ([bool]) -DefaultValue $false
-    $winlogonKeyForAutologon = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" # distinct variable
-    if ($enableAutoLogin) { Write-Log "Checking/Enabling AutoLogin..."
-        if (-not [string]::IsNullOrWhiteSpace($targetUsernameForConfiguration)) { try {
-            Set-ItemProperty -Path $winlogonKeyForAutologon -Name AutoAdminLogon -Value "1" -Type String -Force -ErrorAction Stop; Add-Action "AutoAdminLogon enabled."
-            Set-ItemProperty -Path $winlogonKeyForAutologon -Name DefaultUserName -Value $targetUsernameForConfiguration -Type String -Force -ErrorAction Stop; Add-Action "DefaultUserName: $targetUsernameForConfiguration."
-            } catch { Add-Error "Failed to configure AutoLogin: $($_.Exception.Message)" }}
-        else { Write-Log "EnableAutoLogin=true but target user could not be determined." -L WARN; Add-Error "AutoLogin enabled but target user could not be determined."}
-    } else { Write-Log "Disabling AutoLogin..."; try {
-        Set-ItemProperty -Path $winlogonKeyForAutologon -Name AutoAdminLogon -Value "0" -Type String -Force -ErrorAction Stop; Add-Action "AutoAdminLogon disabled."
-        } catch { Add-Error "Failed to disable AutoAdminLogon: $($_.Exception.Message)" }}
+    $targetUsernameForConfiguration = Get-ConfigValue -Section "SystemConfig" -Key "AutoLoginUsername"
+    if ([string]::IsNullOrWhiteSpace($targetUsernameForConfiguration)) {
+        Write-Log -DefaultMessage "AutoLoginUsername not specified. Attempting to read DefaultUserName from Registry." -MessageId "Log_ReadRegistryForUser" -Level INFO
+        try {
+            $regDefaultUser = (Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" -Name DefaultUserName -ErrorAction SilentlyContinue).DefaultUserName
+            if (-not [string]::IsNullOrWhiteSpace($regDefaultUser)) {
+                $targetUsernameForConfiguration = $regDefaultUser
+                Write-Log -DefaultMessage "Using Registry DefaultUserName as target user: {0}." -MessageId "Log_RegistryUserFound" -MessageArgs $targetUsernameForConfiguration -Level INFO
+            } else { Write-Log -DefaultMessage "Registry DefaultUserName not found or empty. No default target user." -MessageId "Log_RegistryUserNotFound" -Level WARN }
+        } catch { Write-Log -DefaultMessage "Error reading DefaultUserName from Registry: {0}" -MessageId "Log_RegistryReadError" -MessageArgs $_.Exception.Message -Level WARN }
+    } else { Write-Log -DefaultMessage "Using AutoLoginUsername from config.ini as target user: {0}." -MessageId "Log_ConfigUserFound" -MessageArgs $targetUsernameForConfiguration -Level INFO }
 
-    # --- Manage Windows Update ---
-    $disableWindowsUpdate = Get-ConfigValue "SystemConfig" "DisableWindowsUpdate" -Type ([bool]) -DefaultValue $false
-    $windowsUpdatePolicyKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU"; $windowsUpdateService = "wuauserv"
-    try { if(-not(Test-Path $windowsUpdatePolicyKey)){New-Item $windowsUpdatePolicyKey -Force -EA Stop|Out-Null}
-        if($disableWindowsUpdate){ Write-Log "Disabling Win Update..."; Set-ItemProperty $windowsUpdatePolicyKey NoAutoUpdate 1 -Type DWord -Force -EA Stop
-            Get-Service $windowsUpdateService -EA Stop|Set-Service -StartupType Disabled -PassThru -EA Stop|Stop-Service -Force -EA SilentlyContinue; Add-Action "Win Updates disabled."}
-        else{ Write-Log "Enabling Win Update..."; Set-ItemProperty $windowsUpdatePolicyKey NoAutoUpdate 0 -Type DWord -Force -EA Stop
-            Get-Service $windowsUpdateService -EA Stop|Set-Service -StartupType Automatic -PassThru -EA Stop|Start-Service -EA SilentlyContinue; Add-Action "Win Updates enabled."}
-    } catch { Add-Error "Failed to manage Win Update: $($_.Exception.Message)"}
+    $disableFastStartup = Get-ConfigValue -Section "SystemConfig" -Key "DisableFastStartup" -Type ([bool])
+    $powerRegPath = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power"
+    if($disableFastStartup){ if((Get-ItemProperty $powerRegPath -ErrorAction SilentlyContinue).HiberbootEnabled -ne 0){ try{Set-ItemProperty $powerRegPath HiberbootEnabled 0 -Force -EA Stop;Add-Action -DefaultActionMessage "FastStartup disabled." -ActionId "Action_FastStartupDisabled"}catch{Add-Error -DefaultErrorMessage "Failed to disable FastStartup: $($_.Exception.Message)" -ErrorId "Error_DisableFastStartupFailed" -ErrorArgs $_.Exception.Message} } else { Add-Action -DefaultActionMessage "FastStartup verified (already disabled)." -ActionId "Action_FastStartupVerifiedDisabled" } }
+    else { if((Get-ItemProperty $powerRegPath -ErrorAction SilentlyContinue).HiberbootEnabled -ne 1){ try{Set-ItemProperty $powerRegPath HiberbootEnabled 1 -Force -EA Stop;Add-Action -DefaultActionMessage "FastStartup enabled." -ActionId "Action_FastStartupEnabled"}catch{Add-Error -DefaultErrorMessage "Failed to enable FastStartup: $($_.Exception.Message)" -ErrorId "Error_EnableFastStartupFailed" -ErrorArgs $_.Exception.Message} } else { Add-Action -DefaultActionMessage "FastStartup verified (already enabled)." -ActionId "Action_FastStartupVerifiedEnabled" } }
 
-    # --- Disable auto-reboots (WU) ---
-    if(Get-ConfigValue "SystemConfig" "DisableAutoReboot" -Type ([bool]) -DefaultValue $false){ Write-Log "Disabling auto-reboot (WU)..."; try {
-        if(-not(Test-Path $windowsUpdatePolicyKey)){New-Item $windowsUpdatePolicyKey -Force -EA Stop|Out-Null}
-        Set-ItemProperty $windowsUpdatePolicyKey NoAutoRebootWithLoggedOnUsers 1 -Type DWord -Force -EA Stop; Add-Action "Auto-reboot (WU) disabled."
-        } catch { Add-Error "Failed to disable auto-reboot: $($_.Exception.Message)"}}
+    if (Get-ConfigValue "SystemConfig" "DisableSleep" -Type ([bool])) { try { powercfg /change standby-timeout-ac 0; powercfg /change hibernate-timeout-ac 0; Add-Action -DefaultActionMessage "Machine sleep (S3/S4) disabled." -ActionId "Action_SleepDisabled" } catch { Add-Error -DefaultErrorMessage "Failed to disable machine sleep: $($_.Exception.Message)" -ErrorId "Error_DisableSleepFailed" -ErrorArgs $_.Exception.Message }}
+    if (Get-ConfigValue "SystemConfig" "DisableScreenSleep" -Type ([bool])) { try { powercfg /change monitor-timeout-ac 0; Add-Action -DefaultActionMessage "Screen sleep disabled." -ActionId "Action_ScreenSleepDisabled" } catch { Add-Error -DefaultErrorMessage "Failed to disable screen sleep: $($_.Exception.Message)" -ErrorId "Error_DisableScreenSleepFailed" -ErrorArgs $_.Exception.Message }}
 
-    # --- Configure scheduled reboot ---
+    $winlogonKey = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
+    if (Get-ConfigValue "SystemConfig" "EnableAutoLogin" -Type ([bool])) { if (-not [string]::IsNullOrWhiteSpace($targetUsernameForConfiguration)) { try { Set-ItemProperty -Path $winlogonKey -Name AutoAdminLogon -Value "1" -Type String -Force -EA Stop; Add-Action -DefaultActionMessage "AutoAdminLogon enabled." -ActionId "Action_AutoAdminLogonEnabled"; Set-ItemProperty -Path $winlogonKey -Name DefaultUserName -Value $targetUsernameForConfiguration -Type String -Force -EA Stop; Add-Action -DefaultActionMessage "DefaultUserName set to: {0}." -ActionId "Action_DefaultUserNameSet" -ActionArgs $targetUsernameForConfiguration } catch { Add-Error -DefaultErrorMessage "Failed to configure AutoLogin: $($_.Exception.Message)" -ErrorId "Error_AutoLoginFailed" -ErrorArgs $_.Exception.Message }} else { Add-Error -DefaultErrorMessage "AutoLogin enabled but target user could not be determined." -ErrorId "Error_AutoLoginUserUnknown"} }
+    else { try { Set-ItemProperty -Path $winlogonKey -Name AutoAdminLogon -Value "0" -Type String -Force -EA Stop; Add-Action -DefaultActionMessage "AutoAdminLogon disabled." -ActionId "Action_AutoAdminLogonDisabled" } catch { Add-Error -DefaultErrorMessage "Failed to disable AutoAdminLogon: $($_.Exception.Message)" -ErrorId "Error_DisableAutoLoginFailed" -ErrorArgs $_.Exception.Message }}
+
+    $wuPolicyKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU"; $wuService = "wuauserv"
+    if(-not(Test-Path $wuPolicyKey)){New-Item $wuPolicyKey -Force -EA Stop|Out-Null}
+    if(Get-ConfigValue "SystemConfig" "DisableWindowsUpdate" -Type ([bool])){ try{Set-ItemProperty $wuPolicyKey NoAutoUpdate 1 -Type DWord -Force -EA Stop; Get-Service $wuService -EA Stop|Set-Service -StartupType Disabled -PassThru -EA Stop|Stop-Service -Force -EA SilentlyContinue; Add-Action -DefaultActionMessage "Win Updates disabled." -ActionId "Action_UpdatesDisabled"}catch{Add-Error -DefaultErrorMessage "Failed to manage Win Updates: $($_.Exception.Message)" -ErrorId "Error_UpdateMgmtFailed" -ErrorArgs $_.Exception.Message} }
+    else{ try{Set-ItemProperty $wuPolicyKey NoAutoUpdate 0 -Type DWord -Force -EA Stop; Get-Service $wuService -EA Stop|Set-Service -StartupType Automatic -PassThru -EA Stop|Start-Service -EA SilentlyContinue; Add-Action -DefaultActionMessage "Win Updates enabled." -ActionId "Action_UpdatesEnabled"}catch{Add-Error -DefaultErrorMessage "Failed to manage Win Updates: $($_.Exception.Message)" -ErrorId "Error_UpdateMgmtFailed" -ErrorArgs $_.Exception.Message} }
+    if(Get-ConfigValue "SystemConfig" "DisableAutoReboot" -Type ([bool])){ try{Set-ItemProperty $wuPolicyKey NoAutoRebootWithLoggedOnUsers 1 -Type DWord -Force -EA Stop; Add-Action -DefaultActionMessage "Auto-reboot (WU) disabled." -ActionId "Action_AutoRebootDisabled"}catch{Add-Error -DefaultErrorMessage "Failed to disable auto-reboot: $($_.Exception.Message)" -ErrorId "Error_DisableAutoRebootFailed" -ErrorArgs $_.Exception.Message}}
+
     $rebootTime = Get-ConfigValue "SystemConfig" "ScheduledRebootTime"
     $rebootTaskName = "AllSys_SystemScheduledReboot"
-    if (-not [string]::IsNullOrWhiteSpace($rebootTime)) { Write-Log "Configuring scheduled reboot at $rebootTime...";
-        $shutdownPath = Join-Path $env:SystemRoot "System32\shutdown.exe"
+    if (-not [string]::IsNullOrWhiteSpace($rebootTime)) {
         $rebootDesc = "Daily reboot by AllSysConfig (Build: $ScriptInternalBuild)"
-        $rebootAction = New-ScheduledTaskAction -Execute $shutdownPath -Argument "/r /f /t 60 /c `"$rebootDesc`""
-        try {
-            $rebootTrigger = New-ScheduledTaskTrigger -Daily -At $rebootTime -ErrorAction Stop
-            $rebootPrincipal = New-ScheduledTaskPrincipal -UserId "NT AUTHORITY\System" -LogonType ServiceAccount -RunLevel Highest
-            $rebootSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 2) -Compatibility Win8
-            Unregister-ScheduledTask -TaskName $rebootTaskName -Confirm:$false -ErrorAction SilentlyContinue
-            Register-ScheduledTask -TaskName $rebootTaskName -Action $rebootAction -Trigger $rebootTrigger -Principal $rebootPrincipal -Settings $rebootSettings -Description $rebootDesc -Force -ErrorAction Stop
-            Add-Action "Scheduled reboot at $rebootTime (Task: $rebootTaskName)."
-        } catch { Add-Error "Failed to configure scheduled reboot ($rebootTime) task '$rebootTaskName': $($_.Exception.Message)." }}
-    else { Write-Log "ScheduledRebootTime not specified. Deleting task '$rebootTaskName'." -L INFO; Unregister-ScheduledTask $rebootTaskName -Confirm:$false -ErrorAction SilentlyContinue }
-
-    # --- Configure pre-reboot action (Candidate v1.4) ---
-    Write-Log -Message "Starting configuration of pre-reboot action..." -Level DEBUG
-
+        $rebootAction = New-ScheduledTaskAction -Execute "shutdown.exe" -Argument "/r /f /t 60 /c `"$rebootDesc`""
+        $rebootTrigger = New-ScheduledTaskTrigger -Daily -At $rebootTime;
+        Register-ScheduledTask $rebootTaskName -Action $rebootAction -Trigger $rebootTrigger -Principal (New-ScheduledTaskPrincipal -UserId "NT AUTHORITY\System" -LogonType ServiceAccount -RunLevel Highest) -Settings (New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries) -Description $rebootDesc -Force
+        Add-Action -DefaultActionMessage "Scheduled reboot at {0} (Task: {1})." -ActionId "Action_RebootScheduled" -ActionArgs $rebootTime, $rebootTaskName
+    } else { Unregister-ScheduledTask $rebootTaskName -Confirm:$false -ErrorAction SilentlyContinue }
+    
+    # --- Configurer l'action préparatoire avant redémarrage (AVEC LOGIQUE DE CHEMIN CORRIGÉE) ---
     $preRebootActionTime = Get-ConfigValue -Section "SystemConfig" -Key "PreRebootActionTime"
     $preRebootCmdFromFile = Get-ConfigValue -Section "SystemConfig" -Key "PreRebootActionCommand"
     $preRebootArgsFromFile = Get-ConfigValue -Section "SystemConfig" -Key "PreRebootActionArguments"
-    $preRebootLaunchMethodFromFile = (Get-ConfigValue -Section "SystemConfig" -Key "PreRebootActionLaunchMethod" -DefaultValue "direct").ToLower()
-
+    $preRebootLaunchMethod = (Get-ConfigValue -Section "SystemConfig" -Key "PreRebootActionLaunchMethod" -DefaultValue "direct").ToLower()
     $preRebootTaskName = "AllSys_SystemPreRebootAction"
 
     if ((-not [string]::IsNullOrWhiteSpace($preRebootActionTime)) -and (-not [string]::IsNullOrWhiteSpace($preRebootCmdFromFile))) {
-        Write-Log -Message "Valid PreReboot parameters detected: Time='$preRebootActionTime', Command='$preRebootCmdFromFile', Args='$preRebootArgsFromFile', Method='$preRebootLaunchMethodFromFile'."
-
-        # Raw path from config.ini, without outer quotes
+        
         $programToExecute = $preRebootCmdFromFile.Trim('"')
 
         if ($programToExecute -match "%USERPROFILE%") {
             if (-not [string]::IsNullOrWhiteSpace($targetUsernameForConfiguration)) {
-                $userProfilePathTarget = $null
                 try {
                     $userAccount = New-Object System.Security.Principal.NTAccount($targetUsernameForConfiguration)
                     $userSid = $userAccount.Translate([System.Security.Principal.SecurityIdentifier]).Value
                     $userProfilePathTarget = (Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$userSid" -Name ProfileImagePath -ErrorAction Stop).ProfileImagePath
-                } catch {
-                    Add-Error -Message "Could not determine profile path for '$targetUsernameForConfiguration' via SID for PreRebootAction. Error: $($_.Exception.Message)"
-                    $userProfilePathTarget = "C:\Users\$targetUsernameForConfiguration" # Heuristic fallback
-                    Write-Log -Message "Using constructed path '$userProfilePathTarget' as a fallback for the profile of '$targetUsernameForConfiguration'." -Level WARN
-                }
-
-                if (-not [string]::IsNullOrWhiteSpace($userProfilePathTarget) -and (Test-Path $userProfilePathTarget -PathType Container)) {
-                    $programToExecute = $programToExecute -replace "%USERPROFILE%", [regex]::Escape($userProfilePathTarget)
-                    Write-Log -Message "%USERPROFILE% in PreRebootActionCommand replaced with '$userProfilePathTarget'. Resulting path: '$programToExecute'" -Level INFO
-                } else {
-                    Add-Error -Message "Profile '$userProfilePathTarget' for target user '$targetUsernameForConfiguration' not found/invalid. %USERPROFILE% not resolved."
-                    # Leave $programToExecute with %USERPROFILE%, expansion by SYSTEM will be the risky fallback
-                    Write-Log -Message "Leaving %USERPROFILE% for expansion by SYSTEM for PreRebootActionCommand: '$programToExecute'" -Level WARN
-                }
-            } else {
-                Add-Error -Message "%USERPROFILE% detected in PreRebootActionCommand, but target user (AutoLoginUsername) not determined. %USERPROFILE% will not be resolved to a specific user."
-                # Leave $programToExecute with %USERPROFILE%
-                Write-Log -Message "Leaving %USERPROFILE% for expansion by SYSTEM for PreRebootActionCommand: '$programToExecute'" -Level WARN
-            }
+                    if ($userProfilePathTarget) { $programToExecute = $programToExecute -replace "%USERPROFILE%", [regex]::Escape($userProfilePathTarget) }
+                } catch { Add-Error -DefaultErrorMessage "Could not determine profile path for '$targetUsernameForConfiguration' for PreRebootAction." }
+            } else { Add-Error -DefaultErrorMessage "%USERPROFILE% detected in PreRebootActionCommand, but target user could not be determined." }
         }
 
-        # ----- START OF MODIFICATION FOR PROJECT-RELATIVE PATHS -----
-        # If $programToExecute is not an absolute path, not an env variable, and not a simple command in the PATH,
-        # we try to resolve it relative to $ScriptDir (project root directory).
-        if (($programToExecute -notmatch '^[a-zA-Z]:\\') -and `
-            ($programToExecute -notmatch '^\\\\') -and `
-            ($programToExecute -notmatch '^%') -and `
-            (-not (Get-Command $programToExecute -CommandType Application,ExternalScript -ErrorAction SilentlyContinue)) ) {
+        if (($programToExecute -notmatch '^[a-zA-Z]:\\') -and ($programToExecute -notmatch '^\\\\') -and ($programToExecute -notmatch '^%') -and (-not (Get-Command $programToExecute -CommandType Application,ExternalScript -ErrorAction SilentlyContinue))) {
+            $potentialPath = Join-Path -Path $ScriptDir -ChildPath $programToExecute -Resolve -ErrorAction SilentlyContinue
+            if (Test-Path -LiteralPath $potentialPath -PathType Leaf) { $programToExecute = $potentialPath }
+        }
 
-            $potentialProjectPath = ""
+        $programToExecute = [System.Environment]::ExpandEnvironmentVariables($programToExecute)
+
+        $exeForTaskScheduler = ""; $argumentStringForTaskScheduler = ""; $workingDirectoryForTask = ""
+        if (Test-Path -LiteralPath $programToExecute -PathType Leaf) { $workingDirectoryForTask = Split-Path -Path $programToExecute -Parent }
+
+        switch ($preRebootLaunchMethod) {
+            "direct"     { $exeForTaskScheduler = $programToExecute; $argumentStringForTaskScheduler = $preRebootArgsFromFile }
+            "powershell" { $exeForTaskScheduler = "powershell.exe"; $argumentStringForTaskScheduler = "-NoProfile -ExecutionPolicy Bypass -Command `"& `"$programToExecute`" $preRebootArgsFromFile`"" }
+            "cmd"        { $exeForTaskScheduler = "cmd.exe"; $argumentStringForTaskScheduler = "/c `"`"$programToExecute`" $preRebootArgsFromFile`"" }
+            default      { Add-Error -DefaultErrorMessage "Invalid PreRebootActionLaunchMethod: '$preRebootLaunchMethod'." }
+        }
+        
+        if ($exeForTaskScheduler -and ( (Test-Path -LiteralPath $programToExecute -PathType Leaf) -or (Get-Command $programToExecute -ErrorAction SilentlyContinue) ) ) {
             try {
-                # Ensure $ScriptDir is an absolute path before Join-Path
-                if (-not [System.IO.Path]::IsPathRooted($ScriptDir)) {
-                    # This should not happen if $ScriptDir is correctly initialized
-                    Add-Error -Message "The script root directory (\$ScriptDir='$ScriptDir') is not an absolute path. Cannot resolve relative path '$programToExecute'."
-                } else {
-                    $potentialProjectPath = Join-Path -Path $ScriptDir -ChildPath $programToExecute -Resolve -ErrorAction SilentlyContinue
-                }
-            } catch {
-                 Add-Error -Message "Error while attempting Join-Path for '$ScriptDir' and '$programToExecute': $($_.Exception.Message)"
-            }
-
-            if (-not [string]::IsNullOrWhiteSpace($potentialProjectPath) -and (Test-Path -LiteralPath $potentialProjectPath -PathType Leaf)) {
-                Write-Log -Message "PreRebootActionCommand '$preRebootCmdFromFile' (interpreted as '$programToExecute') resolved to project-relative path: '$potentialProjectPath'" -Level DEBUG
-                $programToExecute = $potentialProjectPath
-            } elseif (-not [string]::IsNullOrWhiteSpace($potentialProjectPath)) {
-                 Write-Log -Message "PreRebootActionCommand '$preRebootCmdFromFile' (interpreted as '$programToExecute') looks like a project-relative path, but '$potentialProjectPath' was not found or is not a file." -Level WARN
-            } else {
-                 Write-Log -Message "PreRebootActionCommand '$preRebootCmdFromFile' (interpreted as '$programToExecute') could not be resolved as a project-relative path. $potentialProjectPath is empty." -Level WARN
-            }
-        }
-        # ----- END OF MODIFICATION FOR PROJECT-RELATIVE PATHS -----
-
-        # Final expansion of other environment variables (e.g., %SystemRoot%)
-        try {
-            $programToExecute = [System.Environment]::ExpandEnvironmentVariables($programToExecute)
-        } catch {
-            Add-Error -Message "Error during final environment variable expansion for PreRebootActionCommand '$programToExecute': $($_.Exception.Message)"
-            # $programToExecute remains as is if expansion fails
-        }
-        Write-Log -Message "Program to execute for PreReboot (after all processing): '$programToExecute'" -Level DEBUG
-
-        $exeForTaskScheduler = ""
-        $argumentStringForTaskScheduler = ""
-        $workingDirectoryForTask = "" # Initialization
-
-        if ($preRebootLaunchMethodFromFile -eq "direct") {
-            $exeForTaskScheduler = $programToExecute
-            $argumentStringForTaskScheduler = $preRebootArgsFromFile
-            if (Test-Path -LiteralPath $exeForTaskScheduler -PathType Leaf) {
-                try { $workingDirectoryForTask = Split-Path -Path $exeForTaskScheduler -Parent } catch {}
-            }
-        } elseif ($preRebootLaunchMethodFromFile -eq "powershell") {
-            $exeForTaskScheduler = "powershell.exe"
-            $psCommand = "& `"$programToExecute`""
-            if (-not [string]::IsNullOrWhiteSpace($preRebootArgsFromFile)) { $psCommand += " $preRebootArgsFromFile" }
-            $argumentStringForTaskScheduler = "-NoProfile -ExecutionPolicy Bypass -Command `"$($psCommand.Replace('"', '\"'))`""
-            if (Test-Path -LiteralPath $programToExecute -PathType Leaf) { # If it's a .ps1 script
-                try { $workingDirectoryForTask = Split-Path -Path $programToExecute -Parent } catch {}
-            }
-        } elseif ($preRebootLaunchMethodFromFile -eq "cmd") {
-            $exeForTaskScheduler = "cmd.exe"
-            $cmdCommand = "/c `"$programToExecute`""
-            if (-not [string]::IsNullOrWhiteSpace($preRebootArgsFromFile)) { $cmdCommand += " $preRebootArgsFromFile" }
-            $argumentStringForTaskScheduler = $cmdCommand
-            if (Test-Path -LiteralPath $programToExecute -PathType Leaf) { # If it's a .bat or .exe
-                try { $workingDirectoryForTask = Split-Path -Path $programToExecute -Parent } catch {}
-            }
-        } else {
-            Add-Error -Message "PreRebootActionLaunchMethod '$preRebootLaunchMethodFromFile' not recognized. Task not created."
-            $exeForTaskScheduler = "" # Force task creation failure
-        }
-
-        # If workingDirectoryForTask is empty and it's not a simple command, use $ScriptDir as a fallback
-        if ([string]::IsNullOrWhiteSpace($workingDirectoryForTask) -and `
-            ($exeForTaskScheduler -notmatch '^[a-zA-Z]:\\') -and `
-            ($exeForTaskScheduler -notmatch '^\\\\') -and `
-            (Test-Path -LiteralPath (Join-Path $ScriptDir $exeForTaskScheduler) -ErrorAction SilentlyContinue) ) {
-            # Do not do this for simple PATH commands (e.g., taskkill.exe)
-        } elseif ([string]::IsNullOrWhiteSpace($workingDirectoryForTask) -and (-not (Get-Command $exeForTaskScheduler -ErrorAction SilentlyContinue))) {
-             # If it's not a PATH command and the working dir was not set (e.g., project-relative path to non-file?)
-             $workingDirectoryForTask = $ScriptDir
-             Write-Log -Message "WorkingDirectory for PreRebootAction not determined from '$programToExecute', using '$ScriptDir' as default." -Level DEBUG
-        }
-
-        Write-Log -Message "For the PreReboot task: Exe='$exeForTaskScheduler', Args='$argumentStringForTaskScheduler', WorkDir='$workingDirectoryForTask'" -Level DEBUG
-
-        $canProceedWithTaskCreation = $false
-        if (-not [string]::IsNullOrWhiteSpace($exeForTaskScheduler)) {
-            if ($exeForTaskScheduler -eq "powershell.exe" -or $exeForTaskScheduler -eq "cmd.exe") {
-                # For interpreters, we check that the script/program they need to run ($programToExecute) exists
-                if (Test-Path -LiteralPath $programToExecute -PathType Leaf -ErrorAction SilentlyContinue) {
-                    $canProceedWithTaskCreation = $true
-                } elseif (Get-Command $programToExecute -ErrorAction SilentlyContinue -CommandType Application,ExternalScript) {
-                    Write-Log -Message "Program '$programToExecute' for PreRebootAction (via $preRebootLaunchMethodFromFile) appears to be a PATH command." -Level WARN
-                    $canProceedWithTaskCreation = $true
-                } else {
-                    Add-Error -Message "Script/Program '$programToExecute' for PreRebootAction (via $preRebootLaunchMethodFromFile) is not found."
-                }
-            } elseif (Test-Path -LiteralPath $exeForTaskScheduler -PathType Leaf -ErrorAction SilentlyContinue) {
-                $canProceedWithTaskCreation = $true
-            } elseif (Get-Command $exeForTaskScheduler -ErrorAction SilentlyContinue -CommandType Application,ExternalScript) {
-                 Write-Log -Message "Program '$exeForTaskScheduler' (direct) appears to be a PATH command." -Level WARN
-                 $canProceedWithTaskCreation = $true
-            } else {
-                Add-Error -Message "Main executable '$exeForTaskScheduler' for PreRebootAction is not found."
-            }
-        } else {
-             Add-Error -Message "No executable determined for PreRebootAction. Task not created."
-        }
-
-        if ($canProceedWithTaskCreation) {
-            try {
-                $taskAction = New-ScheduledTaskAction -Execute $exeForTaskScheduler
-                if (-not [string]::IsNullOrWhiteSpace($argumentStringForTaskScheduler)) {
-                    $taskAction.Arguments = $argumentStringForTaskScheduler
-                }
-                # Set the working directory for the task action
-                if (-not [string]::IsNullOrWhiteSpace($workingDirectoryForTask) -and (Test-Path -LiteralPath $workingDirectoryForTask -PathType Container)) {
-                    $taskAction.WorkingDirectory = $workingDirectoryForTask
-                } elseif (-not [string]::IsNullOrWhiteSpace($workingDirectoryForTask)) {
-                    Write-Log -Message "Working directory '$workingDirectoryForTask' for PreRebootAction is specified but does not exist or is not a container. Not applied." -Level WARN
-                }
-
-
-                $taskTrigger = New-ScheduledTaskTrigger -Daily -At $preRebootActionTime -ErrorAction Stop
-                $taskPrincipal = New-ScheduledTaskPrincipal -UserId "NT AUTHORITY\System" -LogonType ServiceAccount -RunLevel Highest
-                $taskSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 30)
-                $taskDescription = "Preparatory action before reboot by AllSysConfig (Build: $ScriptInternalBuild)"
-
+                $taskAction = New-ScheduledTaskAction -Execute $exeForTaskScheduler -Argument $argumentStringForTaskScheduler -WorkingDirectory $workingDirectoryForTask
+                $taskTrigger = New-ScheduledTaskTrigger -Daily -At $preRebootActionTime
+                $principalUserForPreReboot = if (-not [string]::IsNullOrWhiteSpace($targetUsernameForConfiguration)) { $targetUsernameForConfiguration } else { "NT AUTHORITY\System" }
+                $principalLogonType = if (-not [string]::IsNullOrWhiteSpace($targetUsernameForConfiguration)) { "Interactive" } else { "ServiceAccount" }
+                $taskPrincipal = New-ScheduledTaskPrincipal -UserId $principalUserForPreReboot -LogonType $principalLogonType -RunLevel Highest
+                
                 Unregister-ScheduledTask -TaskName $preRebootTaskName -Confirm:$false -ErrorAction SilentlyContinue
-                Register-ScheduledTask -TaskName $preRebootTaskName -Action $taskAction -Trigger $taskTrigger -Principal $taskPrincipal -Settings $taskSettings -Description $taskDescription -Force -ErrorAction Stop
-                Add-Action "Pre-reboot action at '$preRebootActionTime' configured (Task: $preRebootTaskName)."
-                Write-Log -Message "Task '$preRebootTaskName' created/updated to execute: '$($taskAction.Execute)' with args: '$($taskAction.Arguments)' and WorkDir: '$($taskAction.WorkingDirectory)'" -Level INFO
-            } catch {
-                Add-Error -Message "Failed to create/update task '$preRebootTaskName' for PreRebootAction: $($_.Exception.Message)"
-            }
-        } else {
-            Write-Log -Message "Program validation for PreRebootAction failed. Task '$preRebootTaskName' not created/updated." -Level ERROR
-        }
-    } else {
-        Write-Log -Message "PreRebootActionTime or PreRebootActionCommand not specified in config.ini. Deleting task '$preRebootTaskName' if it exists." -Level INFO
-        Unregister-ScheduledTask -TaskName $preRebootTaskName -Confirm:$false -ErrorAction SilentlyContinue
-    }
-    Write-Log -Message "End of pre-reboot action configuration." -Level DEBUG
+                Register-ScheduledTask -TaskName $preRebootTaskName -Action $taskAction -Trigger $taskTrigger -Principal $taskPrincipal -Settings (New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries) -Description "Pre-reboot action by AllSysConfig" -Force -ErrorAction Stop
+                Add-Action -DefaultActionMessage "Pre-reboot action at '{0}' configured (Task: {1})." -ActionId "Action_PreRebootConfigured" -ActionArgs $preRebootActionTime, $preRebootTaskName
+            } catch { Add-Error -DefaultErrorMessage "Failed to create/update pre-reboot task '$preRebootTaskName': $($_.Exception.Message)" }
+        } else { Add-Error -DefaultErrorMessage "Pre-reboot command '$programToExecute' could not be found or resolved." }
 
-    # --- Manage OneDrive (system policy) ---
+    } else { Unregister-ScheduledTask -TaskName $preRebootTaskName -Confirm:$false -ErrorAction SilentlyContinue }
+
+    # --- Manage OneDrive ---
     $oneDrivePolicyKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive"
-    if(Get-ConfigValue -Section "SystemConfig" -Key "DisableOneDrive" -Type ([bool]) -DefaultValue $false){ Write-Log -Message "Disabling OneDrive (policy)..."; try {
-        if (-not(Test-Path $oneDrivePolicyKey)){New-Item -Path $oneDrivePolicyKey -Force -ErrorAction Stop | Out-Null}
-        Set-ItemProperty -Path $oneDrivePolicyKey -Name DisableFileSyncNGSC -Value 1 -Type DWord -Force -ErrorAction Stop
-        Get-Process -Name "OneDrive" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; Add-Action "OneDrive disabled (policy)."}
-        catch { Add-Error -Message "Failed to disable OneDrive: $($_.Exception.Message)"}}
-    else { Write-Log -Message "Enabling/Maintaining OneDrive (policy)..."; try {
-        if(Test-Path $oneDrivePolicyKey){ If(Get-ItemProperty -Path $oneDrivePolicyKey -Name DisableFileSyncNGSC -ErrorAction SilentlyContinue){ Remove-ItemProperty -Path $oneDrivePolicyKey -Name DisableFileSyncNGSC -Force -ErrorAction Stop }}
-        Add-Action "OneDrive allowed (policy)."} catch { Add-Error -Message "Failed to enable OneDrive: $($_.Exception.Message)"}}
+    if(Get-ConfigValue -Section "SystemConfig" -Key "DisableOneDrive" -Type ([bool])){ if(-not(Test-Path $oneDrivePolicyKey)){New-Item -Path $oneDrivePolicyKey -Force|Out-Null}; Set-ItemProperty -Path $oneDrivePolicyKey -Name DisableFileSyncNGSC -Value 1 -Force; Add-Action -DefaultActionMessage "OneDrive disabled (policy)." -ActionId "Action_OneDriveDisabled" }
+    else { if(Test-Path $oneDrivePolicyKey){Remove-ItemProperty -Path $oneDrivePolicyKey -Name DisableFileSyncNGSC -Force -ErrorAction SilentlyContinue}; Add-Action -DefaultActionMessage "OneDrive allowed (policy)." -ActionId "Action_OneDriveEnabled" }
 
 } catch {
-    if ($null -ne $Global:Config) { Add-Error -Message "FATAL SCRIPT ERROR (main block): $($_.Exception.Message) `n$($_.ScriptStackTrace)" }
-    else { $tsErr = Get-Date -Format "yyyy-MM-dd HH:mm:ss"; $errMsg = "$tsErr [FATAL SCRIPT ERROR - CONFIG NOT INITIALIZED/LOADED] - Error: $($_.Exception.Message) `nStackTrace: $($_.ScriptStackTrace)"; try { Add-Content -Path (Join-Path $LogDirToUse "config_systeme_ps_FATAL_ERROR.txt") -Value $errMsg -ErrorAction SilentlyContinue } catch {}; try { Add-Content -Path (Join-Path $ScriptDir "config_systeme_ps_FATAL_ERROR_fallback.txt") -Value $errMsg -ErrorAction SilentlyContinue } catch {}; Write-Host $errMsg -ForegroundColor Red }
+    if ($null -ne $Global:Config) { Add-Error -DefaultErrorMessage "FATAL SCRIPT ERROR (main block): $($_.Exception.Message) `n$($_.ScriptStackTrace)" -ErrorId "Error_FatalScriptError" -ErrorArgs $_.Exception.Message, $_.ScriptStackTrace }
+    else { $tsErr = Get-Date -Format "yyyy-MM-dd HH:mm:ss"; $errMsg = "$tsErr [FATAL SCRIPT ERROR - CONFIG NOT LOADED] - Error: $($_.Exception.Message)"; try { Add-Content -Path (Join-Path $LogDirToUse "config_systeme_ps_FATAL_ERROR.txt") -Value $errMsg -Encoding UTF8 -ErrorAction SilentlyContinue } catch {}; }
 } finally {
-    # --- Gotify Notification ---
-    if ($Global:Config -and (Get-ConfigValue -Section "Gotify" -Key "EnableGotify" -Type ([bool]) -DefaultValue $false)) {
-        $gotifyUrl = Get-ConfigValue -Section "Gotify" -Key "Url"; $gotifyToken = Get-ConfigValue -Section "Gotify" -Key "Token"
-        $gotifyPriority = Get-ConfigValue -Section "Gotify" -Key "Priority" -Type ([int]) -DefaultValue 5
+    if ($Global:Config -and (Get-ConfigValue -Section "Gotify" -Key "EnableGotify" -Type ([bool]))) {
+        $gotifyUrl = Get-ConfigValue -Section "Gotify" -Key "Url"; $gotifyToken = Get-ConfigValue -Section "Gotify" -Key "Token"; $gotifyPriority = Get-ConfigValue -Section "Gotify" -Key "Priority" -Type ([int]) -DefaultValue 5
         if ((-not [string]::IsNullOrWhiteSpace($gotifyUrl)) -and (-not [string]::IsNullOrWhiteSpace($gotifyToken))) {
-            $networkReadyForGotify = $false; if($networkReady){$networkReadyForGotify=$true} else { Write-Log -Message "Re-checking net for Gotify..." -Level WARN; if(Test-NetConnection -ComputerName "8.8.8.8" -Port 53 -InformationLevel Quiet -WarningAction SilentlyContinue){Write-Log -Message "Net for Gotify OK.";$networkReadyForGotify=$true}else{Write-Log -Message "Net for Gotify still down." -Level WARN}}
-            if($networkReadyForGotify){ Write-Log -Message "Preparing Gotify notification (system)..."
+            if($networkReady){
                 $titleSuccessTemplate = Get-ConfigValue -Section "Gotify" -Key "GotifyTitleSuccessSystem" -DefaultValue ("%COMPUTERNAME% " + $ScriptIdentifier + " OK")
                 $titleErrorTemplate = Get-ConfigValue -Section "Gotify" -Key "GotifyTitleErrorSystem" -DefaultValue ("ERROR " + $ScriptIdentifier + " on %COMPUTERNAME%")
                 $finalMessageTitle = if($Global:ErreursRencontrees.Count -gt 0){$titleErrorTemplate -replace "%COMPUTERNAME%",$env:COMPUTERNAME}else{$titleSuccessTemplate -replace "%COMPUTERNAME%",$env:COMPUTERNAME}
-                #$messageBody = "Script '$ScriptIdentifier' (Build: $ScriptInternalBuild) on $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss').`n`n"
-                #$messageBody = "'$ScriptIdentifier' on $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss').`n`n"
                 $messageBody = "On $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss').`n"
                 if($Global:ActionsEffectuees.Count -gt 0){$messageBody += "SYSTEM Actions:`n" + ($Global:ActionsEffectuees -join "`n")}else{$messageBody += "No SYSTEM actions."}
                 if($Global:ErreursRencontrees.Count -gt 0){$messageBody += "`n`nSYSTEM Errors:`n" + ($Global:ErreursRencontrees -join "`n")}
                 $payload = @{message=$messageBody; title=$finalMessageTitle; priority=$gotifyPriority} | ConvertTo-Json -Depth 3 -Compress
                 $fullUrl = "$($gotifyUrl.TrimEnd('/'))/message?token=$gotifyToken"
-                Write-Log "Sending Gotify (system) to $fullUrl..."; try { Invoke-RestMethod -Uri $fullUrl -Method Post -Body $payload -ContentType "application/json" -TimeoutSec 30 -ErrorAction Stop; Write-Log -Message "Gotify (system) sent."}
-                catch {Add-Error "Gotify failure (IRM): $($_.Exception.Message)"; $curlPath=Get-Command curl -ErrorAction SilentlyContinue
-                    if($curlPath){ Write-Log "Falling back to curl for Gotify..."; $tempJsonFile = Join-Path $env:TEMP "gotify_sys_$($PID)_$((Get-Random).ToString()).json"
-                        try{$payload|Out-File $tempJsonFile -Encoding UTF8 -ErrorAction Stop; $cArgs="-s -k -X POST `"$fullUrl`" -H `"Content-Type: application/json`" -d `@`"$tempJsonFile`""
-                            Invoke-Expression "curl $($cArgs -join ' ')"|Out-Null;Write-Log "Gotify (curl) sent."}
-                        catch{Add-Error "Gotify failure (curl): $($_.Exception.Message)"}finally{if(Test-Path $tempJsonFile){Remove-Item $tempJsonFile -ErrorAction SilentlyContinue}}}
-                    else{Add-Error "curl.exe not found."}}}
-            else {Add-Error "Network unavailable for system Gotify."}}
-        else {Add-Error "Incomplete Gotify params."}}
-
-    Write-Log -Message "$ScriptIdentifier ($ScriptInternalBuild) finished."
-    if ($Global:ErreursRencontrees.Count -gt 0) { Write-Log -Message "Some errors occurred." -Level WARN }
-    if ($Host.Name -eq "ConsoleHost" -and $Global:ErreursRencontrees.Count -gt 0 -and (-not $env:TF_BUILD)) {
-        Write-Warning "Errors occurred (system script). Log: $LogFile"
+                try { Invoke-RestMethod -Uri $fullUrl -Method Post -Body $payload -ContentType "application/json" -TimeoutSec 30 -ErrorAction Stop; }
+                catch {Add-Error -DefaultErrorMessage "Gotify (IRM) failed: $($_.Exception.Message)" }
+            } else { Add-Error -DefaultErrorMessage "Network unavailable for Gotify (system)." }
+        } else {Add-Error -DefaultErrorMessage "Gotify params incomplete." }
     }
+
+    Write-Log -DefaultMessage "{0} ({1}) finished." -MessageId "Log_ScriptFinished" -MessageArgs $ScriptIdentifier, $ScriptInternalBuild
+    if ($Global:ErreursRencontrees.Count -gt 0) { Write-Log -DefaultMessage "Errors occurred during execution." -MessageId "Log_ErrorsOccurred" -Level WARN }
 }
