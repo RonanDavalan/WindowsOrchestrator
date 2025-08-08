@@ -1,12 +1,27 @@
 @echo off
-CHCP 65001 > NUL
-REM This script launches the PowerShell uninstallation script, requesting administrator rights.
-echo Launching the uninstallation of AllSysConfig...
-echo An elevation of privileges request (UAC) will appear. Please accept it.
+REM Sets the code page to support international characters
+CHCP 1252 > NUL
+CLS
 
-REM Command to re-launch the PowerShell script with admin rights
-powershell -NoProfile -ExecutionPolicy Bypass -Command "& {Start-Process PowerShell -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File \""%~dp0management\uninstall.ps1\""' -Verb RunAs}"
+REM --- Language argument handling ---
+SET "LANG_ARG="
+IF /I "%~1" == "-l" SET "LANG_ARG=%~2"
+REM --- End of block ---
 
-echo.
-echo The uninstallation script is complete.
-pause
+ECHO #############################################################
+ECHO #          Uninstaller - WindowsAutoConfig                #
+ECHO #############################################################
+ECHO.
+ECHO Starting the uninstallation of AllSysConfig...
+ECHO.
+ECHO A privilege elevation prompt (UAC) will appear. Please accept it.
+ECHO.
+PAUSE
+
+REM This batch file now ONLY calls the PowerShell script.
+REM The PowerShell script itself will handle the elevation request.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0management\uninstall.ps1" -LanguageOverride "%LANG_ARG%"
+
+ECHO.
+ECHO The uninstallation script has finished.
+PAUSE

@@ -1,63 +1,66 @@
-#Requires -Version 5.1
-# No need for -RunAsAdministrator here, it runs in the logged-on user's context.
+﻿#Requires -Version 5.1
 
 <#
 .SYNOPSIS
-    Automated USER configuration script.
+    Script de configuration UTILISATEUR automatisee.
 .DESCRIPTION
-    Reads parameters from config.ini, applies user-specific configurations
-    (mainly managing a defined application process), and sends a Gotify notification.
-    Its log rotation is managed by the config_systeme.ps1 script.
+    Lit les parametres depuis config.ini, gère un processus applicatif défini et journalise ses actions dans la langue de l'OS.
 .NOTES
-    Author: Ronan Davalan & Gemini 2.5-pro
-    Version: See the project's global configuration (config.ini or documentation)
+    Auteur: Ronan Davalan & Gemini
+    Version: i18n - Corrigée
 #>
 
-# --- NO Rotate-LogFile FUNCTION HERE (managed by config_systeme.ps1) ---
+# --- START I18N BLOCK ---
+$lang = @{}
+try {
+    # Détermination robuste du répertoire du script
+    if ($MyInvocation.MyCommand.CommandType -eq 'ExternalScript') { $PSScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition } 
+    else { try { $PSScriptRoot = Split-Path -Parent $script:MyInvocation.MyCommand.Path -ErrorAction Stop } catch { $PSScriptRoot = Get-Location } }
+    
+    $i18nPath = Join-Path $PSScriptRoot "i18n"
+    
+    # Charge les chaînes de caractères pour la langue de l'OS actuelle.
+    # N'échoue pas si le fichier de langue est introuvable (le script utilisera les messages par défaut en anglais).
+    $lang = Import-LocalizedData -BindingVariable 'lang' -BaseDirectory $i18nPath -FileName "strings.psd1" -ErrorAction SilentlyContinue
 
-# --- Global Configuration ---
-$ScriptIdentifierUser = "AllSysConfig-Utilisateur"
-$ScriptInternalBuildUser = "Build-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
-if ($MyInvocation.MyCommand.CommandType -eq 'ExternalScript') {
-    $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-} else {
-    try { $ScriptDir = Split-Path -Parent $script:MyInvocation.MyCommand.Path -ErrorAction Stop }
-    catch { $ScriptDir = Get-Location }
+} catch {
+    # Cette erreur est capturée pour être journalisée plus tard, une fois les logs initialisés.
+    $i18nLoadingError = $_.Exception.Message
 }
+# --- END I18N BLOCK ---
+
+
+#region GLOBAL CONFIG
+$ScriptIdentifierUser = "AllSysConfig-User"
+$ScriptInternalBuildUser = "Build-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+$ScriptDir = $PSScriptRoot
 
 $TargetLogDirUser = Join-Path -Path $ScriptDir -ChildPath "Logs"
-$LogDirToUseUser = $ScriptDir # Fallback
+$LogDirToUseUser = $ScriptDir
+if (Test-Path $TargetLogDirUser -PathType Container) { $LogDirToUseUser = $TargetLogDirUser } 
+else { try { New-Item -Path $TargetLogDirUser -ItemType Directory -Force -ErrorAction Stop | Out-Null; $LogDirToUseUser = $TargetLogDirUser } catch {} }
 
-if (Test-Path $TargetLogDirUser -PathType Container) {
-    $LogDirToUseUser = $TargetLogDirUser
-} else {
-    try { New-Item -Path $TargetLogDirUser -ItemType Directory -Force -ErrorAction Stop | Out-Null; $LogDirToUseUser = $TargetLogDirUser } catch {}
-}
-
-$LogFileUserBaseName = "config_utilisateur_log"
-$LogFileUser = Join-Path -Path $LogDirToUseUser -ChildPath "$($LogFileUserBaseName).txt"
-
+$LogFileUser = Join-Path -Path $LogDirToUseUser -ChildPath "config_utilisateur_log.txt"
 $ConfigFile = Join-Path -Path $ScriptDir -ChildPath "config.ini"
-
 $Global:UserActionsEffectuees = [System.Collections.Generic.List[string]]::new()
 $Global:UserErreursRencontrees = [System.Collections.Generic.List[string]]::new()
-# Will be populated by Get-IniContent
 $Global:Config = $null
+#endregion
 
-# --- Utility Functions ---
-# Get-IniContent must be defined early
+
+#region UTILITY FUNCTIONS
 function Get-IniContent {
     [CmdletBinding()] param ([Parameter(Mandatory=$true)][string]$FilePath)
     $ini = @{}; $currentSection = ""
     if (-not (Test-Path -Path $FilePath -PathType Leaf)) { return $null }
     try {
-        Get-Content $FilePath -ErrorAction Stop | ForEach-Object {
+        Get-Content $FilePath -Encoding UTF8 -ErrorAction Stop | ForEach-Object {
             $line = $_.Trim()
             if ([string]::IsNullOrWhiteSpace($line) -or $line.StartsWith("#") -or $line.StartsWith(";")) { return }
             if ($line -match "^\[(.+)\]$") { $currentSection = $matches[1].Trim(); $ini[$currentSection] = @{} }
             elseif ($line -match "^([^=]+)=(.*)") {
                 if ($currentSection) {
-                    $key = $matches[1].Trim(); $value = $matches[2].Trim() # No inline comment handling here
+                    $key = $matches[1].Trim(); $value = $matches[2].Trim()
                     $ini[$currentSection][$key] = $value
                 }
             }
@@ -69,61 +72,55 @@ function Get-IniContent {
 function Write-UserLog {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory=$true, ValueFromPipeline=$true)]
-        [string]$Message,
-        [ValidateSet("INFO", "WARN", "ERROR", "DEBUG")]
-        [string]$Level = "INFO",
+        [string]$DefaultMessage, 
+        [string]$MessageId, 
+        [object[]]$MessageArgs, 
+        [ValidateSet("INFO", "WARN", "ERROR", "DEBUG")][string]$Level = "INFO", 
         [switch]$NoConsole
     )
     process {
+        $formattedMessage = if ($lang -and $lang.ContainsKey($MessageId)) { try { $lang[$MessageId] -f $MessageArgs } catch { $DefaultMessage } } else { $DefaultMessage }
         $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-        $logEntry = "$timestamp [$Level] [UserScript:$($env:USERNAME)] - $Message"
+        $logEntry = "$timestamp [$Level] [UserScript:$($env:USERNAME)] - $formattedMessage"
 
         $LogParentDirUser = Split-Path $LogFileUser -Parent
-        if (-not (Test-Path -Path $LogParentDirUser -PathType Container)) {
-            try { New-Item -Path $LogParentDirUser -ItemType Directory -Force -ErrorAction Stop | Out-Null } catch {}
-        }
+        if (-not (Test-Path -Path $LogParentDirUser -PathType Container)) { try { New-Item -Path $LogParentDirUser -ItemType Directory -Force -ErrorAction Stop | Out-Null } catch {} }
 
-        try { Add-Content -Path $LogFileUser -Value $logEntry -ErrorAction Stop }
+        try { 
+            Add-Content -Path $LogFileUser -Value $logEntry -Encoding UTF8 -ErrorAction Stop 
+        }
         catch {
-            $fallbackLogDir = "C:\ProgramData\StartupScriptLogs"
-            if (-not (Test-Path -Path $fallbackLogDir -PathType Container)) {
-                try { New-Item -Path $fallbackLogDir -ItemType Directory -Force -ErrorAction Stop | Out-Null } catch {}
-            }
+            $fallbackLogDir = "C:\ProgramData\StartupScriptLogs"; if (-not (Test-Path -Path $fallbackLogDir)) { try { New-Item -Path $fallbackLogDir -ItemType Directory -Force -EA Stop | Out-Null } catch {} }
             $fallbackLogFile = Join-Path -Path $fallbackLogDir -ChildPath "config_utilisateur_FATAL_LOG_ERROR.txt"
-            $fallbackMessage = "$timestamp [FATAL_USER_LOG_ERROR] - Unable to write to '$LogFileUser': $($_.Exception.Message). Original message: $logEntry"
-            Write-Host $fallbackMessage -ForegroundColor Red
-            try { Add-Content -Path $fallbackLogFile -Value $fallbackMessage -ErrorAction Stop } catch {}
+            $fallbackMessage = "$timestamp [FATAL_USER_LOG_ERROR] - Could not write to '$LogFileUser': $($_.Exception.Message). Original: $logEntry"
+            Write-Host $fallbackMessage -ForegroundColor Red; try { Add-Content -Path $fallbackLogFile -Value $fallbackMessage -Encoding UTF8 -ErrorAction Stop } catch {}
         }
-        if (-not $NoConsole -and ($Host.Name -eq "ConsoleHost" -or $PSEdition -eq "Core")) {
-            Write-Host $logEntry
-        }
+        if (-not $NoConsole -and ($Host.Name -eq "ConsoleHost" -or $PSEdition -eq "Core")) { Write-Host $logEntry }
     }
 }
 
 function Add-UserAction {
-    param([string]$ActionMessage)
-    $Global:UserActionsEffectuees.Add($ActionMessage)
-    Write-UserLog -Message "ACTION: $ActionMessage" -Level "INFO" -NoConsole
+    param([string]$DefaultActionMessage, [string]$ActionId, [object[]]$ActionArgs)
+    $formattedMessage = if ($lang -and $lang.ContainsKey($ActionId)) { try { $lang[$ActionId] -f $ActionArgs } catch { $DefaultActionMessage } } else { $DefaultActionMessage }
+    $Global:UserActionsEffectuees.Add($formattedMessage)
+    Write-UserLog -DefaultMessage "ACTION: $formattedMessage" -Level "INFO" -NoConsole
 }
 
 function Add-UserError {
     [CmdletBinding()]
-    param (
-        [Parameter(Mandatory=$true, Position=0)]
-        [string]$Message
-    )
-    $detailedErrorMessage = $Message
+    param ([string]$DefaultErrorMessage, [string]$ErrorId, [object[]]$ErrorArgs)
+    $formattedMessage = if ($lang -and $lang.ContainsKey($ErrorId)) { try { $lang[$ErrorId] -f $ErrorArgs } catch { $DefaultErrorMessage } } else { $DefaultErrorMessage }
+    $detailedErrorMessage = $formattedMessage
     if ([string]::IsNullOrWhiteSpace($detailedErrorMessage)) {
-        if ($global:Error.Count -gt 0) {
+        if ($global:Error.Count -gt 0) { 
             $lastError = $global:Error[0]
-            $detailedErrorMessage = "Unspecified user error. PowerShell: $($lastError.Exception.Message) - StackTrace: $($lastError.ScriptStackTrace) - InvocationInfo: $($lastError.InvocationInfo.Line)"
-        } else {
+            $detailedErrorMessage = "Unspecified user error. PowerShell: $($lastError.Exception.Message) - StackTrace: $($lastError.ScriptStackTrace)"
+        } else { 
             $detailedErrorMessage = "Unspecified user error, and no additional PowerShell error information available."
         }
     }
     $Global:UserErreursRencontrees.Add($detailedErrorMessage)
-    Write-UserLog -Message "ERROR CAPTURED: $detailedErrorMessage" -Level "ERROR"
+    Write-UserLog -DefaultMessage "CAPTURED ERROR: $detailedErrorMessage" -MessageId "Log_CapturedError" -MessageArgs $detailedErrorMessage -Level "ERROR"
 }
 
 function Get-ConfigValue {
@@ -144,37 +141,39 @@ function Get-ConfigValue {
         if ($null -ne $DefaultValue) { return $DefaultValue }
         if ($Type -eq ([bool])) { return $false }; if ($Type -eq ([int])) { return 0 }; return $null
     }
-    if ([string]::IsNullOrWhiteSpace($value) -and $Type -eq ([bool])) {
-        if ($null -ne $DefaultValue) { return $DefaultValue }; return $false
-    }
+    if ([string]::IsNullOrWhiteSpace($value) -and $Type -eq ([bool])) { if ($null -ne $DefaultValue) { return $DefaultValue }; return $false }
     try { return [System.Convert]::ChangeType($value, $Type) }
     catch {
-        Add-UserError "Invalid config value for [$($Section)]$($Key): '$value'. Expected type '$($Type.Name)'. Using default/empty value."
+        Add-UserError -DefaultErrorMessage "Invalid config value for [$($Section)]$($Key): '$value'. Expected type '$($Type.Name)'. Default/empty value used." -ErrorId "Error_InvalidConfigValue" -ErrorArgs $Section, $Key, $value, $Type.Name
         if ($null -ne $DefaultValue) { return $DefaultValue }
         if ($Type -eq ([bool])) { return $false }; if ($Type -eq ([int])) { return 0 }; return $null
     }
 }
-# --- END Utility Functions ---
+#endregion
 
-# --- User Script Start ---
+
+# --- SCRIPT MAIN BODY ---
 try {
     $Global:Config = Get-IniContent -FilePath $ConfigFile
     if (-not $Global:Config) {
-         Write-UserLog -Message "Unable to read or parse '$ConfigFile'. Stopping user configurations." -Level ERROR
-         throw "Critical failure: Unable to load config.ini for the user script."
+         Write-UserLog -DefaultMessage "Could not read or parse '{0}'. Halting user configurations." -MessageId "Log_User_CannotReadConfig" -MessageArgs $ConfigFile -Level ERROR
+         throw "Critical failure: Could not load config.ini for user script."
     }
 
-    Write-UserLog -Message "Starting $ScriptIdentifierUser ($ScriptInternalBuildUser) for '$($env:USERNAME)'..."
-    Write-UserLog -Message "Executing configured user actions for '$($env:USERNAME)'..."
+    if ($i18nLoadingError) { Add-UserError -DefaultErrorMessage "A critical error occurred while loading language files: $i18nLoadingError" -ErrorId "Error_LanguageFileLoad" -ErrorArgs $i18nLoadingError }
 
-    # --- Manage specified process ---
+    Write-UserLog -DefaultMessage "Starting {0} ({1}) for user '{2}'..." -MessageId "Log_User_StartingScript" -MessageArgs $ScriptIdentifierUser, $ScriptInternalBuildUser, $env:USERNAME
+    Write-UserLog -DefaultMessage "Executing configured actions for user '{0}'..." -MessageId "Log_User_ExecutingActions" -MessageArgs $env:USERNAME
+
+    # --- Gérer le processus spécifié ---
     $processNameToManageRaw = Get-ConfigValue -Section "Process" -Key "ProcessName"
     $processNameToManageExpanded = ""
     if (-not [string]::IsNullOrWhiteSpace($processNameToManageRaw)) {
-        try {
-            $processNameToManageExpanded = [System.Environment]::ExpandEnvironmentVariables($processNameToManageRaw.Trim('"'))
-        } catch {
-            Add-UserError "Error expanding variables for ProcessName '$processNameToManageRaw': $($_.Exception.Message)"
+        try { 
+            $processNameToManageExpanded = [System.Environment]::ExpandEnvironmentVariables($processNameToManageRaw.Trim('"')) 
+        } 
+        catch { 
+            Add-UserError -DefaultErrorMessage "Error expanding variables for ProcessName '{0}': {1}" -ErrorId "Error_User_VarExpansionFailed" -ErrorArgs $processNameToManageRaw, $_.Exception.Message
             $processNameToManageExpanded = $processNameToManageRaw.Trim('"')
         }
     }
@@ -182,58 +181,39 @@ try {
     $launchMethod = (Get-ConfigValue -Section "Process" -Key "LaunchMethod" -DefaultValue "direct").ToLower()
 
     if (-not [string]::IsNullOrWhiteSpace($processNameToManageExpanded)) {
-        Write-UserLog -Message "Managing user process (raw:'$processNameToManageRaw', resolved:'$processNameToManageExpanded'). Method: $launchMethod"
-        if (-not [string]::IsNullOrWhiteSpace($processArgumentsToPass)) { Write-UserLog -Message "With arguments: '$processArgumentsToPass'" -Level DEBUG }
+        Write-UserLog -DefaultMessage "Managing user process (raw:'{0}', resolved:'{1}'). Method: {2}" -MessageId "Log_User_ManagingProcess" -MessageArgs $processNameToManageRaw, $processNameToManageExpanded, $launchMethod
+        if (-not [string]::IsNullOrWhiteSpace($processArgumentsToPass)) { Write-UserLog -DefaultMessage "With arguments: '{0}'" -MessageId "Log_User_ProcessWithArgs" -MessageArgs $processArgumentsToPass -Level DEBUG }
 
         $processNameIsFilePath = Test-Path -LiteralPath $processNameToManageExpanded -PathType Leaf -ErrorAction SilentlyContinue
 
         if (($launchMethod -eq "direct" -and $processNameIsFilePath) -or ($launchMethod -ne "direct")) {
-            $exeForStartProcess = ""
-            $argsForStartProcess = ""
-            $processBaseNameToMonitor = ""
+            $exeForStartProcess = ""; $argsForStartProcess = ""; $processBaseNameToMonitor = ""
 
             if ($launchMethod -eq "direct") {
                 $exeForStartProcess = $processNameToManageExpanded
                 $argsForStartProcess = $processArgumentsToPass
-                try { $processBaseNameToMonitor = [System.IO.Path]::GetFileNameWithoutExtension($processNameToManageExpanded) }
-                catch { Write-UserLog "Error extracting base name from '$processNameToManageExpanded' (direct)." -L WARN; $processBaseNameToMonitor = "UnknownProcess" }
+                try { $processBaseNameToMonitor = [System.IO.Path]::GetFileNameWithoutExtension($processNameToManageExpanded) } catch { $processBaseNameToMonitor = "UnknownProcess" }
             } elseif ($launchMethod -eq "powershell") {
                 $exeForStartProcess = "powershell.exe"
                 $commandToRun = "& `"$processNameToManageExpanded`""
                 if (-not [string]::IsNullOrWhiteSpace($processArgumentsToPass)) { $commandToRun += " $processArgumentsToPass" }
                 $argsForStartProcess = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", $commandToRun)
-                try { $processBaseNameToMonitor = [System.IO.Path]::GetFileNameWithoutExtension($processNameToManageExpanded) }
-                catch { $processBaseNameToMonitor = "powershell" }
+                try { $processBaseNameToMonitor = [System.IO.Path]::GetFileNameWithoutExtension($processNameToManageExpanded) } catch { $processBaseNameToMonitor = "powershell" }
             } elseif ($launchMethod -eq "cmd") {
                 $exeForStartProcess = "cmd.exe"
-                $commandToRun = "/c `"$processNameToManageExpanded`""
-                if (-not [string]::IsNullOrWhiteSpace($processArgumentsToPass)) { $commandToRun += " $processArgumentsToPass" }
+                $commandToRun = "/c `"`"$processNameToManageExpanded`" $processArgumentsToPass`""
                 $argsForStartProcess = $commandToRun
-                try { $processBaseNameToMonitor = [System.IO.Path]::GetFileNameWithoutExtension($processNameToManageExpanded) }
-                catch { $processBaseNameToMonitor = "cmd" }
+                try { $processBaseNameToMonitor = [System.IO.Path]::GetFileNameWithoutExtension($processNameToManageExpanded) } catch { $processBaseNameToMonitor = "cmd" }
             } else {
-                Add-UserError "LaunchMethod '$launchMethod' not recognized. Options: direct, powershell, cmd."
-                if ([string]::IsNullOrWhiteSpace($exeForStartProcess)) { throw "LaunchMethod not handled or ProcessName invalid." }
-            }
-
-            if ($launchMethod -ne "direct") {
-                $interpreterPath = (Get-Command $exeForStartProcess -ErrorAction SilentlyContinue).Source
-                if (-not (Test-Path -LiteralPath $interpreterPath -PathType Leaf)) {
-                    Add-UserError "Interpreter '$exeForStartProcess' not found for LaunchMethod '$launchMethod'."
-                    throw "Interpreter for LaunchMethod not found."
-                }
+                Add-UserError -DefaultErrorMessage "LaunchMethod '{0}' not recognized. Options: direct, powershell, cmd." -ErrorId "Error_User_LaunchMethodUnknown" -ErrorArgs $launchMethod
+                throw "Unhandled LaunchMethod or invalid ProcessName."
             }
 
             $workingDir = ""
             if ($processNameIsFilePath) {
                 try { $workingDir = Split-Path -Path $processNameToManageExpanded -Parent } catch {}
-            } elseif ($launchMethod -ne "direct") {
+            } else {
                  $workingDir = $ScriptDir
-                 Write-UserLog "ProcessName '$processNameToManageExpanded' is not a file path; WorkingDir='$ScriptDir' for '$launchMethod'." -L WARN
-            }
-            if (-not [string]::IsNullOrWhiteSpace($workingDir) -and (-not (Test-Path -LiteralPath $workingDir -PathType Container))) {
-                Write-UserLog "Working directory '$workingDir' not found. WorkingDirectory not set." -L WARN
-                $workingDir = ""
             }
 
             try {
@@ -243,67 +223,57 @@ try {
                     Get-Process -Name $processBaseNameToMonitor -ErrorAction SilentlyContinue | ForEach-Object {
                         try {
                             $ownerInfo = Get-CimInstance Win32_Process -Filter "ProcessId = $($_.Id)" | Select-Object -ExpandProperty @{Name="Owner"; Expression={ $_.GetProcessOwner() }} -ErrorAction SilentlyContinue
-                            if ($ownerInfo -and $ownerInfo.SID -eq $currentUserSID) { $runningProcess = $_; break } # break exits ForEach-Object here
+                            if ($ownerInfo -and $ownerInfo.SID -eq $currentUserSID) { $runningProcess = $_; break }
                         } catch {}
                     }
-                } else { Write-UserLog "Base name of the process to monitor is empty." -L WARN }
+                }
 
                 $startProcessSplat = @{ FilePath = $exeForStartProcess; ErrorAction = 'Stop' }
-                if (($argsForStartProcess -is [array] -and $argsForStartProcess.Count -gt 0) -or
-                    ($argsForStartProcess -is [string] -and -not [string]::IsNullOrWhiteSpace($argsForStartProcess))) {
-                    $startProcessSplat.ArgumentList = $argsForStartProcess
-                }
-                if (-not [string]::IsNullOrWhiteSpace($workingDir)) { $startProcessSplat.WorkingDirectory = $workingDir }
+                if (($argsForStartProcess -is [array] -and $argsForStartProcess.Count -gt 0) -or ($argsForStartProcess -is [string] -and -not [string]::IsNullOrWhiteSpace($argsForStartProcess))) { $startProcessSplat.ArgumentList = $argsForStartProcess }
+                if (-not [string]::IsNullOrWhiteSpace($workingDir) -and (Test-Path -LiteralPath $workingDir -PathType Container)) { $startProcessSplat.WorkingDirectory = $workingDir }
 
                 if ($runningProcess) {
-                    Write-UserLog "Process '$processBaseNameToMonitor' (PID: $($runningProcess.Id)) is running. Stopping..."
+                    Write-UserLog -DefaultMessage "Process '{0}' (PID: {1}) is running. Stopping..." -MessageId "Log_User_ProcessStopping" -MessageArgs $processBaseNameToMonitor, $runningProcess.Id
                     $runningProcess | Stop-Process -Force -ErrorAction Stop
-                    Add-UserAction "Process '$processBaseNameToMonitor' stopped."
-                    $logArgsForRestart = if ($argsForStartProcess -is [array]) { $argsForStartProcess -join ' ' } else { $argsForStartProcess }
-                    Write-UserLog "Restarting via $launchMethod : '$exeForStartProcess' with args: '$logArgsForRestart'"
-                    Start-Process @startProcessSplat
-                    Add-UserAction "Process '$processBaseNameToMonitor' restarted (via $launchMethod)."
-                } else {
-                    $logArgsForStart = if ($argsForStartProcess -is [array]) { $argsForStartProcess -join ' ' } else { $argsForStartProcess }
-                    Write-UserLog "Process '$processBaseNameToMonitor' not found. Starting via $launchMethod : '$exeForStartProcess' with args: '$logArgsForStart'"
-                    Start-Process @startProcessSplat
-                    Add-UserAction "Process '$processBaseNameToMonitor' started (via $launchMethod)."
+                    Add-UserAction -DefaultActionMessage "Process '{0}' stopped." -ActionId "Action_User_ProcessStopped" -ActionArgs $processBaseNameToMonitor
                 }
+
+                $logArgsForStart = if ($argsForStartProcess -is [array]) { $argsForStartProcess -join ' ' } else { $argsForStartProcess }
+                Write-UserLog -DefaultMessage "Starting via {0}: '{1}' with args: '{2}'" -MessageId "Log_User_ProcessStarting" -MessageArgs $launchMethod, $exeForStartProcess, $logArgsForStart
+                Start-Process @startProcessSplat
+                Add-UserAction -DefaultActionMessage "Process '{0}' started (via {1})." -ActionId "Action_User_ProcessStarted" -ActionArgs $processBaseNameToMonitor, $launchMethod
+
             } catch {
                 $logArgsCatch = if ($argsForStartProcess -is [array]) { $argsForStartProcess -join ' ' } else { $argsForStartProcess }
-                Add-UserError "Failed to manage process '$processBaseNameToMonitor' (Method: $launchMethod, Path: '$exeForStartProcess', Args: '$logArgsCatch'): $($_.Exception.Message). StackTrace: $($_.ScriptStackTrace)"
+                Add-UserError -DefaultErrorMessage "Failed to manage process '{0}' (Method: {1}, Path: '{2}', Args: '{3}'): {4}. StackTrace: {5}" -ErrorId "Error_User_ProcessManagementFailed" -ErrorArgs $processBaseNameToMonitor, $launchMethod, $exeForStartProcess, $logArgsCatch, $_.Exception.Message, $_.ScriptStackTrace
             }
         } else {
-            Add-UserError "Executable file for ProcessName '$processNameToManageExpanded' (direct mode) NOT FOUND."
+            Add-UserError -DefaultErrorMessage "Executable file for ProcessName '{0}' (direct mode) NOT FOUND." -ErrorId "Error_User_ExeNotFound" -ErrorArgs $processNameToManageExpanded
         }
     } else {
-        Write-UserLog -Message "No ProcessName specified in [Process] or raw path is empty."
+        Write-UserLog -DefaultMessage "No ProcessName specified in [Process] or raw path is empty." -MessageId "Log_User_NoProcessSpecified"
     }
 
 } catch {
-    # Using $null -ne $Global:Config like in config_systeme.ps1
     if ($null -ne $Global:Config) {
-        Add-UserError -Message "FATAL USER SCRIPT ERROR '$($env:USERNAME)': $($_.Exception.Message) `n$($_.ScriptStackTrace)"
+        Add-UserError -DefaultErrorMessage "FATAL USER SCRIPT ERROR '{0}': {1} `n{2}" -ErrorId "Error_User_FatalScriptError" -ErrorArgs $env:USERNAME, $_.Exception.Message, $_.ScriptStackTrace
     } else {
         $timestampError = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-        $errorMsg = "$timestampError [FATAL SCRIPT USER ERROR - CONFIG NOT INITIALIZED/LOADED] - Error: $($_.Exception.Message) `nStackTrace: $($_.ScriptStackTrace)"
-        try { Add-Content -Path (Join-Path $LogDirToUseUser "config_utilisateur_FATAL_ERROR.txt") -Value $errorMsg -ErrorAction SilentlyContinue } catch {}
-        try { Add-Content -Path (Join-Path $ScriptDir "config_utilisateur_FATAL_ERROR_fallback.txt") -Value $errorMsg -ErrorAction SilentlyContinue } catch {}
+        $errorMsg = "$timestampError [FATAL SCRIPT USER ERROR - CONFIG NOT LOADED] - Error: $($_.Exception.Message) `nStackTrace: $($_.ScriptStackTrace)"
+        try { Add-Content -Path (Join-Path $LogDirToUseUser "config_utilisateur_FATAL_ERROR.txt") -Value $errorMsg -Encoding UTF8 -ErrorAction SilentlyContinue } catch {}
+        try { Add-Content -Path (Join-Path $ScriptDir "config_utilisateur_FATAL_ERROR_fallback.txt") -Value $errorMsg -Encoding UTF8 -ErrorAction SilentlyContinue } catch {}
         Write-Host $errorMsg -ForegroundColor Red
     }
 } finally {
-    # --- Gotify Notification ---
-    if ($Global:Config -and (Get-ConfigValue -Section "Gotify" -Key "EnableGotify" -Type ([bool]) -DefaultValue $false)) {
+    if ($Global:Config -and (Get-ConfigValue -Section "Gotify" -Key "EnableGotify" -Type ([bool]))) {
         $gotifyUrl = Get-ConfigValue -Section "Gotify" -Key "Url"
         $gotifyToken = Get-ConfigValue -Section "Gotify" -Key "Token"
         $gotifyPriority = Get-ConfigValue -Section "Gotify" -Key "Priority" -Type ([int]) -DefaultValue 5
 
         if ((-not [string]::IsNullOrWhiteSpace($gotifyUrl)) -and (-not [string]::IsNullOrWhiteSpace($gotifyToken))) {
-            Write-UserLog -Message "Preparing Gotify notification for the user script..."
-
             $titleSuccessTemplateUser = Get-ConfigValue -Section "Gotify" -Key "GotifyTitleSuccessUser" -DefaultValue ("%COMPUTERNAME% %USERNAME% " + $ScriptIdentifierUser + " OK")
             $titleErrorTemplateUser = Get-ConfigValue -Section "Gotify" -Key "GotifyTitleErrorUser" -DefaultValue ("ERROR " + $ScriptIdentifierUser + " %USERNAME% on %COMPUTERNAME%")
-
+            
             $finalMessageTitleUser = ""
             if ($Global:UserErreursRencontrees.Count -gt 0) {
                 $finalMessageTitleUser = $titleErrorTemplateUser -replace "%COMPUTERNAME%", $env:COMPUTERNAME -replace "%USERNAME%", $env:USERNAME
@@ -311,8 +281,6 @@ try {
                 $finalMessageTitleUser = $titleSuccessTemplateUser -replace "%COMPUTERNAME%", $env:COMPUTERNAME -replace "%USERNAME%", $env:USERNAME
             }
 
-            #$messageBodyUser = "Script '$ScriptIdentifierUser' (Build: $ScriptInternalBuildUser) for $($env:USERNAME) on $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss').`n`n"
-            #$messageBodyUser = "'$ScriptIdentifierUser' on $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss').`n`n"
             $messageBodyUser = "On $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss').`n"
             if ($Global:UserActionsEffectuees.Count -gt 0) { $messageBodyUser += "USER Actions:`n" + ($Global:UserActionsEffectuees -join "`n") }
             else { $messageBodyUser += "No USER actions." }
@@ -320,20 +288,15 @@ try {
 
             $payloadUser = @{ message = $messageBodyUser; title = $finalMessageTitleUser; priority = $gotifyPriority } | ConvertTo-Json -Depth 3 -Compress
             $fullUrlUser = "$($gotifyUrl.TrimEnd('/'))/message?token=$gotifyToken"
-            Write-UserLog -Message "Sending Gotify (user) to $fullUrlUser..."
-            try { Invoke-RestMethod -Uri $fullUrlUser -Method Post -Body $payloadUser -ContentType "application/json" -TimeoutSec 30 -ErrorAction Stop
-                Write-UserLog -Message "Gotify (user) sent."
-            } catch { Add-UserError "Gotify failure (IRM): $($_.Exception.Message)"; $curlUserPath=Get-Command curl -ErrorAction SilentlyContinue
-                if ($curlUserPath) { Write-UserLog "Falling back to curl for Gotify (user)..."; $tempJsonFileUser = Join-Path $env:TEMP "gotify_user_$($PID)_$((Get-Random).ToString()).json"
-                    try { $payloadUser|Out-File $tempJsonFileUser -Encoding UTF8 -ErrorAction Stop; $curlArgsUser="-s -k -X POST `"$fullUrlUser`" -H `"Content-Type: application/json`" -d `@`"$tempJsonFileUser`""
-                        Invoke-Expression "curl $($curlArgsUser -join ' ')"|Out-Null; Write-UserLog "Gotify (user - curl) sent."
-                    } catch { Add-UserError "Gotify failure (curl): $($_.Exception.Message)" }
-                    finally { if (Test-Path $tempJsonFileUser) { Remove-Item $tempJsonFileUser -ErrorAction SilentlyContinue } }
-                } else { Add-UserError "curl.exe not found for Gotify fallback (user)." }
+            
+            try { 
+                Invoke-RestMethod -Uri $fullUrlUser -Method Post -Body $payloadUser -ContentType "application/json" -TimeoutSec 30 -ErrorAction Stop
+            } catch { 
+                Add-UserError "Gotify (IRM) failed: $($_.Exception.Message)"
             }
-        } else { Add-UserError "Incomplete Gotify params for user script." }
+        } else { Add-UserError -DefaultErrorMessage "Gotify params incomplete for user script." }
     }
 
-    Write-UserLog -Message "$ScriptIdentifierUser ($ScriptInternalBuildUser) for '$($env:USERNAME)' finished."
-    if ($Global:UserErreursRencontrees.Count -gt 0) { Write-UserLog -Message "Some errors occurred." -Level WARN }
+    Write-UserLog -DefaultMessage "{0} ({1}) for '{2}' finished." -MessageId "Log_User_ScriptFinished" -MessageArgs $ScriptIdentifierUser, $ScriptInternalBuildUser, $env:USERNAME
+    if ($Global:UserErreursRencontrees.Count -gt 0) { Write-UserLog -DefaultMessage "Errors occurred during execution." -MessageId "Log_ErrorsOccurred" -Level WARN }
 }

@@ -1,42 +1,46 @@
 @echo off
-CHCP 65001 > NUL
-REM This script launches the configuration wizard, then the installer with elevated privileges.
+REM Sets the code page to support international characters
+CHCP 1252 > NUL
+CLS
 
-cls
-echo #############################################################
-echo #    Installation Wizard - WindowsAutoConfig              #
-echo #############################################################
-echo.
-echo --- Step 1 of 2: Configuration ---
-echo.
-echo Launching the graphical wizard. Please fill in the
-echo required settings then click "Save".
-echo If you wish to skip this step and use the existing config.ini,
-echo you can close the wizard when it appears.
-echo.
-pause
+REM --- Language argument handling ---
+SET "LANG_ARG="
+IF /I "%~1" == "-l" SET "LANG_ARG=%~2"
+REM --- End of block ---
 
-REM Launching firstconfig.ps1
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0management\firstconfig.ps1"
+ECHO #############################################################
+ECHO #           Installation Wizard - WindowsAutoConfig         #
+ECHO #############################################################
+ECHO.
+ECHO --- Step 1 of 2: Configuration ---
+ECHO.
+ECHO Launching the graphical wizard. Please fill in the required
+ECHO parameters and then click "Save".
+ECHO If you wish to skip this step and use the existing config.ini,
+ECHO you can close the wizard when it appears.
+ECHO.
+PAUSE
 
+REM Launch firstconfig.ps1, passing the language argument if defined
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0management\firstconfig.ps1" "%LANG_ARG%"
 
-echo.
-echo Configuration finished via wizard (or skipped).
-echo.
-echo --- Step 2 of 2: System Task Installation ---
-echo.
-echo Starting the system task installation...
-echo.
-echo WARNING: A Windows security prompt (UAC) will
-echo appear to request administrator rights.
-echo Please click "Yes" to continue.
-echo.
-pause
+ECHO.
+ECHO Configuration finished via wizard (or skipped).
+ECHO.
+ECHO --- Step 2 of 2: System Task Installation ---
+ECHO.
+ECHO Starting the installation of system tasks...
+ECHO.
+ECHO WARNING: A Windows security prompt (UAC) will appear
+ECHO to request administrator rights.
+ECHO Please click "Yes" to continue.
+ECHO.
+PAUSE
 
-REM Runs the PowerShell installation script, requesting admin rights.
+REM Launch the PowerShell installation script, requesting admin rights.
 powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& {Start-Process PowerShell -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File \"%~dp0management\install.ps1\"' -Verb RunAs}"
 
-echo.
-echo The task installation process is complete.
-echo Check the PowerShell installation script window for details and potential errors.
-pause
+ECHO.
+ECHO The task installation process is complete.
+ECHO Check the PowerShell installation window for details and potential errors.
+PAUSE
