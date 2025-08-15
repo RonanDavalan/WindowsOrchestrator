@@ -1,4 +1,4 @@
-﻿@{
+@{
     #=========================================
     # --- uninstall.ps1 Strings ---
     #=========================================
@@ -36,7 +36,7 @@
     Install_ElevationWarning = "権限の昇格に失敗しました。このスクリプトを管理者として実行してください。"
     Install_PressEnterToExit = "Enterキーを押して終了します。"
     Install_ConfigIniNotFoundWarning = "想定される親ディレクトリ（{0}）にconfig.iniが見つかりません。"
-    Install_ProjectRootPrompt = "AllSysConfigスクリプトのルートディレクトリへのフルパスを入力してください（例：C:\AllSysConfig）"
+    Install_ProjectRootPrompt = "WindowsAutoConfigスクリプトのルートディレクトリへのフルパスを入力してください（例：C:\WindowsAutoConfig）"
     Install_InvalidProjectRootError = "無効なプロジェクトルートディレクトリ、またはconfig.iniが見つかりません：'{0}'"
     Install_PathDeterminationError = "初期パスの決定中にエラーが発生しました：{0}"
     Install_MissingSystemFile = "必要なシステムファイルが見つかりません：{0}"
@@ -46,10 +46,10 @@
     Install_UserTaskTarget = "ユーザータスクは次のユーザーのためにインストールされます：{0}"
     Install_StartConfiguringTasks = "スケジュールされたタスクの構成を開始します..."
     Install_CreatingSystemTask = "システムタスク '{0}' を作成/更新しています..."
-    Install_SystemTaskDescription = "AllSysConfig：起動時にシステム構成スクリプトを実行します。"
+    Install_SystemTaskDescription = "WindowsAutoConfig：起動時にシステム構成スクリプトを実行します。"
     Install_SystemTaskConfiguredSuccess = "タスク '{0}' は正常に構成されました。"
     Install_CreatingUserTask = "'{1}' のためにユーザータスク '{0}' を作成/更新しています..."
-    Install_UserTaskDescription = "AllSysConfig：ログオン時にユーザー構成スクリプトを実行します。"
+    Install_UserTaskDescription = "WindowsAutoConfig：ログオン時にユーザー構成スクリプトを実行します。"
     Install_MainTasksConfigured = "主要なスケジュールタスクが構成されました。"
     Install_DailyRebootTasksNote = "毎日の再起動（'AllSys_SystemScheduledReboot'）と再起動前のアクション（'AllSys_SystemPreRebootAction'）のタスクは、'{0}' の実行中に作成/管理されます。"
     Install_AttemptingInitialLaunch = "構成スクリプトの初回起動を試みています..."
@@ -208,4 +208,15 @@
     Log_User_NoProcessSpecified = "[Process]にProcessNameが指定されていないか、生のパスが空です。"
     Error_User_FatalScriptError = "致命的なユーザースクリプトエラー '{0}'：{1} `n{2}"
     Error_User_VarExpansionFailed = "ProcessName '{0}' の変数の展開中にエラーが発生しました：{1}"
+    Log_User_ScriptFinished = "ユーザー '{2}' のための {0} ({1}) が終了しました。"
+    #=========================================
+    # --- Gotify Notification Strings ---
+    #=========================================
+    Gotify_MessageDate = "{0}に。"
+    Gotify_SystemActionsHeader = "システムアクション:"
+    Gotify_NoSystemActions = "システムアクションなし。"
+    Gotify_SystemErrorsHeader = "システムエラー:"
+    Gotify_UserActionsHeader = "ユーザーアクション:"
+    Gotify_NoUserActions = "ユーザーアクションなし。"
+    Gotify_UserErrorsHeader = "ユーザーエラー:"
 }

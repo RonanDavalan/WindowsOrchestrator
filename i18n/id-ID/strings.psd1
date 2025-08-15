@@ -1,4 +1,4 @@
-﻿@{
+@{
     #=========================================
     # --- uninstall.ps1 Strings ---
     #=========================================
@@ -36,7 +36,7 @@
     Install_ElevationWarning = "Gagal meningkatkan hak istimewa. Silakan jalankan skrip ini sebagai administrator."
     Install_PressEnterToExit = "Tekan Enter untuk keluar."
     Install_ConfigIniNotFoundWarning = "config.ini tidak ditemukan di direktori induk yang seharusnya ({0})."
-    Install_ProjectRootPrompt = "Silakan masukkan path lengkap ke direktori root skrip AllSysConfig (misalnya, C:\AllSysConfig)"
+    Install_ProjectRootPrompt = "Silakan masukkan path lengkap ke direktori root skrip WindowsAutoConfig (misalnya, C:\WindowsAutoConfig)"
     Install_InvalidProjectRootError = "Direktori root proyek tidak valid atau config.ini tidak ditemukan: '{0}'"
     Install_PathDeterminationError = "Error saat menentukan path awal: {0}"
     Install_MissingSystemFile = "File sistem yang dibutuhkan hilang: {0}"
@@ -46,10 +46,10 @@
     Install_UserTaskTarget = "Tugas pengguna akan diinstal untuk: {0}"
     Install_StartConfiguringTasks = "Memulai konfigurasi tugas terjadwal..."
     Install_CreatingSystemTask = "Membuat/Memperbarui tugas sistem '{0}'..."
-    Install_SystemTaskDescription = "AllSysConfig: Menjalankan skrip konfigurasi sistem saat startup."
+    Install_SystemTaskDescription = "WindowsAutoConfig: Menjalankan skrip konfigurasi sistem saat startup."
     Install_SystemTaskConfiguredSuccess = "Tugas '{0}' berhasil dikonfigurasi."
     Install_CreatingUserTask = "Membuat/Memperbarui tugas pengguna '{0}' untuk '{1}'..."
-    Install_UserTaskDescription = "AllSysConfig: Menjalankan skrip konfigurasi pengguna saat logon."
+    Install_UserTaskDescription = "WindowsAutoConfig: Menjalankan skrip konfigurasi pengguna saat logon."
     Install_MainTasksConfigured = "Tugas terjadwal utama telah dikonfigurasi."
     Install_DailyRebootTasksNote = "Tugas untuk reboot harian ('AllSys_SystemScheduledReboot') dan tindakan pra-reboot ('AllSys_SystemPreRebootAction') akan dibuat/dikelola oleh '{0}' saat eksekusi."
     Install_AttemptingInitialLaunch = "Mencoba peluncuran awal skrip konfigurasi..."
@@ -208,4 +208,15 @@ PERINGATAN: Pengaturan Anda saat ini akan hilang.
     Log_User_NoProcessSpecified = "Tidak ada ProcessName yang ditentukan di [Process] atau path mentah kosong."
     Error_User_FatalScriptError = "ERROR SKRIP PENGGUNA FATAL '{0}': {1} `n{2}"
     Error_User_VarExpansionFailed = "Error saat memperluas variabel untuk ProcessName '{0}': {1}"
+    Log_User_ScriptFinished = "{0} ({1}) untuk pengguna '{2}' selesai."
+    #=========================================
+    # --- Gotify Notification Strings ---
+    #=========================================
+    Gotify_MessageDate = "Pada {0}."
+    Gotify_SystemActionsHeader = "Tindakan Sistem:"
+    Gotify_NoSystemActions = "Tidak ada tindakan sistem."
+    Gotify_SystemErrorsHeader = "Kesalahan Sistem:"
+    Gotify_UserActionsHeader = "Tindakan Pengguna:"
+    Gotify_NoUserActions = "Tidak ada tindakan pengguna."
+    Gotify_UserErrorsHeader = "Kesalahan Pengguna:"
 }

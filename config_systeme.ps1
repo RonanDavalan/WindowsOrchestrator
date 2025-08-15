@@ -12,21 +12,40 @@
     Version: i18n - Corrigée
 #>
 
-# --- START I18N BLOCK ---
+# --- START I18N BLOCK (Robust) ---
 $lang = @{}
 try {
-    # Détermination robuste du répertoire du script
     if ($MyInvocation.MyCommand.CommandType -eq 'ExternalScript') { $PSScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition } 
     else { try { $PSScriptRoot = Split-Path -Parent $script:MyInvocation.MyCommand.Path -ErrorAction Stop } catch { $PSScriptRoot = Get-Location } }
-    
-    $i18nPath = Join-Path $PSScriptRoot "i18n"
-    
-    # Charge les chaînes de caractères pour la langue de l'OS actuelle.
-    # N'échoue pas si le fichier de langue est introuvable (le script utilisera les messages par défaut en anglais).
-    $lang = Import-LocalizedData -BindingVariable 'lang' -BaseDirectory $i18nPath -FileName "strings.psd1" -ErrorAction SilentlyContinue
 
+    # --- Fonction interne pour charger la langue depuis config.ini ---
+    # Note: On ne peut pas encore utiliser Get-ConfigValue car il dépend des traductions pour les erreurs.
+    $configLanguage = ""
+    $tempConfigPath = Join-Path $PSScriptRoot "config.ini"
+    if (Test-Path $tempConfigPath) {
+        $langLine = Get-Content $tempConfigPath -Encoding UTF8 | Select-String -Pattern "^\s*Language\s*=" -SimpleMatch | Select-Object -Last 1
+        if ($langLine) { $configLanguage = ($langLine -split '=')[1].Trim() }
+    }
+
+    $cultureName = if (-not [string]::IsNullOrWhiteSpace($configLanguage)) {
+        switch ($configLanguage.ToLower()) {
+            'ar' { 'ar-SA' }; 'bn' { 'bn-BD' }; 'de' { 'de-DE' }; 'en' { 'en-US' };
+            'es' { 'es-ES' }; 'fr' { 'fr-FR' }; 'hi' { 'hi-IN' }; 'id' { 'id-ID' };
+            'ja' { 'ja-JP' }; 'ru' { 'ru-RU' }; 'zh' { 'zh-CN' };
+            default { (Get-Culture).Name }
+        }
+    } else {
+        (Get-Culture).Name
+    }
+
+    $langFilePath = Join-Path $PSScriptRoot "i18n\$cultureName\strings.psd1"
+    if (-not (Test-Path $langFilePath)) { $langFilePath = Join-Path $PSScriptRoot "i18n\en-US\strings.psd1" } # Fallback sur anglais
+
+    if (Test-Path $langFilePath) {
+        $langContent = Get-Content -Path $langFilePath -Raw -Encoding UTF8
+        $lang = Invoke-Expression $langContent
+    }
 } catch {
-    # Cette erreur est capturée pour être journalisée plus tard, une fois les logs initialisés.
     $i18nLoadingError = $_.Exception.Message
 }
 # --- END I18N BLOCK ---
@@ -83,7 +102,7 @@ function Get-IniContent {
 
 
 #region GLOBAL CONFIG & EARLY LOGS SETUP
-$ScriptIdentifier = "AllSysConfig-System"
+$ScriptIdentifier = "WindowsAutoConfig-System"
 $ScriptInternalBuild = "Build-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
 $ScriptDir = $PSScriptRoot
 
@@ -126,7 +145,12 @@ function Write-Log {
         [switch]$NoConsole
     )
     process {
-        $formattedMessage = if ($lang -and $lang.ContainsKey($MessageId)) { try { $lang[$MessageId] -f $MessageArgs } catch { $DefaultMessage } } else { $DefaultMessage }
+        $messageTemplate = if ($lang -and $lang.ContainsKey($MessageId)) { $lang[$MessageId] } else { $DefaultMessage }
+        try {
+            $formattedMessage = $messageTemplate -f $MessageArgs
+        } catch {
+            $formattedMessage = $messageTemplate # En cas d'erreur de formatage, affiche le modèle brut pour le débogage
+        }
         $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"; $logEntry = "$timestamp [$Level] - $formattedMessage"
         
         $LogParentDir = Split-Path $LogFile -Parent
@@ -149,7 +173,8 @@ function Write-Log {
 
 function Add-Action {
     param([string]$DefaultActionMessage, [string]$ActionId, [object[]]$ActionArgs)
-    $formattedMessage = if ($lang -and $lang.ContainsKey($ActionId)) { try { $lang[$ActionId] -f $ActionArgs } catch { $DefaultActionMessage } } else { $DefaultActionMessage }
+    $messageTemplate = if ($lang -and $lang.ContainsKey($ActionId)) { $lang[$ActionId] } else { $DefaultActionMessage }
+    $formattedMessage = try { $messageTemplate -f $ActionArgs } catch { $messageTemplate }
     $Global:ActionsEffectuees.Add($formattedMessage)
     Write-Log -DefaultMessage "ACTION: $formattedMessage" -Level "INFO" -NoConsole
 }
@@ -158,7 +183,8 @@ function Add-Error {
     [CmdletBinding()]
     param ([string]$DefaultErrorMessage, [string]$ErrorId, [object[]]$ErrorArgs)
     
-    $formattedMessage = if ($lang -and $lang.ContainsKey($ErrorId)) { try { $lang[$ErrorId] -f $ErrorArgs } catch { $DefaultErrorMessage } } else { $DefaultErrorMessage }
+    $messageTemplate = if ($lang -and $lang.ContainsKey($ErrorId)) { $lang[$ErrorId] } else { $DefaultErrorMessage }
+    $formattedMessage = try { $messageTemplate -f $ErrorArgs } catch { $messageTemplate }
     
     $detailedErrorMessage = $formattedMessage
     if ([string]::IsNullOrWhiteSpace($detailedErrorMessage)) {
@@ -234,7 +260,7 @@ try {
     if(Get-ConfigValue "SystemConfig" "DisableAutoReboot" -Type ([bool])){ try{Set-ItemProperty $wuPolicyKey NoAutoRebootWithLoggedOnUsers 1 -Type DWord -Force -EA Stop; Add-Action -DefaultActionMessage "Auto-reboot (WU) disabled." -ActionId "Action_AutoRebootDisabled"}catch{Add-Error -DefaultErrorMessage "Failed to disable auto-reboot: $($_.Exception.Message)" -ErrorId "Error_DisableAutoRebootFailed" -ErrorArgs $_.Exception.Message}}
 
     $rebootTime = Get-ConfigValue "SystemConfig" "ScheduledRebootTime"
-    $rebootTaskName = "AllSys_SystemScheduledReboot"
+    $rebootTaskName = "WindowsAutoConfig-SystemScheduledReboot"
     if (-not [string]::IsNullOrWhiteSpace($rebootTime)) {
         $rebootDesc = "Daily reboot by AllSysConfig (Build: $ScriptInternalBuild)"
         $rebootAction = New-ScheduledTaskAction -Execute "shutdown.exe" -Argument "/r /f /t 60 /c `"$rebootDesc`""
@@ -248,7 +274,7 @@ try {
     $preRebootCmdFromFile = Get-ConfigValue -Section "SystemConfig" -Key "PreRebootActionCommand"
     $preRebootArgsFromFile = Get-ConfigValue -Section "SystemConfig" -Key "PreRebootActionArguments"
     $preRebootLaunchMethod = (Get-ConfigValue -Section "SystemConfig" -Key "PreRebootActionLaunchMethod" -DefaultValue "direct").ToLower()
-    $preRebootTaskName = "AllSys_SystemPreRebootAction"
+    $preRebootTaskName = "WindowsAutoConfig-SystemPreRebootAction"
 
     if ((-not [string]::IsNullOrWhiteSpace($preRebootActionTime)) -and (-not [string]::IsNullOrWhiteSpace($preRebootCmdFromFile))) {
         
@@ -314,12 +340,24 @@ try {
                 $titleSuccessTemplate = Get-ConfigValue -Section "Gotify" -Key "GotifyTitleSuccessSystem" -DefaultValue ("%COMPUTERNAME% " + $ScriptIdentifier + " OK")
                 $titleErrorTemplate = Get-ConfigValue -Section "Gotify" -Key "GotifyTitleErrorSystem" -DefaultValue ("ERROR " + $ScriptIdentifier + " on %COMPUTERNAME%")
                 $finalMessageTitle = if($Global:ErreursRencontrees.Count -gt 0){$titleErrorTemplate -replace "%COMPUTERNAME%",$env:COMPUTERNAME}else{$titleSuccessTemplate -replace "%COMPUTERNAME%",$env:COMPUTERNAME}
-                $messageBody = "On $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss').`n"
-                if($Global:ActionsEffectuees.Count -gt 0){$messageBody += "SYSTEM Actions:`n" + ($Global:ActionsEffectuees -join "`n")}else{$messageBody += "No SYSTEM actions."}
-                if($Global:ErreursRencontrees.Count -gt 0){$messageBody += "`n`nSYSTEM Errors:`n" + ($Global:ErreursRencontrees -join "`n")}
+                $dateStr = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+    $dateLineTemplate = if ($lang -and $lang.ContainsKey('Gotify_MessageDate')) { $lang.Gotify_MessageDate } else { "On {0}." }
+    $messageBody = ($dateLineTemplate -f $dateStr) + "`n"
+
+    if ($Global:ActionsEffectuees.Count -gt 0) {
+        $actionsHeader = if ($lang -and $lang.ContainsKey('Gotify_SystemActionsHeader')) { $lang.Gotify_SystemActionsHeader } else { "SYSTEM Actions:" }
+        $messageBody += "$actionsHeader`n" + ($Global:ActionsEffectuees -join "`n")
+    } else {
+        $noActionsMessage = if ($lang -and $lang.ContainsKey('Gotify_NoSystemActions')) { $lang.Gotify_NoSystemActions } else { "No SYSTEM actions." }
+        $messageBody += $noActionsMessage
+    }
+    if ($Global:ErreursRencontrees.Count -gt 0) {
+        $errorsHeader = if ($lang -and $lang.ContainsKey('Gotify_SystemErrorsHeader')) { $lang.Gotify_SystemErrorsHeader } else { "SYSTEM Errors:" }
+        $messageBody += "`n`n$errorsHeader`n" + ($Global:ErreursRencontrees -join "`n")
+    }
                 $payload = @{message=$messageBody; title=$finalMessageTitle; priority=$gotifyPriority} | ConvertTo-Json -Depth 3 -Compress
                 $fullUrl = "$($gotifyUrl.TrimEnd('/'))/message?token=$gotifyToken"
-                try { Invoke-RestMethod -Uri $fullUrl -Method Post -Body $payload -ContentType "application/json" -TimeoutSec 30 -ErrorAction Stop; }
+                try { Invoke-RestMethod -Uri $fullUrl -Method Post -Body $payload -ContentType "application/json; charset=utf-8" -TimeoutSec 30 -ErrorAction Stop; }
                 catch {Add-Error -DefaultErrorMessage "Gotify (IRM) failed: $($_.Exception.Message)" }
             } else { Add-Error -DefaultErrorMessage "Network unavailable for Gotify (system)." }
         } else {Add-Error -DefaultErrorMessage "Gotify params incomplete." }

@@ -1,4 +1,4 @@
-﻿@{
+@{
     #=========================================
     # --- uninstall.ps1 Strings ---
     #=========================================
@@ -36,7 +36,7 @@
     Install_ElevationWarning = "Privilege elevation failed. Please run this script as an administrator."
     Install_PressEnterToExit = "Press Enter to exit."
     Install_ConfigIniNotFoundWarning = "config.ini not found in the presumed parent directory ({0})."
-    Install_ProjectRootPrompt = "Please enter the full path to the root directory of the AllSysConfig scripts (e.g., C:\AllSysConfig)"
+    Install_ProjectRootPrompt = "Please enter the full path to the root directory of the WindowsAutoConfig scripts (e.g., C:\WindowsAutoConfig)"
     Install_InvalidProjectRootError = "Invalid project root directory or config.ini not found: '{0}'"
     Install_PathDeterminationError = "Error determining initial paths: {0}"
     Install_MissingSystemFile = "Required system file missing: {0}"
@@ -46,10 +46,10 @@
     Install_UserTaskTarget = "The user task will be installed for: {0}"
     Install_StartConfiguringTasks = "Starting scheduled task configuration..."
     Install_CreatingSystemTask = "Creating/Updating system task '{0}'..."
-    Install_SystemTaskDescription = "AllSysConfig: Executes the system configuration script at startup."
+    Install_SystemTaskDescription = "WindowsAutoConfig: Executes the system configuration script at startup."
     Install_SystemTaskConfiguredSuccess = "Task '{0}' configured successfully."
     Install_CreatingUserTask = "Creating/Updating user task '{0}' for '{1}'..."
-    Install_UserTaskDescription = "AllSysConfig: Executes the user configuration script at logon."
+    Install_UserTaskDescription = "WindowsAutoConfig: Executes the user configuration script at logon."
     Install_MainTasksConfigured = "Main scheduled tasks configured."
     Install_DailyRebootTasksNote = "Tasks for daily reboot ('AllSys_SystemScheduledReboot') and pre-reboot action ('AllSys_SystemPreRebootAction') will be created/managed by '{0}' during its execution."
     Install_AttemptingInitialLaunch = "Attempting initial launch of configuration scripts..."
@@ -208,4 +208,14 @@ WARNING: Your current settings will be lost.
     Log_User_NoProcessSpecified = "No ProcessName specified in [Process] or raw path is empty."
     Error_User_FatalScriptError = "FATAL USER SCRIPT ERROR '{0}': {1} `n{2}"
     Error_User_VarExpansionFailed = "Error expanding variables for ProcessName '{0}': {1}"
+    #=========================================
+    # --- Gotify Notification Strings ---
+    #=========================================
+    Gotify_MessageDate = "On {0}."
+    Gotify_SystemActionsHeader = "SYSTEM Actions:"
+    Gotify_NoSystemActions = "No SYSTEM actions."
+    Gotify_SystemErrorsHeader = "SYSTEM Errors:"
+    Gotify_UserActionsHeader = "USER Actions:"
+    Gotify_NoUserActions = "No USER actions."
+    Gotify_UserErrorsHeader = "USER Errors:"
 }

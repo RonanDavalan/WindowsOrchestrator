@@ -1,4 +1,4 @@
-﻿@{
+@{
     #=========================================
     # --- uninstall.ps1 Strings ---
     #=========================================
@@ -36,7 +36,7 @@
     Install_ElevationWarning = "विशेषाधिकार बढ़ाने में विफल। कृपया इस स्क्रिप्ट को व्यवस्थापक के रूप में चलाएँ।"
     Install_PressEnterToExit = "बाहर निकलने के लिए एंटर दबाएँ।"
     Install_ConfigIniNotFoundWarning = "संभावित पैरेंट डायरेक्टरी ({0}) में config.ini नहीं मिला।"
-    Install_ProjectRootPrompt = "कृपया AllSysConfig स्क्रिप्ट की रूट डायरेक्टरी का पूरा पथ दर्ज करें (जैसे, C:\AllSysConfig)"
+    Install_ProjectRootPrompt = "कृपया WindowsAutoConfig स्क्रिप्ट की रूट डायरेक्टरी का पूरा पथ दर्ज करें (जैसे, C:\WindowsAutoConfig)"
     Install_InvalidProjectRootError = "अमान्य प्रोजेक्ट रूट डायरेक्टरी या config.ini नहीं मिला: '{0}'"
     Install_PathDeterminationError = "प्रारंभिक पथ निर्धारित करने में त्रुटि: {0}"
     Install_MissingSystemFile = "आवश्यक सिस्टम फ़ाइल गायब है: {0}"
@@ -46,10 +46,10 @@
     Install_UserTaskTarget = "उपयोगकर्ता कार्य इसके लिए स्थापित किया जाएगा: {0}"
     Install_StartConfiguringTasks = "अनुसूचित कार्य कॉन्फ़िगरेशन शुरू हो रहा है..."
     Install_CreatingSystemTask = "सिस्टम कार्य '{0}' बनाया/अपडेट किया जा रहा है..."
-    Install_SystemTaskDescription = "AllSysConfig: स्टार्टअप पर सिस्टम कॉन्फ़िगरेशन स्क्रिप्ट निष्पादित करता है।"
+    Install_SystemTaskDescription = "WindowsAutoConfig: स्टार्टअप पर सिस्टम कॉन्फ़िगरेशन स्क्रिप्ट निष्पादित करता है।"
     Install_SystemTaskConfiguredSuccess = "कार्य '{0}' सफलतापूर्वक कॉन्फ़िगर किया गया।"
     Install_CreatingUserTask = "उपयोगकर्ता कार्य '{0}' को '{1}' के लिए बनाया/अपडेट किया जा रहा है..."
-    Install_UserTaskDescription = "AllSysConfig: लॉगऑन पर उपयोगकर्ता कॉन्फ़िगरेशन स्क्रिप्ट निष्पादित करता है।"
+    Install_UserTaskDescription = "WindowsAutoConfig: लॉगऑन पर उपयोगकर्ता कॉन्फ़िगरेशन स्क्रिप्ट निष्पादित करता है।"
     Install_MainTasksConfigured = "मुख्य अनुसूचित कार्य कॉन्फ़िगर किए गए।"
     Install_DailyRebootTasksNote = "दैनिक रिबूट ('AllSys_SystemScheduledReboot') और प्री-रिबूट एक्शन ('AllSys_SystemPreRebootAction') के लिए कार्य '{0}' द्वारा इसके निष्पादन के दौरान बनाए/प्रबंधित किए जाएंगे।"
     Install_AttemptingInitialLaunch = "कॉन्फ़िगरेशन स्क्रिप्ट का प्रारंभिक लॉन्च करने का प्रयास किया जा रहा है..."
@@ -208,4 +208,15 @@
     Log_User_NoProcessSpecified = "[Process] में कोई ProcessName निर्दिष्ट नहीं है या रॉ पथ खाली है।"
     Error_User_FatalScriptError = "घातक उपयोगकर्ता स्क्रिप्ट त्रुटि '{0}': {1} `n{2}"
     Error_User_VarExpansionFailed = "ProcessName '{0}' के लिए चर का विस्तार करने में त्रुटि: {1}"
+    Log_User_ScriptFinished = "उपयोगकर्ता '{2}' के लिए {0} ({1}) समाप्त हुआ।"
+    #=========================================
+    # --- Gotify Notification Strings ---
+    #=========================================
+    Gotify_MessageDate = "{0} को।"
+    Gotify_SystemActionsHeader = "सिस्टम कार्रवाइयां:"
+    Gotify_NoSystemActions = "कोई सिस्टम कार्रवाई नहीं।"
+    Gotify_SystemErrorsHeader = "सिस्टम त्रुटियां:"
+    Gotify_UserActionsHeader = "उपयोगकर्ता कार्रवाइयां:"
+    Gotify_NoUserActions = "कोई उपयोगकर्ता कार्रवाई नहीं।"
+    Gotify_UserErrorsHeader = "उपयोगकर्ता त्रुटियां:"
 }

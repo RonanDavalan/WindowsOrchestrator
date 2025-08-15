@@ -1,12 +1,8 @@
 @echo off
 REM Sets the code page to support international characters
-CHCP 1252 > NUL
+REM Sets the code page to support international characters
+REM CHCP 1252 > NUL
 CLS
-
-REM --- Language argument handling ---
-SET "LANG_ARG="
-IF /I "%~1" == "-l" SET "LANG_ARG=%~2"
-REM --- End of block ---
 
 ECHO #############################################################
 ECHO #          Uninstaller - WindowsAutoConfig                #
@@ -20,7 +16,7 @@ PAUSE
 
 REM This batch file now ONLY calls the PowerShell script.
 REM The PowerShell script itself will handle the elevation request.
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0management\uninstall.ps1" -LanguageOverride "%LANG_ARG%"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0management\uninstall.ps1"
 
 ECHO.
 ECHO The uninstallation script has finished.

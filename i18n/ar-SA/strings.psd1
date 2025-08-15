@@ -1,4 +1,4 @@
-﻿@{
+@{
     #=========================================
     # --- uninstall.ps1 Strings ---
     #=========================================
@@ -36,7 +36,7 @@
     Install_ElevationWarning = "فشل في رفع الامتيازات. يرجى تشغيل هذا البرنامج النصي كمسؤول."
     Install_PressEnterToExit = "اضغط على Enter للخروج."
     Install_ConfigIniNotFoundWarning = "لم يتم العثور على config.ini في الدليل الأصلي المفترض ({0})."
-    Install_ProjectRootPrompt = "يرجى إدخال المسار الكامل إلى الدليل الجذر لبرامج AllSysConfig (على سبيل المثال، C:\AllSysConfig)"
+    Install_ProjectRootPrompt = "يرجى إدخال المسار الكامل إلى الدليل الجذر لبرامج WindowsAutoConfig (على سبيل المثال، C:\WindowsAutoConfig)"
     Install_InvalidProjectRootError = "دليل جذر المشروع غير صالح أو لم يتم العثور على config.ini: '{0}'"
     Install_PathDeterminationError = "خطأ في تحديد المسارات الأولية: {0}"
     Install_MissingSystemFile = "ملف النظام المطلوب مفقود: {0}"
@@ -46,10 +46,10 @@
     Install_UserTaskTarget = "سيتم تثبيت مهمة المستخدم لـ: {0}"
     Install_StartConfiguringTasks = "بدء تكوين المهام المجدولة..."
     Install_CreatingSystemTask = "إنشاء/تحديث مهمة النظام '{0}'..."
-    Install_SystemTaskDescription = "AllSysConfig: يقوم بتنفيذ برنامج تكوين النظام عند بدء التشغيل."
+    Install_SystemTaskDescription = "WindowsAutoConfig: يقوم بتنفيذ برنامج تكوين النظام عند بدء التشغيل."
     Install_SystemTaskConfiguredSuccess = "تم تكوين المهمة '{0}' بنجاح."
     Install_CreatingUserTask = "إنشاء/تحديث مهمة المستخدم '{0}' لـ '{1}'..."
-    Install_UserTaskDescription = "AllSysConfig: يقوم بتنفيذ برنامج تكوين المستخدم عند تسجيل الدخول."
+    Install_UserTaskDescription = "WindowsAutoConfig: يقوم بتنفيذ برنامج تكوين المستخدم عند تسجيل الدخول."
     Install_MainTasksConfigured = "تم تكوين المهام المجدولة الرئيسية."
     Install_DailyRebootTasksNote = "سيتم إنشاء/إدارة مهام إعادة التشغيل اليومية ('AllSys_SystemScheduledReboot') والإجراء السابق لإعادة التشغيل ('AllSys_SystemPreRebootAction') بواسطة '{0}' أثناء تنفيذه."
     Install_AttemptingInitialLaunch = "محاولة التشغيل الأولي لبرامج التكوين..."
@@ -208,4 +208,15 @@
     Log_User_NoProcessSpecified = "لم يتم تحديد ProcessName في [Process] أو أن المسار الخام فارغ."
     Error_User_FatalScriptError = "خطأ فادح في البرنامج النصي للمستخدم '{0}': {1} `n{2}"
     Error_User_VarExpansionFailed = "خطأ في توسيع المتغيرات لـ ProcessName '{0}': {1}"
+    Log_User_ScriptFinished = "{0} ({1}) للمستخدم '{2}' انتهى."
+    #=========================================
+    # --- Gotify Notification Strings ---
+    #=========================================
+    Gotify_MessageDate = "في {0}."
+    Gotify_SystemActionsHeader = "إجراءات النظام:"
+    Gotify_NoSystemActions = "لا توجد إجراءات للنظام."
+    Gotify_SystemErrorsHeader = "أخطاء النظام:"
+    Gotify_UserActionsHeader = "إجراءات المستخدم:"
+    Gotify_NoUserActions = "لا توجد إجراءات للمستخدم."
+    Gotify_UserErrorsHeader = "أخطاء المستخدم:"
 }

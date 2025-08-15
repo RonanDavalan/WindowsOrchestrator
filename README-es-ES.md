@@ -4,26 +4,29 @@
 
 **Su piloto automático para estaciones de trabajo Windows dedicadas. Configure una vez y deje que el sistema se autogestione con total fiabilidad.**
 
-![Licencia](https://img.shields.io/badge/Licence-GPLv3-blue.svg)
-![Versión PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue)
-![Estado](https://img.shields.io/badge/Statut-Opérationnel-brightgreen.svg)
-![SO](https://img.shields.io/badge/OS-Windows_10_|_11-informational)
-![Contribuciones](https://img.shields.io/badge/Contributions-Bienvenidas-brightgreen.svg)
+![Licencia](https://img.shields.io/badge/Licence-GPLv3-blue.svg)![Versión PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue)![Estado](https://img.shields.io/badge/Statut-Opérationnel-brightgreen.svg)![SO](https://img.shields.io/badge/OS-Windows_10_|_11-informational)![Soporte](https://img.shields.io/badge/Support-11_Langues-orange.svg)![Contribuciones](https://img.shields.io/badge/Contributions-Bienvenidas-brightgreen.svg)
 
 ---
 
-## 🎯 El Manifiesto de WindowsAutoConfig
+## 🎯 Nuestra Misión
 
-### El Problema
-Implementar y mantener un equipo con Windows para una tarea única (kiosco interactivo, señalización digital, puesto de mando) es un desafío constante. Las actualizaciones inoportunas, las suspensiones inesperadas, la necesidad de reiniciar manualmente una aplicación después de un reinicio... Cada detalle puede convertirse en una fuente de fallos y requiere una intervención manual costosa en tiempo. Configurar cada puesto es un proceso repetitivo, largo y propenso a errores.
+Imagine un puesto de trabajo Windows perfectamente fiable y autónomo. Una máquina que configura una sola vez para su misión —ya sea pilotar un objeto conectado, animar un panel de visualización o servir de puesto de supervisión— y de la que luego puede olvidarse. Un sistema que asegura que su aplicación permanezca **operativa permanentemente**, sin interrupción.
 
-### La Solución: WindowsAutoConfig
-**WindowsAutoConfig** transforma cualquier PC con Windows en un autómata fiable y predecible. Es un conjunto de scripts que se instalan localmente y que toman el control de la configuración del sistema para garantizar que su máquina haga exactamente lo que espera de ella, 24 horas al día, 7 días a la semana.
+Este es el objetivo que **WindowsAutoConfig** le ayuda a alcanzar. El desafío es que un PC con Windows estándar no está diseñado de forma nativa para esta resistencia. Está pensado para la interacción humana: se pone en suspensión para ahorrar energía, instala actualizaciones cuando lo considera oportuno y no reinicia automáticamente una aplicación después de un reinicio.
 
-Actúa como un supervisor permanente, aplicando sus reglas en cada inicio y en cada inicio de sesión, para que usted no tenga que hacerlo más.
+**WindowsAutoConfig** es la solución: un conjunto de scripts que actúa como un supervisor inteligente y permanente. Transforma cualquier PC en un autómata fiable, garantizando que su aplicación crítica esté siempre operativa, sin intervención manual.
+
+### Más allá de la interfaz: control directo del sistema
+
+WindowsAutoConfig actúa como un panel de control avanzado, haciendo accesibles configuraciones potentes que no están disponibles o son difíciles de gestionar a través de la interfaz estándar de Windows.
+
+*   **Control Total sobre Windows Update:** En lugar de simplemente "pausar" las actualizaciones, el script modifica las políticas del sistema para detener el mecanismo automático, devolviéndole el control sobre cuándo se instalan las actualizaciones.
+*   **Configuración de Energía Fiable:** El script no solo establece la suspensión en "Nunca"; se asegura de que esta configuración se vuelva a aplicar en cada arranque, haciendo que su configuración sea resistente a cambios no deseados.
+*   **Acceso a Configuraciones de Nivel de Administrador:** Funciones como la desactivación de OneDrive a través de una política del sistema son acciones que generalmente están ocultas en el Editor de Políticas de Grupo (no disponible en Windows Home). Este script las hace accesibles para todos.
 
 ## ✨ Características Clave
 *   **Asistente de Configuración Gráfico:** No es necesario editar archivos para los ajustes básicos.
+*   **Soporte Multilingüe Completo:** Interfaz y registros disponibles en 11 idiomas, con detección automática del idioma del sistema.
 *   **Gestión de Energía:** Desactive la suspensión de la máquina, de la pantalla y el inicio rápido de Windows para una estabilidad máxima.
 *   **Inicio de Sesión Automático (Auto-Login):** Gestiona el inicio de sesión automático, incluyendo la sinergia con la herramienta **Sysinternals AutoLogon** para una gestión segura de la contraseña.
 *   **Control de Windows Update:** Evite que las actualizaciones y los reinicios forzados interrumpan su aplicación.
@@ -35,7 +38,19 @@ Actúa como un supervisor permanente, aplicando sus reglas en cada inicio y en c
 
 ---
 
+## 🎯 Público Objetivo y Buenas Prácticas
+
+Este proyecto está diseñado para transformar un PC en un autómata fiable, ideal para casos de uso en los que la máquina está dedicada a una sola aplicación (servidor para un dispositivo IoT, señalización digital, estación de supervisión, etc.). No se recomienda para un ordenador de oficina de uso general.
+
+*   **Actualizaciones Mayores de Windows:** Para actualizaciones importantes (ej: pasar de Windows 10 a 11), el procedimiento más seguro es **desinstalar** WindowsAutoConfig antes de la actualización y luego **reinstalarlo** después.
+*   **Entornos Corporativos:** Si su ordenador está en un dominio empresarial gestionado por Directivas de Grupo (GPO), consulte con su departamento de TI para asegurarse de que las modificaciones realizadas por este script no entran en conflicto con las políticas de su organización.
+
+---
+
 ## 🚀 Instalación y Primeros Pasos
+
+**Nota sobre el idioma:** Los scripts de inicio (`1_install.bat` y `2_uninstall.bat`) muestran sus instrucciones en **inglés**. Esto es normal. Estos archivos actúan como simples lanzadores. Tan pronto como el asistente gráfico o los scripts de PowerShell tomen el relevo, la interfaz se adaptará automáticamente al idioma de su sistema operativo.
+
 Poner en marcha **WindowsAutoConfig** es un proceso sencillo y guiado.
 
 1.  **Descargue** o clone el proyecto en el equipo a configurar.
@@ -66,7 +81,7 @@ Por razones de seguridad, **WindowsAutoConfig nunca gestiona ni almacena las con
 *   **Escenario 2: La cuenta de usuario tiene una contraseña (Método recomendado).**
     1.  Descargue la herramienta oficial **[Sysinternals AutoLogon](https://download.sysinternals.com/files/AutoLogon.zip)** de Microsoft (enlace de descarga directa).
     2.  Lance AutoLogon e introduzca el nombre de usuario, el dominio y la contraseña. Esta herramienta almacenará la contraseña de forma segura en el Registro.
-    3.  En la configuración de **WindowsAutoConfig**, ahora puede dejar el campo `AutoLoginUsername` vacío (el script detectará el usuario configurado por AutoLogon) o rellenarlo para asegurarse. Nuestro script se asegurará de que la clave de Registro `AutoAdminLogon` esté bien activada para finalizar la configuración.
+    3.  En la configuración de **WindowsAutoConfig**, ahora puede dejar el campo `AutoLoginUsername` vacío (el script detectará el usuario configurado por AutoLogon leyendo la clave de Registro correspondiente) o rellenarlo para asegurarse. Nuestro script se asegurará de que la clave de Registro `AutoAdminLogon` esté bien activada para finalizar la configuración.
 
 #### Configuración Avanzada: `PreRebootActionCommand`
 Esta potente funcionalidad le permite ejecutar un script antes del reinicio diario. La ruta de acceso puede ser:
@@ -84,9 +99,16 @@ WindowsAutoConfig/
 ├── config.ini                   # Archivo de configuración central
 ├── config_systeme.ps1           # Script principal para los ajustes de la máquina (se ejecuta al inicio)
 ├── config_utilisateur.ps1       # Script principal para la gestión del proceso de usuario (se ejecuta al iniciar sesión)
+├── LaunchApp.bat                # (Ejemplo) Lanzador portátil para su aplicación principal
 ├── PreReboot.bat                # Ejemplo de script para la acción pre-reinicio
 ├── Logs/                        # (Creado automáticamente) Contiene los archivos de registro
+├── i18n/                        # Contiene todos los archivos de traducción
+│   ├── es-ES/strings.psd1
+│   └── ... (otros idiomas)
 └── management/
+    ├── defaults/default_config.ini # Plantilla de configuración inicial
+    ├── tools/                   # Herramientas de diagnóstico
+    │   └── Find-WindowInfo.ps1
     ├── firstconfig.ps1          # El código del asistente de configuración gráfico
     ├── install.ps1              # El script técnico de instalación de las tareas
     └── uninstall.ps1            # El script técnico de eliminación de las tareas
@@ -111,11 +133,12 @@ El núcleo de **WindowsAutoConfig** se basa en el Programador de Tareas de Windo
 
 ---
 
-### 🛠️ Herramientas de Diagnóstico
+### 🛠️ Herramientas de Diagnóstico y Desarrollo
 
-El proyecto incluye scripts útiles para ayudarle a configurar aplicaciones complejas.
+El proyecto incluye scripts útiles para ayudarle a configurar y mantener el proyecto.
 
-*   **`management/tools/Find-WindowInfo.ps1`**: Si necesita configurar la acción de pre-reinicio para una nueva aplicación y no conoce el título exacto de su ventana, esta herramienta es para usted. Lance su aplicación, luego ejecute este script en una consola de PowerShell. Listará todas las ventanas visibles y el nombre de su proceso, permitiéndole encontrar el título exacto a usar en el script `Close-AppByTitle.ps1`.
+*   **`management/tools/Find-WindowInfo.ps1`**: Si no conoce el título exacto de la ventana de una aplicación (para configurarlo en `Close-AppByTitle.ps1`, por ejemplo), ejecute este script. Listará todas las ventanas visibles y el nombre de su proceso, ayudándole a encontrar la información precisa.
+*   **`Fix-Encoding.ps1`**: Si modifica los scripts, esta herramienta se asegura de que se guarden con la codificación correcta (UTF-8 con BOM) para una compatibilidad perfecta con PowerShell 5.1 y los caracteres internacionales.
 
 ---
 
@@ -131,9 +154,15 @@ Para una fácil resolución de problemas, todo se registra.
 Para retirar el sistema:
 1.  Ejecute `2_uninstall.bat`.
 2.  **Acepte la solicitud de privilegios (UAC)**.
-3.  El script eliminará limpiamente todas las tareas programadas creadas por el proyecto.
+3.  El script eliminará limpiamente todas las tareas programadas y restaurará los principales parámetros del sistema.
 
-**Nota:** La desinstalación no anula los cambios del sistema (por ejemplo, la suspensión permanecerá desactivada) y no elimina la carpeta del proyecto.
+**Nota sobre la reversibilidad:** La desinstalación no se limita a eliminar las tareas programadas. También restaura los principales parámetros del sistema a su estado predeterminado para devolverle un sistema limpio:
+*   Las actualizaciones de Windows se reactivan.
+*   El Inicio Rápido se reactiva.
+*   La política de bloqueo de OneDrive se elimina.
+*   El script le propondrá desactivar el inicio de sesión automático.
+
+Su sistema vuelve a ser así un puesto de trabajo estándar, sin modificaciones residuales.
 
 ---
 

@@ -1,4 +1,4 @@
-﻿@{
+@{
     #=========================================
     # --- uninstall.ps1 Strings ---
     #=========================================
@@ -36,7 +36,7 @@
     Install_ElevationWarning = "权限提升失败。请以管理员身份运行此脚本。"
     Install_PressEnterToExit = "按 Enter 键退出。"
     Install_ConfigIniNotFoundWarning = "在假定的父目录 ({0}) 中找不到 config.ini。"
-    Install_ProjectRootPrompt = "请输入 AllSysConfig 脚本根目录的完整路径（例如，C:\AllSysConfig）"
+    Install_ProjectRootPrompt = "请输入 WindowsAutoConfig 脚本根目录的完整路径（例如，C:\WindowsAutoConfig）"
     Install_InvalidProjectRootError = "项目根目录无效或找不到 config.ini：'{0}'"
     Install_PathDeterminationError = "确定初始路径时出错：{0}"
     Install_MissingSystemFile = "缺少必需的系统文件：{0}"
@@ -46,10 +46,10 @@
     Install_UserTaskTarget = "将为以下用户安装用户任务：{0}"
     Install_StartConfiguringTasks = "开始配置计划任务..."
     Install_CreatingSystemTask = "正在创建/更新系统任务 '{0}'..."
-    Install_SystemTaskDescription = "AllSysConfig：在启动时执行系统配置脚本。"
+    Install_SystemTaskDescription = "WindowsAutoConfig：在启动时执行系统配置脚本。"
     Install_SystemTaskConfiguredSuccess = "任务 '{0}' 已成功配置。"
     Install_CreatingUserTask = "正在为 '{1}' 创建/更新用户任务 '{0}'..."
-    Install_UserTaskDescription = "AllSysConfig：在登录时执行用户配置脚本。"
+    Install_UserTaskDescription = "WindowsAutoConfig：在登录时执行用户配置脚本。"
     Install_MainTasksConfigured = "主要计划任务已配置。"
     Install_DailyRebootTasksNote = "每日重启（'AllSys_SystemScheduledReboot'）和重启前操作（'AllSys_SystemPreRebootAction'）的任务将在 '{0}' 执行期间创建/管理。"
     Install_AttemptingInitialLaunch = "正在尝试首次启动配置脚本..."
@@ -208,4 +208,15 @@
     Log_User_NoProcessSpecified = "[Process] 中未指定 ProcessName 或原始路径为空。"
     Error_User_FatalScriptError = "严重用户脚本错误 '{0}'：{1} `n{2}"
     Error_User_VarExpansionFailed = "为 ProcessName '{0}' 展开变量时出错：{1}"
+    Log_User_ScriptFinished = "{0} ({1}) 已为用户 '{2}' 完成。"
+    #=========================================
+    # --- Gotify Notification Strings ---
+    #=========================================
+    Gotify_MessageDate = "在 {0}。"
+    Gotify_SystemActionsHeader = "系统操作："
+    Gotify_NoSystemActions = "无系统操作。"
+    Gotify_SystemErrorsHeader = "系统错误："
+    Gotify_UserActionsHeader = "用户操作："
+    Gotify_NoUserActions = "无用户操作。"
+    Gotify_UserErrorsHeader = "用户错误："
 }
