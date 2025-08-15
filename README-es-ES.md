@@ -1,6 +1,6 @@
 # WindowsAutoConfig ⚙️
 
-[🇫🇷 Français](README-fr-FR.md) | [🇺🇸 English](README.md) | [🇩🇪 Deutsch](README-de-DE.md) | [🇮🇳 हिंदी](README-hi-IN.md) | [🇯🇵 日本語](README-ja-JP.md) | [🇷🇺 Русский](README-ru-RU.md) | [🇨🇳 中文](README-zh-CN.md)
+[🇺🇸 English](README.md) | [🇫🇷 Français](README-fr-FR.md) | [🇩🇪 Deutsch](README-de-DE.md) | [🇮🇳 हिंदी](README-hi-IN.md) | [🇯🇵 日本語](README-ja-JP.md) | [🇷🇺 Русский](README-ru-RU.md) | [🇨🇳 中文](README-zh-CN.md) | [🇸🇦 العربية](README-ar-SA.md) | [🇧🇩 বাংলা](README-bn-BD.md) | [🇮🇩 Bahasa Indonesia](README-id-ID.md)
 
 **Su piloto automático para estaciones de trabajo Windows dedicadas. Configure una vez y deje que el sistema se autogestione con total fiabilidad.**
 
