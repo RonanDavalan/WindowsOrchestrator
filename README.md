@@ -6,6 +6,8 @@
 
 ![License](https://img.shields.io/badge/Licence-GPLv3-blue.svg)![PowerShell Version](https://img.shields.io/badge/PowerShell-5.1%2B-blue)![Status](https://img.shields.io/badge/Statut-Opérationnel-brightgreen.svg)![OS](https://img.shields.io/badge/OS-Windows_10_|_11-informational)![Support](https://img.shields.io/badge/Support-11_Langues-orange.svg)![Contributions](https://img.shields.io/badge/Contributions-Bienvenues-brightgreen.svg)
 
+![WindowsAutoConfig Configuration Wizard](assets/screenshot-wizard.png)
+
 ---
 
 ## 🎯 Our Mission
