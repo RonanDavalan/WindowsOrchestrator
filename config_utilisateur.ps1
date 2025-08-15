@@ -10,28 +10,47 @@
     Version: i18n - Corrigée
 #>
 
-# --- START I18N BLOCK ---
+# --- START I18N BLOCK (Robust) ---
 $lang = @{}
 try {
-    # Détermination robuste du répertoire du script
     if ($MyInvocation.MyCommand.CommandType -eq 'ExternalScript') { $PSScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition } 
     else { try { $PSScriptRoot = Split-Path -Parent $script:MyInvocation.MyCommand.Path -ErrorAction Stop } catch { $PSScriptRoot = Get-Location } }
-    
-    $i18nPath = Join-Path $PSScriptRoot "i18n"
-    
-    # Charge les chaînes de caractères pour la langue de l'OS actuelle.
-    # N'échoue pas si le fichier de langue est introuvable (le script utilisera les messages par défaut en anglais).
-    $lang = Import-LocalizedData -BindingVariable 'lang' -BaseDirectory $i18nPath -FileName "strings.psd1" -ErrorAction SilentlyContinue
 
+    # --- Fonction interne pour charger la langue depuis config.ini ---
+    # Note: On ne peut pas encore utiliser Get-ConfigValue car il dépend des traductions pour les erreurs.
+    $configLanguage = ""
+    $tempConfigPath = Join-Path $PSScriptRoot "config.ini"
+    if (Test-Path $tempConfigPath) {
+        $langLine = Get-Content $tempConfigPath -Encoding UTF8 | Select-String -Pattern "^\s*Language\s*=" -SimpleMatch | Select-Object -Last 1
+        if ($langLine) { $configLanguage = ($langLine -split '=')[1].Trim() }
+    }
+
+    $cultureName = if (-not [string]::IsNullOrWhiteSpace($configLanguage)) {
+        switch ($configLanguage.ToLower()) {
+            'ar' { 'ar-SA' }; 'bn' { 'bn-BD' }; 'de' { 'de-DE' }; 'en' { 'en-US' };
+            'es' { 'es-ES' }; 'fr' { 'fr-FR' }; 'hi' { 'hi-IN' }; 'id' { 'id-ID' };
+            'ja' { 'ja-JP' }; 'ru' { 'ru-RU' }; 'zh' { 'zh-CN' };
+            default { (Get-Culture).Name }
+        }
+    } else {
+        (Get-Culture).Name
+    }
+
+    $langFilePath = Join-Path $PSScriptRoot "i18n\$cultureName\strings.psd1"
+    if (-not (Test-Path $langFilePath)) { $langFilePath = Join-Path $PSScriptRoot "i18n\en-US\strings.psd1" } # Fallback sur anglais
+
+    if (Test-Path $langFilePath) {
+        $langContent = Get-Content -Path $langFilePath -Raw -Encoding UTF8
+        $lang = Invoke-Expression $langContent
+    }
 } catch {
-    # Cette erreur est capturée pour être journalisée plus tard, une fois les logs initialisés.
     $i18nLoadingError = $_.Exception.Message
 }
 # --- END I18N BLOCK ---
 
 
 #region GLOBAL CONFIG
-$ScriptIdentifierUser = "AllSysConfig-User"
+$ScriptIdentifierUser = "WindowsAutoConfig-User"
 $ScriptInternalBuildUser = "Build-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
 $ScriptDir = $PSScriptRoot
 
@@ -79,7 +98,12 @@ function Write-UserLog {
         [switch]$NoConsole
     )
     process {
-        $formattedMessage = if ($lang -and $lang.ContainsKey($MessageId)) { try { $lang[$MessageId] -f $MessageArgs } catch { $DefaultMessage } } else { $DefaultMessage }
+        $messageTemplate = if ($lang -and $lang.ContainsKey($MessageId)) { $lang[$MessageId] } else { $DefaultMessage }
+        try {
+            $formattedMessage = $messageTemplate -f $MessageArgs
+        } catch {
+            $formattedMessage = $messageTemplate # En cas d'erreur de formatage, affiche le modèle brut pour le débogage
+        }
         $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
         $logEntry = "$timestamp [$Level] [UserScript:$($env:USERNAME)] - $formattedMessage"
 
@@ -101,7 +125,8 @@ function Write-UserLog {
 
 function Add-UserAction {
     param([string]$DefaultActionMessage, [string]$ActionId, [object[]]$ActionArgs)
-    $formattedMessage = if ($lang -and $lang.ContainsKey($ActionId)) { try { $lang[$ActionId] -f $ActionArgs } catch { $DefaultActionMessage } } else { $DefaultActionMessage }
+    $messageTemplate = if ($lang -and $lang.ContainsKey($ActionId)) { $lang[$ActionId] } else { $DefaultActionMessage }
+    $formattedMessage = try { $messageTemplate -f $ActionArgs } catch { $messageTemplate }
     $Global:UserActionsEffectuees.Add($formattedMessage)
     Write-UserLog -DefaultMessage "ACTION: $formattedMessage" -Level "INFO" -NoConsole
 }
@@ -109,7 +134,8 @@ function Add-UserAction {
 function Add-UserError {
     [CmdletBinding()]
     param ([string]$DefaultErrorMessage, [string]$ErrorId, [object[]]$ErrorArgs)
-    $formattedMessage = if ($lang -and $lang.ContainsKey($ErrorId)) { try { $lang[$ErrorId] -f $ErrorArgs } catch { $DefaultErrorMessage } } else { $DefaultErrorMessage }
+    $messageTemplate = if ($lang -and $lang.ContainsKey($ErrorId)) { $lang[$ErrorId] } else { $DefaultErrorMessage }
+    $formattedMessage = try { $messageTemplate -f $ErrorArgs } catch { $messageTemplate }
     $detailedErrorMessage = $formattedMessage
     if ([string]::IsNullOrWhiteSpace($detailedErrorMessage)) {
         if ($global:Error.Count -gt 0) { 
@@ -239,7 +265,7 @@ try {
                 }
 
                 $logArgsForStart = if ($argsForStartProcess -is [array]) { $argsForStartProcess -join ' ' } else { $argsForStartProcess }
-                Write-UserLog -DefaultMessage "Starting via {0}: '{1}' with args: '{2}'" -MessageId "Log_User_ProcessStarting" -MessageArgs $launchMethod, $exeForStartProcess, $logArgsForStart
+                Write-UserLog -DefaultMessage "Process '{0}' not found. Starting via {1}: '{2}' with args: '{3}'" -MessageId "Log_User_ProcessStarting" -MessageArgs @($processBaseNameToMonitor, $launchMethod, $exeForStartProcess, $logArgsForStart)
                 Start-Process @startProcessSplat
                 Add-UserAction -DefaultActionMessage "Process '{0}' started (via {1})." -ActionId "Action_User_ProcessStarted" -ActionArgs $processBaseNameToMonitor, $launchMethod
 
@@ -282,15 +308,27 @@ try {
             }
 
             $messageBodyUser = "On $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss').`n"
-            if ($Global:UserActionsEffectuees.Count -gt 0) { $messageBodyUser += "USER Actions:`n" + ($Global:UserActionsEffectuees -join "`n") }
-            else { $messageBodyUser += "No USER actions." }
-            if ($Global:UserErreursRencontrees.Count -gt 0) { $messageBodyUser += "`n`nUSER Errors:`n" + ($Global:UserErreursRencontrees -join "`n") }
+            $dateStr = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+    $dateLineTemplate = if ($lang -and $lang.ContainsKey('Gotify_MessageDate')) { $lang.Gotify_MessageDate } else { "On {0}." }
+    $messageBodyUser = ($dateLineTemplate -f $dateStr) + "`n"
+
+    if ($Global:UserActionsEffectuees.Count -gt 0) {
+        $actionsHeader = if ($lang -and $lang.ContainsKey('Gotify_UserActionsHeader')) { $lang.Gotify_UserActionsHeader } else { "USER Actions:" }
+        $messageBodyUser += "$actionsHeader`n" + ($Global:UserActionsEffectuees -join "`n")
+    } else {
+        $noActionsMessage = if ($lang -and $lang.ContainsKey('Gotify_NoUserActions')) { $lang.Gotify_NoUserActions } else { "No USER actions." }
+        $messageBodyUser += $noActionsMessage
+    }
+    if ($Global:UserErreursRencontrees.Count -gt 0) {
+        $errorsHeader = if ($lang -and $lang.ContainsKey('Gotify_UserErrorsHeader')) { $lang.Gotify_UserErrorsHeader } else { "USER Errors:" }
+        $messageBodyUser += "`n`n$errorsHeader`n" + ($Global:UserErreursRencontrees -join "`n")
+    }
 
             $payloadUser = @{ message = $messageBodyUser; title = $finalMessageTitleUser; priority = $gotifyPriority } | ConvertTo-Json -Depth 3 -Compress
             $fullUrlUser = "$($gotifyUrl.TrimEnd('/'))/message?token=$gotifyToken"
             
             try { 
-                Invoke-RestMethod -Uri $fullUrlUser -Method Post -Body $payloadUser -ContentType "application/json" -TimeoutSec 30 -ErrorAction Stop
+                Invoke-RestMethod -Uri $fullUrlUser -Method Post -Body $payloadUser -ContentType "application/json; charset=utf-8" -TimeoutSec 30 -ErrorAction Stop
             } catch { 
                 Add-UserError "Gotify (IRM) failed: $($_.Exception.Message)"
             }

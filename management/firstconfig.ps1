@@ -26,24 +26,8 @@ try {
     
     $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\")).Path
     
-    $cultureName = if (-not [string]::IsNullOrWhiteSpace($LanguageOverride)) {
-        switch ($LanguageOverride.ToLower()) {
-            'ar' { 'ar-SA' }
-			'bn' { 'bn-BD' }
-			'de' { 'de-DE' }
-			'en' { 'en-US' }
-			'es' { 'es-ES' }
-			'fr' { 'fr-FR' }
-			'hi' { 'hi-IN' }
-			'id' { 'id-ID' }
-			'ja' { 'ja-JP' }
-			'ru' { 'ru-RU' }           
-			'zh' { 'zh-CN' }
-            default { (Get-Culture).Name }
-        }
-    } else {
-        (Get-Culture).Name
-    }
+    # Détection automatique et exclusive de la culture du système
+	$cultureName = (Get-Culture).Name
 
     # Recherche du fichier de langue le plus approprié (avec fallback vers l'anglais)
     $langFilePath = Join-Path $projectRoot "i18n\$cultureName\strings.psd1"
@@ -53,7 +37,7 @@ try {
 
     # Utilisation de la méthode de chargement qui a été validée par le script de test
     if (Test-Path $langFilePath) {
-        $langContent = Get-Content -Path $langFilePath -Raw
+        $langContent = Get-Content -Path $langFilePath -Raw -Encoding UTF8
         $lang = Invoke-Expression $langContent
     } else {
         throw "Aucun fichier de langue valide (ni pour $cultureName, ni en-US) n'a été trouvé."
@@ -188,11 +172,13 @@ $defaultValues = @{
     DisableAutoReboot = $true; PreRebootActionTime = "02:55"; PreRebootActionCommand = ""
     PreRebootActionArguments = ""; PreRebootActionLaunchMethod = "cmd"
     ScheduledRebootTime = "03:00"; DisableOneDrive = $true; ProcessName = ""
-    ProcessArguments = ""; LaunchMethod = "cmd"
+    ProcessArguments = ""; LaunchMethod = "cmd"; Language = "en"
 }
 $currentValues = @{}
 foreach ($key in $defaultValues.Keys) {
-    $section = if ($key -in ("ProcessName", "ProcessArguments", "LaunchMethod")) { "Process" } else { "SystemConfig" }
+    $section = "SystemConfig" # Par défaut
+    if ($key -in ("ProcessName", "ProcessArguments", "LaunchMethod")) { $section = "Process" }
+    if ($key -in ("Language", "EnableLogRotation", "MaxSystemLogsToKeep", "MaxUserLogsToKeep")) { $section = "Logging" }
     $rawValue = Get-IniValue -FilePath $ConfigIniPath -Section $section -Key $key -DefaultValue $defaultValues[$key]
     if ($defaultValues[$key] -is [boolean]) {
         if ($rawValue -is [boolean]) { $currentValues[$key] = $rawValue }
@@ -263,6 +249,12 @@ $btnSave.Add_Click({
     Set-IniValue $ConfigIniPath "Process" "ProcessName" $txtProcessName.Text
     Set-IniValue $ConfigIniPath "Process" "ProcessArguments" $txtProcessArguments.Text
     Set-IniValue $ConfigIniPath "Process" "LaunchMethod" $cmbLaunchMethod.Text
+    
+    # --- Lignes à ajouter ---
+    $detectedLanguageShort = ($cultureName.Split('-'))[0]
+    Set-IniValue $ConfigIniPath "Logging" "Language" $detectedLanguageShort
+    # --- Fin des lignes à ajouter ---
+
     [System.Windows.Forms.MessageBox]::Show(($lang.ConfigForm_SaveSuccessMessage -f $ConfigIniPath), $lang.ConfigForm_SaveSuccessCaption, "OK", "Information")
 })
 $form.Add_FormClosing({ param($sender, $e)

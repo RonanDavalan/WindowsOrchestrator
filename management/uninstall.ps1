@@ -43,30 +43,14 @@ try {
     
     $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\")).Path
     
-    $cultureName = if (-not [string]::IsNullOrWhiteSpace($LanguageOverride)) {
-        switch ($LanguageOverride.ToLower()) {
-            'en' { 'en-US' }
-            'fr' { 'fr-FR' }
-            'es' { 'es-ES' }
-            'de' { 'de-DE' }
-            'ru' { 'ru-RU' }
-            'zh' { 'zh-CN' }
-            'ja' { 'ja-JP' }
-            'ar' { 'ar-SA' }
-            'hi' { 'hi-IN' }
-            'bn' { 'bn-BD' }
-            'id' { 'id-ID' }
-            default { (Get-Culture).Name }
-        }
-    } else {
-        (Get-Culture).Name
-    }
+    # Détection automatique et exclusive de la culture du système
+	$cultureName = (Get-Culture).Name	
 
     $langFilePath = Join-Path $projectRoot "i18n\$cultureName\strings.psd1"
     if (-not (Test-Path $langFilePath)) { $langFilePath = Join-Path $projectRoot "i18n\en-US\strings.psd1" }
 
     if (Test-Path $langFilePath) {
-        $langContent = Get-Content -Path $langFilePath -Raw
+        $langContent = Get-Content -Path $langFilePath -Raw -Encoding UTF8
         $lang = Invoke-Expression $langContent
     } else { throw "No valid language file found." }
 
@@ -160,10 +144,10 @@ Write-Host ""
 Write-StyledHost $lang.Uninstall_DeletingScheduledTasks "INFO"
 
 $TasksToRemove = @(
-    "AllSysConfig-SystemStartup",
-    "AllSysConfig-UserLogon",
-    "AllSys_SystemScheduledReboot",
-    "AllSys_SystemPreRebootAction"
+    "WindowsAutoConfig-SystemStartup",
+    "WindowsAutoConfig-UserLogon",
+    "WindowsAutoConfig-SystemScheduledReboot",
+    "WindowsAutoConfig-SystemPreRebootAction"
 )
 $tasksFoundButNotRemoved = [System.Collections.Generic.List[string]]::new()
 

@@ -1,29 +1,32 @@
 # WindowsAutoConfig ⚙️
 
-[🇫🇷 Français](README-fr-FR.md) | [🇺🇸 English](README.md) | [🇪🇸 Español](README-es-ES.md) | [🇮🇳 हिंदी](README-hi-IN.md) | [🇯🇵 日本語](README-ja-JP.md) | [🇷🇺 Русский](README-ru-RU.md) | [🇨🇳 中文](README-zh-CN.md)
+[🇺🇸 English](README.md) | [🇫🇷 Français](README-fr-FR.md) | [🇪🇸 Español](README-es-ES.md) | [🇮🇳 हिंदी](README-hi-IN.md) | [🇯🇵 日本語](README-ja-JP.md) | [🇷🇺 Русский](README-ru-RU.md) | [🇨🇳 中文](README-zh-CN.md) | [🇸🇦 العربية](README-ar-SA.md) | [🇧🇩 বাংলা](README-bn-BD.md) | [🇮🇩 Bahasa Indonesia](README-id-ID.md)
 
 **Ihr Autopilot für dedizierte Windows-Arbeitsplätze. Einmal konfigurieren und das System zuverlässig sich selbst verwalten lassen.**
 
-![Lizenz](https://img.shields.io/badge/Licence-GPLv3-blue.svg)
-![PowerShell Version](https://img.shields.io/badge/PowerShell-5.1%2B-blue)
-![Status](https://img.shields.io/badge/Statut-Opérationnel-brightgreen.svg)
-![OS](https://img.shields.io/badge/OS-Windows_10_|_11-informational)
-![Beiträge](https://img.shields.io/badge/Contributions-Bienvenues-brightgreen.svg)
+![Lizenz](https://img.shields.io/badge/Licence-GPLv3-blue.svg)![PowerShell Version](https://img.shields.io/badge/PowerShell-5.1%2B-blue)![Status](https://img.shields.io/badge/Statut-Opérationnel-brightgreen.svg)![OS](https://img.shields.io/badge/OS-Windows_10_|_11-informational)![Unterstützung](https://img.shields.io/badge/Support-11_Langues-orange.svg)![Beiträge](https://img.shields.io/badge/Contributions-Bienvenues-brightgreen.svg)
 
 ---
 
-## 🎯 Das WindowsAutoConfig-Manifest
+## 🎯 Unsere Mission
 
-### Das Problem
-Die Bereitstellung und Wartung eines Windows-Computers für eine einzelne Aufgabe (interaktiver Kiosk, Digital Signage, Kommandozentrale) ist eine ständige Herausforderung. Unzeitgemäße Updates, unerwartete Ruhemodi, die Notwendigkeit, eine Anwendung nach einem Neustart manuell neu zu starten... Jedes Detail kann zu einer Fehlerquelle werden und erfordert zeitaufwändige manuelle Eingriffe. Die Konfiguration jedes Arbeitsplatzes ist ein sich wiederholender, langwieriger und fehleranfälliger Prozess.
+Stellen Sie sich eine absolut zuverlässige und autonome Windows-Workstation vor. Eine Maschine, die Sie einmal für ihre Aufgabe konfigurieren – sei es die Steuerung eines vernetzten Geräts, die Bespielung einer digitalen Anzeige oder der Dienst als Überwachungsstation – und die Sie dann vergessen können. Ein System, das sicherstellt, dass Ihre Anwendung **dauerhaft betriebsbereit** bleibt, ohne Unterbrechung.
 
-### Die Lösung: WindowsAutoConfig
-**WindowsAutoConfig** verwandelt jeden Windows-PC in einen zuverlässigen und vorhersehbaren Automaten. Es ist ein Satz von Skripten, die Sie lokal installieren und die die Kontrolle über die Systemkonfiguration übernehmen, um sicherzustellen, dass Ihr Computer genau das tut, was Sie von ihm erwarten, 24 Stunden am Tag, 7 Tage die Woche.
+Das ist das Ziel, das **WindowsAutoConfig** Ihnen hilft zu erreichen. Die Herausforderung besteht darin, dass ein Standard-Windows-PC von Haus aus nicht für diese Art von Ausdauer ausgelegt ist. Er ist für die menschliche Interaktion konzipiert: Er geht in den Ruhezustand, um Energie zu sparen, installiert Updates, wenn er es für richtig hält, und startet eine Anwendung nach einem Neustart nicht automatisch neu.
 
-Es fungiert als dauerhafter Supervisor, der Ihre Regeln bei jedem Start und jeder Anmeldung anwendet, damit Sie dies nicht mehr tun müssen.
+**WindowsAutoConfig** ist die Lösung: eine Reihe von Skripten, die als intelligenter und permanenter Supervisor fungieren. Es verwandelt jeden PC in einen zuverlässigen Automaten und stellt sicher, dass Ihre kritische Anwendung immer betriebsbereit ist, ohne manuellen Eingriff.
+
+### Jenseits der Benutzeroberfläche: Direkte Systemsteuerung
+
+WindowsAutoConfig fungiert als erweitertes Kontrollpanel und macht leistungsstarke Konfigurationen zugänglich, die über die Standard-Windows-Benutzeroberfläche entweder nicht verfügbar oder schwer zu verwalten sind.
+
+*   **Vollständige Kontrolle über Windows Update:** Anstatt Updates nur zu "pausieren", ändert das Skript die Systemrichtlinien, um den automatischen Mechanismus anzuhalten, sodass Sie die Kontrolle darüber zurückgewinnen, wann Updates installiert werden.
+*   **Zuverlässige Energieeinstellungen:** Das Skript stellt den Ruhezustand nicht nur auf "Nie"; es stellt sicher, dass diese Einstellung bei jedem Start erneut angewendet wird, wodurch Ihre Konfiguration widerstandsfähig gegen unerwünschte Änderungen wird.
+*   **Zugriff auf Einstellungen auf Administratorebene:** Funktionen wie das Deaktivieren von OneDrive über eine Systemrichtlinie sind Aktionen, die normalerweise im Gruppenrichtlinien-Editor (nicht verfügbar in Windows Home) verborgen sind. Dieses Skript macht sie für jeden zugänglich.
 
 ## ✨ Hauptfunktionen
 *   **Grafischer Konfigurationsassistent:** Keine Notwendigkeit, Dateien für grundlegende Einstellungen zu bearbeiten.
+*   **Vollständige mehrsprachige Unterstützung:** Benutzeroberfläche und Protokolle in 11 Sprachen verfügbar, mit automatischer Erkennung der Systemsprache.
 *   **Energieverwaltung:** Deaktivieren Sie den Ruhemodus des Rechners, des Bildschirms und den Schnellstart von Windows für maximale Stabilität.
 *   **Automatische Anmeldung (Auto-Login):** Verwaltet die automatische Anmeldung, auch in Synergie mit dem Tool **Sysinternals AutoLogon** für eine sichere Passwortverwaltung.
 *   **Windows Update Kontrolle:** Verhindern Sie, dass erzwungene Updates und Neustarts Ihre Anwendung stören.
@@ -35,7 +38,19 @@ Es fungiert als dauerhafter Supervisor, der Ihre Regeln bei jedem Start und jede
 
 ---
 
+## 🎯 Zielgruppe und bewährte Praktiken
+
+Dieses Projekt wurde entwickelt, um einen PC in einen zuverlässigen Automaten zu verwandeln, ideal für Anwendungsfälle, in denen die Maschine einer einzigen Anwendung gewidmet ist (IoT-Server, Digital Signage, Überwachungsstation usw.). Es wird nicht für einen Allzweck-Büro- oder Alltagscomputer empfohlen.
+
+*   **Große Windows-Updates:** Bei bedeutenden Updates (z. B. Upgrade von Windows 10 auf 11) ist das sicherste Verfahren, WindowsAutoConfig vor dem Update zu **deinstallieren** und danach **neu zu installieren**.
+*   **Unternehmensumgebungen:** Wenn Ihr Computer Teil einer Unternehmensdomäne ist, die von Gruppenrichtlinienobjekten (GPOs) verwaltet wird, erkundigen Sie sich bei Ihrer IT-Abteilung, um sicherzustellen, dass die von diesem Skript vorgenommenen Änderungen nicht im Widerspruch zu den Richtlinien Ihrer Organisation stehen.
+
+---
+
 ## 🚀 Installation und erste Schritte
+
+**Hinweis zur Sprache:** Die Startskripte (`1_install.bat` und `2_uninstall.bat`) zeigen ihre Anweisungen auf **Englisch** an. Das ist normal. Diese Dateien fungieren als einfache Starter. Sobald der grafische Assistent oder die PowerShell-Skripte übernehmen, passt sich die Benutzeroberfläche automatisch der Sprache Ihres Betriebssystems an.
+
 Die Einrichtung von **WindowsAutoConfig** ist ein einfacher und geführter Prozess.
 
 1.  **Laden Sie** das Projekt auf den zu konfigurierenden Computer herunter oder klonen Sie es.
@@ -66,7 +81,7 @@ Aus Sicherheitsgründen **verwaltet und speichert WindowsAutoConfig Passwörter 
 *   **Szenario 2: Das Benutzerkonto hat ein Passwort (empfohlene Methode).**
     1.  Laden Sie das offizielle Tool **[Sysinternals AutoLogon](https://download.sysinternals.com/files/AutoLogon.zip)** von Microsoft herunter (direkter Download-Link).
     2.  Starten Sie AutoLogon und geben Sie den Benutzernamen, die Domäne und das Passwort ein. Dieses Tool speichert das Passwort sicher in der Registrierung.
-    3.  In der Konfiguration von **WindowsAutoConfig** können Sie nun das Feld `AutoLoginUsername` leer lassen (das Skript erkennt den von AutoLogon konfigurierten Benutzer) oder es zur Sicherheit ausfüllen. Unser Skript stellt sicher, dass der Registrierungsschlüssel `AutoAdminLogon` für die endgültige Konfiguration aktiviert ist.
+    3.  In der Konfiguration von **WindowsAutoConfig** können Sie nun das Feld `AutoLoginUsername` leer lassen (das Skript erkennt den von AutoLogon konfigurierten Benutzer durch Lesen des entsprechenden Registrierungsschlüssels) oder es zur Sicherheit ausfüllen. Unser Skript stellt sicher, dass der Registrierungsschlüssel `AutoAdminLogon` für die endgültige Konfiguration aktiviert ist.
 
 #### Erweiterte Konfiguration: `PreRebootActionCommand`
 Diese leistungsstarke Funktion ermöglicht es Ihnen, ein Skript vor dem täglichen Neustart auszuführen. Der Pfad kann sein:
@@ -84,9 +99,16 @@ WindowsAutoConfig/
 ├── config.ini                   # Zentrale Konfigurationsdatei
 ├── config_systeme.ps1           # Hauptskript für Maschineneinstellungen (wird beim Start ausgeführt)
 ├── config_utilisateur.ps1       # Hauptskript für die Benutzerprozessverwaltung (wird bei der Anmeldung ausgeführt)
+├── LaunchApp.bat                # (Beispiel) Portabler Starter für Ihre Hauptanwendung
 ├── PreReboot.bat                # Beispielskript für die Aktion vor dem Neustart
 ├── Logs/                        # (Automatisch erstellt) Enthält die Protokolldateien
+├── i18n/                        # Enthält alle Übersetzungsdateien
+│   ├── de-DE/strings.psd1
+│   └── ... (andere Sprachen)
 └── management/
+    ├── defaults/default_config.ini # Initiale Konfigurationsvorlage
+    ├── tools/                   # Diagnosewerkzeuge
+    │   └── Find-WindowInfo.ps1
     ├── firstconfig.ps1          # Der Code des grafischen Konfigurationsassistenten
     ├── install.ps1              # Das technische Skript für die Aufgabeninstallation
     └── uninstall.ps1            # Das technische Skript zum Löschen von Aufgaben
@@ -111,11 +133,12 @@ Das Herzstück von **WindowsAutoConfig** basiert auf dem Windows Aufgabenplaner:
 
 ---
 
-### 🛠️ Diagnosetools
+### 🛠️ Diagnose- und Entwicklungstools
 
-Das Projekt enthält nützliche Skripte, die Ihnen bei der Konfiguration komplexer Anwendungen helfen.
+Das Projekt enthält nützliche Skripte, die Ihnen bei der Konfiguration und Wartung des Projekts helfen.
 
-*   **`management/tools/Find-WindowInfo.ps1`**: Wenn Sie die Aktion vor dem Neustart für eine neue Anwendung konfigurieren müssen und den genauen Titel des Fensters nicht kennen, ist dieses Tool genau das Richtige für Sie. Starten Sie Ihre Anwendung und führen Sie dieses Skript in einer PowerShell-Konsole aus. Es listet alle sichtbaren Fenster und deren Prozessnamen auf, sodass Sie den genauen Titel finden können, der im Skript `Close-AppByTitle.ps1` zu verwenden ist.
+*   **`management/tools/Find-WindowInfo.ps1`**: Wenn Sie den genauen Titel eines Anwendungsfensters nicht kennen (um ihn beispielsweise in `Close-AppByTitle.ps1` zu konfigurieren), führen Sie dieses Skript aus. Es listet alle sichtbaren Fenster und deren Prozessnamen auf und hilft Ihnen so, die genauen Informationen zu finden.
+*   **`Fix-Encoding.ps1`**: Wenn Sie die Skripte ändern, stellt dieses Tool sicher, dass sie mit der richtigen Kodierung (UTF-8 mit BOM) gespeichert werden, um eine perfekte Kompatibilität mit PowerShell 5.1 und internationalen Zeichen zu gewährleisten.
 
 ---
 
@@ -131,9 +154,15 @@ Zur einfachen Fehlerbehebung wird alles protokolliert.
 Um das System zu entfernen:
 1.  Führen Sie `2_uninstall.bat` aus.
 2.  **Akzeptieren Sie die Berechtigungsanfrage (UAC)**.
-3.  Das Skript entfernt sauber alle vom Projekt erstellten geplanten Aufgaben.
+3.  Das Skript entfernt sauber alle geplanten Aufgaben und stellt die wichtigsten Systemeinstellungen wieder her.
 
-**Hinweis:** Die Deinstallation macht Systemänderungen (z. B. bleibt der Ruhemodus deaktiviert) nicht rückgängig und löscht den Projektordner nicht.
+**Hinweis zur Reversibilität:** Die Deinstallation entfernt nicht nur die geplanten Aufgaben. Sie stellt auch die wichtigsten Systemeinstellungen auf ihren Standardzustand zurück, um Ihnen ein sauberes System zu übergeben:
+*   Windows-Updates werden wieder aktiviert.
+*   Der Schnellstart wird wieder aktiviert.
+*   Die Richtlinie zum Blockieren von OneDrive wird entfernt.
+*   Das Skript wird Ihnen vorschlagen, die automatische Anmeldung zu deaktivieren.
+
+Ihr System wird so wieder zu einer Standard-Workstation, ohne verbleibende Änderungen.
 
 ---
 

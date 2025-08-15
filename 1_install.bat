@@ -1,12 +1,9 @@
 @echo off
 REM Sets the code page to support international characters
-CHCP 1252 > NUL
+REM CHCP 1252 > NUL
+CHCP 65001 > NUL
 CLS
 
-REM --- Language argument handling ---
-SET "LANG_ARG="
-IF /I "%~1" == "-l" SET "LANG_ARG=%~2"
-REM --- End of block ---
 
 ECHO #############################################################
 ECHO #           Installation Wizard - WindowsAutoConfig         #
@@ -22,7 +19,7 @@ ECHO.
 PAUSE
 
 REM Launch firstconfig.ps1, passing the language argument if defined
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0management\firstconfig.ps1" "%LANG_ARG%"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0management\firstconfig.ps1"
 
 ECHO.
 ECHO Configuration finished via wizard (or skipped).
@@ -38,7 +35,8 @@ ECHO.
 PAUSE
 
 REM Launch the PowerShell installation script, requesting admin rights.
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& {Start-Process PowerShell -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File \"%~dp0management\install.ps1\"' -Verb RunAs}"
+set "PS_ARGS=-NoProfile -ExecutionPolicy Bypass -File "%~dp0management\install.ps1""
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& {Start-Process PowerShell -ArgumentList $env:PS_ARGS -Verb RunAs}"
 
 ECHO.
 ECHO The task installation process is complete.

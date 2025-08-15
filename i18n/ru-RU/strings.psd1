@@ -1,4 +1,4 @@
-﻿@{
+@{
     #=========================================
     # --- uninstall.ps1 Strings ---
     #=========================================
@@ -36,7 +36,7 @@
     Install_ElevationWarning = "Не удалось повысить привилегии. Пожалуйста, запустите этот скрипт от имени администратора."
     Install_PressEnterToExit = "Нажмите Enter для выхода."
     Install_ConfigIniNotFoundWarning = "config.ini не найден в предполагаемом родительском каталоге ({0})."
-    Install_ProjectRootPrompt = "Пожалуйста, введите полный путь к корневому каталогу скриптов AllSysConfig (например, C:\AllSysConfig)"
+    Install_ProjectRootPrompt = "Пожалуйста, введите полный путь к корневому каталогу скриптов WindowsAutoConfig (например, C:\WindowsAutoConfig)"
     Install_InvalidProjectRootError = "Неверный корневой каталог проекта или не найден config.ini: '{0}'"
     Install_PathDeterminationError = "Ошибка при определении начальных путей: {0}"
     Install_MissingSystemFile = "Отсутствует необходимый системный файл: {0}"
@@ -46,10 +46,10 @@
     Install_UserTaskTarget = "Задача пользователя будет установлена для: {0}"
     Install_StartConfiguringTasks = "Начинается настройка запланированных задач..."
     Install_CreatingSystemTask = "Создание/обновление системной задачи '{0}'..."
-    Install_SystemTaskDescription = "AllSysConfig: Выполняет скрипт конфигурации системы при запуске."
+    Install_SystemTaskDescription = "WindowsAutoConfig: Выполняет скрипт конфигурации системы при запуске."
     Install_SystemTaskConfiguredSuccess = "Задача '{0}' успешно настроена."
     Install_CreatingUserTask = "Создание/обновление задачи пользователя '{0}' для '{1}'..."
-    Install_UserTaskDescription = "AllSysConfig: Выполняет скрипт конфигурации пользователя при входе в систему."
+    Install_UserTaskDescription = "WindowsAutoConfig: Выполняет скрипт конфигурации пользователя при входе в систему."
     Install_MainTasksConfigured = "Основные запланированные задачи настроены."
     Install_DailyRebootTasksNote = "Задачи для ежедневной перезагрузки ('AllSys_SystemScheduledReboot') и действия перед перезагрузкой ('AllSys_SystemPreRebootAction') будут создаваться/управляться скриптом '{0}' во время его выполнения."
     Install_AttemptingInitialLaunch = "Попытка первоначального запуска скриптов конфигурации..."
@@ -208,4 +208,15 @@
     Log_User_NoProcessSpecified = "В [Process] не указан ProcessName или исходный путь пуст."
     Error_User_FatalScriptError = "КРИТИЧЕСКАЯ ОШИБКА ПОЛЬЗОВАТЕЛЬСКОГО СКРИПТА '{0}': {1} `n{2}"
     Error_User_VarExpansionFailed = "Ошибка расширения переменных для ProcessName '{0}': {1}"
+    Log_User_ScriptFinished = "{0} ({1}) для пользователя '{2}' завершен."
+    #=========================================
+    # --- Gotify Notification Strings ---
+    #=========================================
+    Gotify_MessageDate = "На {0}."
+    Gotify_SystemActionsHeader = "Действия СИСТЕМЫ:"
+    Gotify_NoSystemActions = "Системных действий нет."
+    Gotify_SystemErrorsHeader = "Ошибки СИСТЕМЫ:"
+    Gotify_UserActionsHeader = "Действия ПОЛЬЗОВАТЕЛЯ:"
+    Gotify_NoUserActions = "Действий пользователя нет."
+    Gotify_UserErrorsHeader = "Ошибки ПОЛЬЗОВАТЕЛЯ:"
 }

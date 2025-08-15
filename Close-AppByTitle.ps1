@@ -1,4 +1,4 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 <#
 .SYNOPSIS
     Trouve une fenêtre par son titre, la met au premier plan, et lui envoie des touches.
@@ -9,7 +9,7 @@
 
 param(
     # Le titre EXACT de la fenêtre de l'application à fermer.
-    [string]$WindowTitle = "",
+    [string]$WindowTitle = "AllSys-Clk",
     
     # La séquence de touches pour la fermer.
     [string]$KeysToSend = "{ESC}{ESC}x{ENTER}"

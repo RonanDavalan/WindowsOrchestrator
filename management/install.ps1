@@ -1,7 +1,4 @@
-﻿param(
-    # Accepte un argument de langue optionnel (non utilisé ici, mais prévu pour la cohérence)
-    [string]$LanguageOverride = ""
-)
+﻿param()
 
 <#
 .SYNOPSIS
@@ -17,41 +14,37 @@
 # --- Internationalization (i18n) ---
 $lang = @{}
 try {
+    # Définition des chemins de base
     if ($MyInvocation.MyCommand.CommandType -eq 'ExternalScript') { $PSScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition } 
     else { try { $PSScriptRoot = Split-Path -Parent $script:MyInvocation.MyCommand.Path -ErrorAction Stop } catch { $PSScriptRoot = Get-Location } }
-    
     $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\")).Path
     
-    $cultureName = if (-not [string]::IsNullOrWhiteSpace($LanguageOverride)) {
-        switch ($LanguageOverride.ToLower()) {
-            'ar' { 'ar-SA' }
-			'bn' { 'bn-BD' }
-			'de' { 'de-DE' }
-			'en' { 'en-US' }
-			'es' { 'es-ES' }
-			'fr' { 'fr-FR' }
-			'hi' { 'hi-IN' }
-			'id' { 'id-ID' }
-			'ja' { 'ja-JP' }
-			'ru' { 'ru-RU' }           
-			'zh' { 'zh-CN' }
-            default { (Get-Culture).Name }
-        }
-    } else {
-        (Get-Culture).Name
+    # Détection automatique et exclusive de la culture du système.
+    $cultureName = (Get-Culture).Name
+
+    # Construction du chemin vers le fichier de langue
+    $langFilePath = Join-Path $projectRoot "i18n\$cultureName\strings.psd1"
+    if (-not (Test-Path $langFilePath)) { 
+        # Si le fichier de la langue système n'existe pas, on se rabat sur l'anglais.
+        $langFilePath = Join-Path $projectRoot "i18n\en-US\strings.psd1" 
     }
 
-    $langFilePath = Join-Path $projectRoot "i18n\$cultureName\strings.psd1"
-    if (-not (Test-Path $langFilePath)) { $langFilePath = Join-Path $projectRoot "i18n\en-US\strings.psd1" }
-
+    # Chargement du fichier de langue
     if (Test-Path $langFilePath) {
-        $langContent = Get-Content -Path $langFilePath -Raw
+        $langContent = Get-Content -Path $langFilePath -Raw -Encoding UTF8
         $lang = Invoke-Expression $langContent
-    } else { throw "Aucun fichier de langue valide trouvé." }
+    } else { 
+        # Erreur si même le fichier anglais est introuvable
+        throw "Aucun fichier de langue valide trouvé, y compris le fichier de secours en-US." 
+    }
 
-    if ($null -eq $lang -or $lang.Count -eq 0) { throw "Le fichier de langue '$langFilePath' est vide ou invalide." }
+    # Vérification que le fichier chargé n'est pas vide
+    if ($null -eq $lang -or $lang.Count -eq 0) { 
+        throw "Le fichier de langue '$langFilePath' est vide ou invalide." 
+    }
 
 } catch {
+    # Ce bloc s'exécute si une des étapes ci-dessus échoue
     Write-Error "FATAL ERROR: Could not load language files. Details: $($_.Exception.Message)"
     Read-Host "Press Enter to exit."
     exit 1
@@ -94,8 +87,8 @@ try {
     $SystemScriptPath = Join-Path $ProjectRootDir "config_systeme.ps1"
     $UserScriptPath   = Join-Path $ProjectRootDir "config_utilisateur.ps1"
     
-    $TaskNameSystem = "AllSysConfig-SystemStartup"
-    $TaskNameUser   = "AllSysConfig-UserLogon"
+    $TaskNameSystem = "WindowsAutoConfig-SystemStartup"
+    $TaskNameUser   = "WindowsAutoConfig-UserLogon"
 
     Write-StyledHost ($lang.Install_ProjectRootUsed -f $ProjectRootDir) "INFO"
 }
@@ -120,10 +113,18 @@ Write-StyledHost ($lang.Install_UserTaskTarget -f $TargetUserForUserTask) "INFO"
 
 # --- Début de l'Installation ---
 Write-StyledHost $lang.Install_StartConfiguringTasks "INFO"
+
+# --- Préparation des arguments pour les tâches en fonction de la langue ---
+# La variable $cultureName (ex: "fr-FR") est déjà définie par le bloc i18n en début de script.
+# Nous l'injectons directement dans la commande pour forcer la culture de la tâche planifiée.
+$finalArgumentSystem = "-NoProfile -ExecutionPolicy Bypass -Command `"& { [System.Threading.Thread]::CurrentThread.CurrentUICulture = '$cultureName'; . '$SystemScriptPath' }`""
+$finalArgumentUser = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -Command `"& { [System.Threading.Thread]::CurrentThread.CurrentUICulture = '$cultureName'; . '$UserScriptPath' }`""
+# --- Fin de la préparation ---
+
 try {
     # Tâche 1: Script Système
     Write-StyledHost ($lang.Install_CreatingSystemTask -f $TaskNameSystem) "INFO"
-    $ActionSystem = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$SystemScriptPath`"" -WorkingDirectory $ProjectRootDir
+    $ActionSystem = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $finalArgumentSystem -WorkingDirectory $ProjectRootDir
     $TriggerSystem = New-ScheduledTaskTrigger -AtStartup
     $PrincipalSystem = New-ScheduledTaskPrincipal -UserId "NT AUTHORITY\SYSTEM" -RunLevel Highest
     $SettingsSystem = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 2)
@@ -132,7 +133,7 @@ try {
 
     # Tâche 2: Script Utilisateur
     Write-StyledHost ($lang.Install_CreatingUserTask -f $TaskNameUser, $TargetUserForUserTask) "INFO"
-    $ActionUser = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$UserScriptPath`"" -WorkingDirectory $ProjectRootDir
+    $ActionUser = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $finalArgumentUser -WorkingDirectory $ProjectRootDir
     $TriggerUser = New-ScheduledTaskTrigger -AtLogOn -User $TargetUserForUserTask
     $PrincipalUser = New-ScheduledTaskPrincipal -UserId $TargetUserForUserTask -LogonType Interactive
     $SettingsUser = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 1)

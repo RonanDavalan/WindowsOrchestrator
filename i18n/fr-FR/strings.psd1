@@ -1,4 +1,4 @@
-﻿@{
+@{
     #=========================================
     # --- uninstall.ps1 Strings ---
     #=========================================
@@ -36,7 +36,7 @@
     Install_ElevationWarning = "Échec de l'élévation des privilèges. Veuillez exécuter ce script en tant qu'administrateur."
     Install_PressEnterToExit = "Appuyez sur Entrée pour quitter."
     Install_ConfigIniNotFoundWarning = "config.ini non trouvé dans le répertoire parent présumé ({0})."
-    Install_ProjectRootPrompt = "Veuillez entrer le chemin complet du répertoire racine des scripts AllSysConfig (ex: C:\AllSysConfig)"
+    Install_ProjectRootPrompt = "Veuillez entrer le chemin complet du répertoire racine des scripts WindowsAutoConfig (ex: C:\WindowsAutoConfig)"
     Install_InvalidProjectRootError = "Répertoire racine du projet invalide ou config.ini introuvable : '{0}'"
     Install_PathDeterminationError = "Erreur lors de la détermination des chemins initiaux : {0}"
     Install_MissingSystemFile = "Fichier système requis manquant : {0}"
@@ -46,10 +46,10 @@
     Install_UserTaskTarget = "La tâche utilisateur sera installée pour : {0}"
     Install_StartConfiguringTasks = "Début de la configuration des tâches planifiées..."
     Install_CreatingSystemTask = "Création/Mise à jour de la tâche système '{0}'..."
-    Install_SystemTaskDescription = "AllSysConfig: Exécute le script de configuration système au démarrage."
+    Install_SystemTaskDescription = "WindowsAutoConfig: Exécute le script de configuration système au démarrage."
     Install_SystemTaskConfiguredSuccess = "Tâche '{0}' configurée avec succès."
     Install_CreatingUserTask = "Création/Mise à jour de la tâche utilisateur '{0}' pour '{1}'..."
-    Install_UserTaskDescription = "AllSysConfig: Exécute le script de configuration utilisateur à l'ouverture de session."
+    Install_UserTaskDescription = "WindowsAutoConfig: Exécute le script de configuration utilisateur à l'ouverture de session."
     Install_MainTasksConfigured = "Tâches planifiées principales configurées."
     Install_DailyRebootTasksNote = "Les tâches pour le redémarrage quotidien ('AllSys_SystemScheduledReboot') et l'action pré-redémarrage ('AllSys_SystemPreRebootAction') seront créées/gérées par '{0}' lors de son exécution."
     Install_AttemptingInitialLaunch = "Tentative de lancement initial des scripts de configuration..."
@@ -208,4 +208,15 @@ ATTENTION : Vos réglages actuels seront perdus.
     Log_User_NoProcessSpecified = "Aucun ProcessName spécifié dans [Process] ou le chemin est vide."
     Error_User_FatalScriptError = "ERREUR FATALE DU SCRIPT UTILISATEUR '{0}': {1} `n{2}"
     Error_User_VarExpansionFailed = "Erreur lors de l'expansion des variables pour ProcessName '{0}': {1}"
+    Log_User_ScriptFinished = "{0} ({1}) pour l'utilisateur '{2}' terminé."
+    #=========================================
+    # --- Gotify Notification Strings ---
+    #=========================================
+    Gotify_MessageDate = "Exécuté le {0}."
+    Gotify_SystemActionsHeader = "Actions SYSTÈME :"
+    Gotify_NoSystemActions = "Aucune action SYSTÈME."
+    Gotify_SystemErrorsHeader = "Erreurs SYSTÈME :"
+    Gotify_UserActionsHeader = "Actions UTILISATEUR :"
+    Gotify_NoUserActions = "Aucune action UTILISATEUR."
+    Gotify_UserErrorsHeader = "Erreurs UTILISATEUR :"
 }

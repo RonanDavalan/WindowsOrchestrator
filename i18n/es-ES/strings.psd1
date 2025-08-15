@@ -1,4 +1,4 @@
-﻿@{
+@{
     #=========================================
     # --- uninstall.ps1 Strings ---
     #=========================================
@@ -36,7 +36,7 @@
     Install_ElevationWarning = "Error al elevar privilegios. Por favor, ejecute este script como administrador."
     Install_PressEnterToExit = "Presione Enter para salir."
     Install_ConfigIniNotFoundWarning = "config.ini no encontrado en el presunto directorio padre ({0})."
-    Install_ProjectRootPrompt = "Por favor, ingrese la ruta completa al directorio raíz de los scripts de AllSysConfig (ej: C:\AllSysConfig)"
+    Install_ProjectRootPrompt = "Por favor, ingrese la ruta completa al directorio raíz de los scripts de WindowsAutoConfig (ej: C:\WindowsAutoConfig)"
     Install_InvalidProjectRootError = "Directorio raíz del proyecto inválido o config.ini no encontrado: '{0}'"
     Install_PathDeterminationError = "Error al determinar las rutas iniciales: {0}"
     Install_MissingSystemFile = "Falta el archivo de sistema requerido: {0}"
@@ -46,10 +46,10 @@
     Install_UserTaskTarget = "La tarea de usuario se instalará para: {0}"
     Install_StartConfiguringTasks = "Iniciando la configuración de tareas programadas..."
     Install_CreatingSystemTask = "Creando/Actualizando la tarea de sistema '{0}'..."
-    Install_SystemTaskDescription = "AllSysConfig: Ejecuta el script de configuración del sistema al inicio."
+    Install_SystemTaskDescription = "WindowsAutoConfig: Ejecuta el script de configuración del sistema al inicio."
     Install_SystemTaskConfiguredSuccess = "Tarea '{0}' configurada con éxito."
     Install_CreatingUserTask = "Creando/Actualizando la tarea de usuario '{0}' para '{1}'..."
-    Install_UserTaskDescription = "AllSysConfig: Ejecuta el script de configuración del usuario al iniciar sesión."
+    Install_UserTaskDescription = "WindowsAutoConfig: Ejecuta el script de configuración del usuario al iniciar sesión."
     Install_MainTasksConfigured = "Tareas programadas principales configuradas."
     Install_DailyRebootTasksNote = "Las tareas para el reinicio diario ('AllSys_SystemScheduledReboot') y la acción previa al reinicio ('AllSys_SystemPreRebootAction') serán creadas/gestionadas por '{0}' durante su ejecución."
     Install_AttemptingInitialLaunch = "Intentando el lanzamiento inicial de los scripts de configuración..."
@@ -208,4 +208,15 @@ ADVERTENCIA: Su configuración actual se perderá.
     Log_User_NoProcessSpecified = "No se especificó ProcessName en [Process] o la ruta está vacía."
     Error_User_FatalScriptError = "ERROR FATAL DEL SCRIPT DE USUARIO '{0}': {1} `n{2}"
     Error_User_VarExpansionFailed = "Error al expandir las variables para ProcessName '{0}': {1}"
+    Log_User_ScriptFinished = "{0} ({1}) para el usuario '{2}' finalizado."
+    #=========================================
+    # --- Gotify Notification Strings ---
+    #=========================================
+    Gotify_MessageDate = "En {0}."
+    Gotify_SystemActionsHeader = "Acciones del sistema:"
+    Gotify_NoSystemActions = "No hay acciones del sistema."
+    Gotify_SystemErrorsHeader = "Errores del sistema:"
+    Gotify_UserActionsHeader = "Acciones del usuario:"
+    Gotify_NoUserActions = "No hay acciones del usuario."
+    Gotify_UserErrorsHeader = "Errores del usuario:"
 }
