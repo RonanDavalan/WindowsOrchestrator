@@ -4,27 +4,58 @@
 
 **Autopilot Anda untuk stasiun kerja Windows khusus. Konfigurasikan sekali, dan biarkan sistem mengelola dirinya sendiri dengan andal.**
 
-![License](https://img.shields.io/badge/Licence-GPLv3-blue.svg)![PowerShell Version](https://img.shields.io/badge/PowerShell-5.1%2B-blue)![Status](https://img.shields.io/badge/Statut-Opérationnel-brightgreen.svg)![OS](https://img.shields.io/badge/OS-Windows_10_|_11-informational)![Support](https://img.shields.io/badge/Support-11_Langues-orange.svg)![Contributions](https://img.shields.io/badge/Contributions-Bienvenues-brightgreen.svg)
+![Lisensi](https://img.shields.io/badge/Licence-GPLv3-blue.svg)![Versi PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue)![Status](https://img.shields.io/badge/Status-Operational-brightgreen.svg)![OS](https://img.shields.io/badge/OS-Windows_10_|_11-informational)![Dukungan](https://img.shields.io/badge/Support-11_Languages-orange.svg)![Kontribusi](https://img.shields.io/badge/Contributions-Welcome-brightgreen.svg)
 
 ---
 
 ## 🎯 Misi Kami
 
-Bayangkan sebuah stasiun kerja Windows yang andal dan otonom. Sebuah mesin yang Anda konfigurasikan sekali untuk misinya—apakah itu mengendalikan perangkat yang terhubung, menyalakan layar digital, atau berfungsi sebagai stasiun pemantauan—dan kemudian dapat dilupakan. Sebuah sistem yang memastikan aplikasi Anda tetap **beroperasi secara permanen**, tanpa gangguan.
+Bayangkan sebuah stasiun kerja Windows yang andal dan otonom. Sebuah mesin yang Anda konfigurasikan sekali untuk misinya dan kemudian dapat dilupakan. Sebuah sistem yang memastikan aplikasi Anda tetap **beroperasi secara permanen**, tanpa gangguan.
 
-Inilah tujuan yang dibantu oleh **WindowsAutoConfig** untuk Anda capai. Tantangannya adalah PC Windows standar tidak dirancang secara asli untuk jenis daya tahan ini. Ini dibuat untuk interaksi manusia: ia tidur untuk menghemat daya, menginstal pembaruan saat dianggap sesuai, dan tidak secara otomatis memulai ulang aplikasi setelah reboot.
+Inilah tujuan yang dibantu oleh **WindowsAutoConfig** untuk Anda capai. Tantangannya adalah PC Windows standar tidak dirancang secara asli untuk daya tahan ini. Ini dirancang untuk interaksi manusia: ia tidur, menginstal pembaruan saat dianggap sesuai, dan tidak secara otomatis memulai ulang aplikasi setelah reboot.
 
 **WindowsAutoConfig** adalah solusinya: seperangkat skrip yang bertindak sebagai pengawas cerdas dan permanen. Ini mengubah PC apa pun menjadi otomat yang andal, memastikan bahwa aplikasi penting Anda selalu beroperasi, tanpa intervensi manual.
 
-### Di Luar Antarmuka: Kontrol Sistem Langsung
+### Mengapa `WindowsAutoConfig` dibuat? Kisah tentang kebutuhan nyata.
 
-WindowsAutoConfig bertindak sebagai panel kontrol canggih, membuat konfigurasi yang kuat dapat diakses yang tidak tersedia atau sulit dikelola melalui UI Windows standar.
+`WindowsAutoConfig` adalah solusi rekayasa, lahir dari kebutuhan untuk memastikan **kontinuitas operasional** pada sistem operasi desktop. **Dikembangkan sebagai bagian dari solusi AI lokal AllSys kami, sekarang menjadi alat sumber terbuka mandiri yang dapat digunakan untuk aplikasi apa pun.**
 
-*   **Kontrol Penuh atas Pembaruan Windows:** Alih-alih hanya "menjeda" pembaruan, skrip memodifikasi kebijakan sistem untuk menghentikan mekanisme otomatis, memberi Anda kembali kendali atas kapan pembaruan diinstal.
-*   **Pengaturan Daya yang Andal:** Skrip tidak hanya mengatur tidur ke "Tidak Pernah"; ini memastikan pengaturan ini diterapkan kembali pada setiap boot, membuat konfigurasi Anda tahan terhadap perubahan yang tidak diinginkan.
-*   **Akses ke Pengaturan Tingkat Administrator:** Fitur seperti menonaktifkan OneDrive melalui kebijakan sistem adalah tindakan yang biasanya terkubur di Editor Kebijakan Grup (tidak tersedia di Windows Home). Skrip ini membuatnya dapat diakses oleh semua orang.
+Kami dihadapkan tidak hanya pada satu, tetapi dua jenis kegagalan sistemik:
+
+#### 1. Kegagalan Mendadak: Pemadaman Tak Terduga
+
+Skenarionya sederhana: mesin yang dikonfigurasi untuk akses jarak jauh dan pemadaman listrik di malam hari. Bahkan dengan BIOS yang diatur untuk restart otomatis, misi gagal. Windows restart tetapi tetap di layar login; aplikasi penting tidak diluncurkan kembali, sesi tidak dibuka. Sistem tidak dapat diakses.
+
+#### 2. Degradasi Lambat: Ketidakstabilan Jangka Panjang
+
+Yang lebih berbahaya adalah perilaku Windows dari waktu ke waktu. Dirancang sebagai OS interaktif, ini tidak dioptimalkan untuk proses yang berjalan tanpa gangguan. Secara bertahap, kebocoran memori dan penurunan kinerja muncul, membuat sistem tidak stabil dan memerlukan restart manual.
+
+### Jawabannya: Lapisan Keandalan Asli
+
+Menghadapi tantangan ini, utilitas pihak ketiga terbukti tidak cukup. Oleh karena itu, kami membuat keputusan untuk **merancang lapisan ketahanan sistem kami sendiri.**
+
+`WindowsAutoConfig` bertindak sebagai autopilot yang mengambil kendali OS untuk:
+
+- **Memastikan Pemulihan Otomatis:** Setelah kegagalan, ini menjamin pembukaan sesi dan restart aplikasi utama Anda.
+- **Menjamin Pemeliharaan Preventif:** Ini memungkinkan Anda untuk menjadwalkan restart harian yang terkontrol dengan eksekusi skrip khusus sebelumnya.
+- **Melindungi Aplikasi** dari gangguan Windows yang tidak tepat waktu (pembaruan, mode tidur...).
+
+`WindowsAutoConfig` adalah alat penting bagi siapa saja yang membutuhkan stasiun kerja Windows untuk tetap **andal, stabil, dan beroperasi tanpa pengawasan berkelanjutan.**
+
+---
+
+## 💡 Kasus Penggunaan Umum
+
+*   **Papan Nama Digital:** Memastikan bahwa perangkat lunak papan nama berjalan 24/7 di layar publik.
+*   **Server Rumah dan IoT:** Mengontrol server Plex, gateway Home Assistant, atau objek yang terhubung dari PC Windows.
+*   **Stasiun Pengawasan:** Menjaga aplikasi pemantauan (kamera, log jaringan) selalu aktif.
+*   **Kios Interaktif:** Memastikan bahwa aplikasi kios restart secara otomatis setelah setiap reboot.
+*   **Otomatisasi Ringan:** Menjalankan skrip atau proses secara terus-menerus untuk tugas penambangan data atau pengujian.
+
+---
 
 ## ✨ Fitur Utama
+
 *   **Wizard Konfigurasi Grafis:** Tidak perlu mengedit file untuk pengaturan dasar.
 *   **Dukungan Multibahasa Penuh:** Antarmuka dan log tersedia dalam 11 bahasa, dengan deteksi otomatis bahasa sistem.
 *   **Manajemen Daya:** Nonaktifkan tidur mesin, tidur layar, dan Windows Fast Startup untuk stabilitas maksimum.
@@ -103,7 +134,7 @@ WindowsAutoConfig/
 ├── PreReboot.bat                # Contoh skrip untuk tindakan pra-reboot
 ├── Logs/                        # (Dibuat secara otomatis) Berisi file log
 ├── i18n/                        # Berisi semua file terjemahan
-│   ├── en-US/strings.psd1
+│   ├── id-ID/strings.psd1
 │   └── ... (bahasa lain)
 └── management/
     ├── defaults/default_config.ini # Templat konfigurasi awal

@@ -10,21 +10,52 @@
 
 ## 🎯 Notre Mission
 
-Imaginez un poste Windows parfaitement fiable et autonome. Une machine que vous configurez une seule fois pour sa mission — qu'il s'agisse de piloter un objet connecté, d'animer un panneau d'affichage ou de servir de poste de supervision — et que vous pouvez ensuite oublier. Un système qui assure que votre application reste **opérationnelle en permanence**, sans interruption.
+Imaginez un poste Windows parfaitement fiable et autonome. Une machine que vous configurez une seule fois pour sa mission et que vous pouvez ensuite oublier. Un système qui assure que votre application reste **opérationnelle en permanence**, sans interruption.
 
-C'est l'objectif que **WindowsAutoConfig** vous aide à atteindre. Le défi est qu'un PC Windows standard n'est pas nativement conçu pour cette endurance. Il est pensé pour l'interaction humaine : il se met en veille pour économiser l'énergie, installe des mises à jour quand il le juge bon, et ne redémarre pas automatiquement une application après un redémarrage.
+C'est l'objectif que **WindowsAutoConfig** vous aide à atteindre. Le défi est qu'un PC Windows standard n'est pas nativement conçu pour cette endurance. Il est pensé pour l'interaction humaine : il se met en veille, installe des mises à jour quand il le juge bon, et ne redémarre pas automatiquement une application après un redémarrage.
 
 **WindowsAutoConfig** est la solution : un ensemble de scripts qui agit comme un superviseur intelligent et permanent. Il transforme n'importe quel PC en un automate fiable, garantissant que votre application critique est toujours opérationnelle, sans intervention manuelle.
 
-### Au-delà de l'interface : un contrôle direct du système
+### Pourquoi `WindowsAutoConfig` a été créé ? L'histoire d'un réel besoin.
 
-WindowsAutoConfig agit comme un panneau de contrôle avancé, rendant accessibles des configurations puissantes qui ne sont pas disponibles ou sont difficiles à gérer via l'interface standard de Windows.
+`WindowsAutoConfig` est une solution d'ingénierie, née de la nécessité de garantir la **continuité opérationnelle** sur un système d'exploitation de bureau. **Développé dans le cadre de notre solution d'IA locale AllSys, il est maintenant un outil open-source autonome pouvant être utilisé pour n'importe quelle application.**
 
-*   **Maîtrise Complète de Windows Update :** Au lieu de simplement "mettre en pause" les mises à jour, le script modifie les stratégies système pour stopper le mécanisme automatique, vous redonnant la main sur le moment où les mises à jour sont installées.
-*   **Configuration Fiable de l'Alimentation :** Le script ne se contente pas de régler la mise en veille sur "Jamais", il s'assure que ce réglage est réappliqué à chaque démarrage, rendant votre configuration résistante à tout changement indésirable.
-*   **Accès aux Paramètres Administrateur :** Des fonctionnalités comme la désactivation de OneDrive via une politique système sont des actions normalement réservées à l'Éditeur de Stratégie de Groupe (indisponible sur Windows Famille). Le script les rend accessibles à tous.
+Nous avons été confrontés non pas à un, mais à deux types de défaillances systémiques :
+
+#### 1. La Défaillance Brutale : La Panne Inattendue
+
+Le scénario est simple : une machine configurée pour un accès distant et une coupure de courant nocturne. Même avec un BIOS paramétré pour un redémarrage automatique, la mission échoue. Windows redémarre mais reste sur l'écran de connexion ; l'application critique n'est pas relancée, la session n'est pas ouverte. Le système est inaccessible.
+
+#### 2. La Dégradation Lente : L'Instabilité à Long Terme 
+
+Plus insidieux encore est le comportement de Windows sur la durée. Conçu comme un OS interactif, il n'est pas optimisé pour des processus tournant sans interruption. Progressivement, des fuites de mémoire et des dégradations de performance apparaissent, rendant le système instable et nécessitant un redémarrage manuel.
+
+### La Réponse : Une Couche de Fiabilité Native 
+
+Face à ces défis, les utilitaires tiers se sont révélés insuffisants. Nous avons donc pris la décision d'**architecturer notre propre couche de résilience système.**
+
+`WindowsAutoConfig` agit comme un pilote automatique qui prend le contrôle de l'OS pour :
+
+- **Assurer la Reprise Automatique :** Après une panne, il garantit l'ouverture de session et le redémarrage de votre application principale.
+- **Garantir la Maintenance Préventive :** Il permet de planifier un redémarrage quotidien contrôlé avec l'exécution de scripts personnalisés en amont.
+- **Protéger l'Application** des interruptions intempestives de Windows (mises à jour, mise en veille...).
+
+`WindowsAutoConfig` est l'outil indispensable pour quiconque a besoin qu'un poste Windows reste **fiable, stable et opérationnel sans surveillance continue.**
+
+---
+
+## 💡 Cas d'Usage Typiques
+
+*   **Affichage Dynamique :** Garantir qu'un logiciel de signalisation tourne 24/7 sur un écran public.
+*   **Serveurs Domestiques et IoT :** Piloter un serveur Plex, une passerelle Home Assistant ou un objet connecté depuis un PC Windows.
+*   **Postes de Supervision :** Maintenir une application de surveillance (caméras, logs réseau) toujours active.
+*   **Bornes Interactives (Kiosques) :** S'assurer que l'application de la borne se relance automatiquement après chaque redémarrage.
+*   **Automatisation Légère :** Exécuter des scripts ou des processus en continu pour des tâches de data-mining ou de tests.
+
+---
 
 ## ✨ Fonctionnalités Clés
+
 *   **Assistant de Configuration Graphique :** Pas besoin d'éditer de fichiers pour les réglages de base.
 *   **Support Multilingue Complet :** Interface et journaux disponibles en 11 langues, avec détection automatique de la langue du système.
 *   **Gestion de l'Alimentation :** Désactivez la mise en veille de la machine, de l'écran, et le démarrage rapide de Windows pour une stabilité maximale.

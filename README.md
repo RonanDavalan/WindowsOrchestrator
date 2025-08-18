@@ -4,29 +4,58 @@
 
 **Your autopilot for dedicated Windows workstations. Configure once, and let the system reliably manage itself.**
 
-![License](https://img.shields.io/badge/Licence-GPLv3-blue.svg)![PowerShell Version](https://img.shields.io/badge/PowerShell-5.1%2B-blue)![Status](https://img.shields.io/badge/Statut-Opérationnel-brightgreen.svg)![OS](https://img.shields.io/badge/OS-Windows_10_|_11-informational)![Support](https://img.shields.io/badge/Support-11_Langues-orange.svg)![Contributions](https://img.shields.io/badge/Contributions-Bienvenues-brightgreen.svg)
-
-![WindowsAutoConfig Configuration Wizard](assets/screenshot-wizard.png)
+![Licence](https://img.shields.io/badge/Licence-GPLv3-blue.svg)![PowerShell Version](https://img.shields.io/badge/PowerShell-5.1%2B-blue)![Status](https://img.shields.io/badge/Status-Operational-brightgreen.svg)![OS](https://img.shields.io/badge/OS-Windows_10_|_11-informational)![Support](https://img.shields.io/badge/Support-11_Languages-orange.svg)![Contributions](https://img.shields.io/badge/Contributions-Welcome-brightgreen.svg)
 
 ---
 
 ## 🎯 Our Mission
 
-Imagine a perfectly reliable and autonomous Windows workstation. A machine that you configure once for its mission—whether it's controlling a connected device, powering a digital display, or serving as a monitoring station—and can then forget about. A system that ensures your application remains **permanently operational**, without interruption.
+Imagine a perfectly reliable and autonomous Windows workstation. A machine you configure once for its mission and can then forget about. A system that ensures your application remains **permanently operational**, without interruption.
 
-This is the goal that **WindowsAutoConfig** helps you achieve. The challenge is that a standard Windows PC is not natively designed for this kind of endurance. It's built for human interaction: it goes to sleep to save power, installs updates when it sees fit, and doesn't automatically restart an application after a reboot.
+This is the goal that **WindowsAutoConfig** helps you achieve. The challenge is that a standard Windows PC is not natively designed for this endurance. It is designed for human interaction: it goes to sleep, installs updates when it deems it appropriate, and does not automatically restart an application after a reboot.
 
 **WindowsAutoConfig** is the solution: a set of scripts that acts as an intelligent and permanent supervisor. It transforms any PC into a reliable automaton, ensuring that your critical application is always operational, without manual intervention.
 
-### Beyond the Interface: Direct System Control
+### Why was `WindowsAutoConfig` created? The story of a real need.
 
-WindowsAutoConfig acts as an advanced control panel, making powerful configurations accessible that are either unavailable or difficult to manage through the standard Windows UI.
+`WindowsAutoConfig` is an engineering solution, born from the need to ensure **operational continuity** on a desktop operating system. **Developed as part of our AllSys local AI solution, it is now a standalone open-source tool that can be used for any application.**
 
-*   **Full Control Over Windows Update:** Instead of just "pausing" updates, the script modifies system policies to halt the automatic mechanism, giving you back control over when updates are installed.
-*   **Reliable Power Settings:** The script doesn't just set sleep to "Never"; it ensures this setting is reapplied at every boot, making your configuration resilient to unwanted changes.
-*   **Access to Administrator-Level Settings:** Features like disabling OneDrive via system policy are actions usually buried in the Group Policy Editor (unavailable on Windows Home). This script makes them accessible to everyone.
+We were faced not with one, but with two types of systemic failures:
+
+#### 1. The Abrupt Failure: The Unexpected Outage
+
+The scenario is simple: a machine configured for remote access and a nighttime power outage. Even with a BIOS set for automatic restart, the mission fails. Windows restarts but remains on the login screen; the critical application is not relaunched, the session is not opened. The system is inaccessible.
+
+#### 2. The Slow Degradation: Long-Term Instability
+
+Even more insidious is the behavior of Windows over time. Designed as an interactive OS, it is not optimized for processes running without interruption. Gradually, memory leaks and performance degradation appear, making the system unstable and requiring a manual restart.
+
+### The Answer: A Native Reliability Layer
+
+Faced with these challenges, third-party utilities proved insufficient. We therefore made the decision to **architect our own system resilience layer.**
+
+`WindowsAutoConfig` acts as an autopilot that takes control of the OS to:
+
+- **Ensure Automatic Recovery:** After a failure, it guarantees session opening and the restart of your main application.
+- **Guarantee Preventive Maintenance:** It allows you to schedule a controlled daily restart with the execution of custom scripts beforehand.
+- **Protect the Application** from untimely interruptions from Windows (updates, sleep mode...).
+
+`WindowsAutoConfig` is the essential tool for anyone who needs a Windows workstation to remain **reliable, stable, and operational without continuous monitoring.**
+
+---
+
+## 💡 Typical Use Cases
+
+*   **Digital Signage:** Ensure that signage software runs 24/7 on a public screen.
+*   **Home Servers and IoT:** Control a Plex server, a Home Assistant gateway, or a connected object from a Windows PC.
+*   **Supervision Stations:** Keep a monitoring application (cameras, network logs) always active.
+*   **Interactive Kiosks:** Ensure that the kiosk application restarts automatically after each reboot.
+*   **Lightweight Automation:** Run scripts or processes continuously for data-mining or testing tasks.
+
+---
 
 ## ✨ Key Features
+
 *   **Graphical Configuration Wizard:** No need to edit files for basic settings.
 *   **Full Multilingual Support:** Interface and logs available in 11 languages, with automatic detection of the system's language.
 *   **Power Management:** Disable machine sleep, display sleep, and Windows Fast Startup for maximum stability.

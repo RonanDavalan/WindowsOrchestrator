@@ -2,32 +2,63 @@
 
 [🇺🇸 English](README.md) | [🇫🇷 Français](README-fr-FR.md) | [🇪🇸 Español](README-es-ES.md) | [🇮🇳 हिंदी](README-hi-IN.md) | [🇯🇵 日本語](README-ja-JP.md) | [🇷🇺 Русский](README-ru-RU.md) | [🇨🇳 中文](README-zh-CN.md) | [🇸🇦 العربية](README-ar-SA.md) | [🇧🇩 বাংলা](README-bn-BD.md) | [🇮🇩 Bahasa Indonesia](README-id-ID.md)
 
-**Ihr Autopilot für dedizierte Windows-Arbeitsplätze. Einmal konfigurieren und das System zuverlässig sich selbst verwalten lassen.**
+**Ihr Autopilot für dedizierte Windows-Workstations. Einmal konfigurieren und das System zuverlässig sich selbst verwalten lassen.**
 
-![Lizenz](https://img.shields.io/badge/Licence-GPLv3-blue.svg)![PowerShell Version](https://img.shields.io/badge/PowerShell-5.1%2B-blue)![Status](https://img.shields.io/badge/Statut-Opérationnel-brightgreen.svg)![OS](https://img.shields.io/badge/OS-Windows_10_|_11-informational)![Unterstützung](https://img.shields.io/badge/Support-11_Langues-orange.svg)![Beiträge](https://img.shields.io/badge/Contributions-Bienvenues-brightgreen.svg)
+![Lizenz](https://img.shields.io/badge/Licence-GPLv3-blue.svg)![PowerShell Version](https://img.shields.io/badge/PowerShell-5.1%2B-blue)![Status](https://img.shields.io/badge/Status-Operational-brightgreen.svg)![OS](https://img.shields.io/badge/OS-Windows_10_|_11-informational)![Unterstützung](https://img.shields.io/badge/Support-11_Languages-orange.svg)![Beiträge](https://img.shields.io/badge/Contributions-Welcome-brightgreen.svg)
 
 ---
 
 ## 🎯 Unsere Mission
 
-Stellen Sie sich eine absolut zuverlässige und autonome Windows-Workstation vor. Eine Maschine, die Sie einmal für ihre Aufgabe konfigurieren – sei es die Steuerung eines vernetzten Geräts, die Bespielung einer digitalen Anzeige oder der Dienst als Überwachungsstation – und die Sie dann vergessen können. Ein System, das sicherstellt, dass Ihre Anwendung **dauerhaft betriebsbereit** bleibt, ohne Unterbrechung.
+Stellen Sie sich eine absolut zuverlässige und autonome Windows-Workstation vor. Eine Maschine, die Sie einmal für ihre Aufgabe konfigurieren und dann vergessen können. Ein System, das sicherstellt, dass Ihre Anwendung **dauerhaft betriebsbereit** bleibt, ohne Unterbrechung.
 
-Das ist das Ziel, das **WindowsAutoConfig** Ihnen hilft zu erreichen. Die Herausforderung besteht darin, dass ein Standard-Windows-PC von Haus aus nicht für diese Art von Ausdauer ausgelegt ist. Er ist für die menschliche Interaktion konzipiert: Er geht in den Ruhezustand, um Energie zu sparen, installiert Updates, wenn er es für richtig hält, und startet eine Anwendung nach einem Neustart nicht automatisch neu.
+Das ist das Ziel, das **WindowsAutoConfig** Ihnen hilft zu erreichen. Die Herausforderung besteht darin, dass ein Standard-Windows-PC von Haus aus nicht für diese Ausdauer ausgelegt ist. Er ist für die menschliche Interaktion konzipiert: Er geht in den Ruhezustand, installiert Updates, wenn er es für richtig hält, und startet eine Anwendung nach einem Neustart nicht automatisch neu.
 
 **WindowsAutoConfig** ist die Lösung: eine Reihe von Skripten, die als intelligenter und permanenter Supervisor fungieren. Es verwandelt jeden PC in einen zuverlässigen Automaten und stellt sicher, dass Ihre kritische Anwendung immer betriebsbereit ist, ohne manuellen Eingriff.
 
-### Jenseits der Benutzeroberfläche: Direkte Systemsteuerung
+### Warum wurde `WindowsAutoConfig` entwickelt? Die Geschichte eines echten Bedarfs.
 
-WindowsAutoConfig fungiert als erweitertes Kontrollpanel und macht leistungsstarke Konfigurationen zugänglich, die über die Standard-Windows-Benutzeroberfläche entweder nicht verfügbar oder schwer zu verwalten sind.
+`WindowsAutoConfig` ist eine technische Lösung, die aus der Notwendigkeit heraus entstand, die **Betriebskontinuität** auf einem Desktop-Betriebssystem zu gewährleisten. **Entwickelt als Teil unserer lokalen KI-Lösung AllSys, ist es jetzt ein eigenständiges Open-Source-Tool, das für jede Anwendung verwendet werden kann.**
 
-*   **Vollständige Kontrolle über Windows Update:** Anstatt Updates nur zu "pausieren", ändert das Skript die Systemrichtlinien, um den automatischen Mechanismus anzuhalten, sodass Sie die Kontrolle darüber zurückgewinnen, wann Updates installiert werden.
-*   **Zuverlässige Energieeinstellungen:** Das Skript stellt den Ruhezustand nicht nur auf "Nie"; es stellt sicher, dass diese Einstellung bei jedem Start erneut angewendet wird, wodurch Ihre Konfiguration widerstandsfähig gegen unerwünschte Änderungen wird.
-*   **Zugriff auf Einstellungen auf Administratorebene:** Funktionen wie das Deaktivieren von OneDrive über eine Systemrichtlinie sind Aktionen, die normalerweise im Gruppenrichtlinien-Editor (nicht verfügbar in Windows Home) verborgen sind. Dieses Skript macht sie für jeden zugänglich.
+Wir sahen uns nicht nur mit einer, sondern mit zwei Arten von Systemausfällen konfrontiert:
 
-## ✨ Hauptfunktionen
+#### 1. Der plötzliche Ausfall: Der unerwartete Stromausfall
+
+Das Szenario ist einfach: eine für den Fernzugriff konfigurierte Maschine und ein nächtlicher Stromausfall. Selbst mit einem für den automatischen Neustart konfigurierten BIOS schlägt die Mission fehl. Windows startet neu, bleibt aber auf dem Anmeldebildschirm; die kritische Anwendung wird nicht neu gestartet, die Sitzung wird nicht geöffnet. Das System ist unzugänglich.
+
+#### 2. Die langsame Verschlechterung: Langfristige Instabilität
+
+Noch heimtückischer ist das Verhalten von Windows im Laufe der Zeit. Als interaktives Betriebssystem konzipiert, ist es nicht für unterbrechungsfrei laufende Prozesse optimiert. Allmählich treten Speicherlecks und Leistungsverschlechterungen auf, die das System instabil machen und einen manuellen Neustart erfordern.
+
+### Die Antwort: Eine native Zuverlässigkeitsschicht
+
+Angesichts dieser Herausforderungen erwiesen sich Dienstprogramme von Drittanbietern als unzureichend. Wir haben uns daher entschieden, **unsere eigene Systemresilienzschicht zu entwickeln.**
+
+`WindowsAutoConfig` fungiert als Autopilot, der die Kontrolle über das Betriebssystem übernimmt, um:
+
+- **Automatische Wiederherstellung zu gewährleisten:** Nach einem Ausfall garantiert es das Öffnen der Sitzung und den Neustart Ihrer Hauptanwendung.
+- **Vorbeugende Wartung zu garantieren:** Es ermöglicht Ihnen, einen kontrollierten täglichen Neustart mit der vorherigen Ausführung von benutzerdefinierten Skripten zu planen.
+- **Die Anwendung** vor unerwünschten Unterbrechungen durch Windows (Updates, Ruhezustand...) zu schützen.
+
+`WindowsAutoConfig` ist das unverzichtbare Werkzeug für jeden, der eine Windows-Workstation benötigt, die **zuverlässig, stabil und ohne kontinuierliche Überwachung betriebsbereit bleibt.**
+
+---
+
+## 💡 Typische Anwendungsfälle
+
+*   **Digital Signage:** Sicherstellen, dass eine Signage-Software rund um die Uhr auf einem öffentlichen Bildschirm läuft.
+*   **Heimserver und IoT:** Steuern eines Plex-Servers, eines Home Assistant-Gateways oder eines vernetzten Objekts von einem Windows-PC aus.
+*   **Überwachungsstationen:** Eine Überwachungsanwendung (Kameras, Netzwerkprotokolle) immer aktiv halten.
+*   **Interaktive Kioske:** Sicherstellen, dass die Kiosk-Anwendung nach jedem Neustart automatisch neu startet.
+*   **Leichte Automatisierung:** Skripte oder Prozesse kontinuierlich für Data-Mining- oder Testaufgaben ausführen.
+
+---
+
+## ✨ Hauptmerkmale
+
 *   **Grafischer Konfigurationsassistent:** Keine Notwendigkeit, Dateien für grundlegende Einstellungen zu bearbeiten.
 *   **Vollständige mehrsprachige Unterstützung:** Benutzeroberfläche und Protokolle in 11 Sprachen verfügbar, mit automatischer Erkennung der Systemsprache.
-*   **Energieverwaltung:** Deaktivieren Sie den Ruhemodus des Rechners, des Bildschirms und den Schnellstart von Windows für maximale Stabilität.
+*   **Energieverwaltung:** Deaktivieren Sie den Ruhezustand des Rechners, des Bildschirms und den Schnellstart von Windows für maximale Stabilität.
 *   **Automatische Anmeldung (Auto-Login):** Verwaltet die automatische Anmeldung, auch in Synergie mit dem Tool **Sysinternals AutoLogon** für eine sichere Passwortverwaltung.
 *   **Windows Update Kontrolle:** Verhindern Sie, dass erzwungene Updates und Neustarts Ihre Anwendung stören.
 *   **Prozessmanager:** Startet, überwacht und startet Ihre Hauptanwendung bei jeder Sitzung automatisch neu.
@@ -40,7 +71,7 @@ WindowsAutoConfig fungiert als erweitertes Kontrollpanel und macht leistungsstar
 
 ## 🎯 Zielgruppe und bewährte Praktiken
 
-Dieses Projekt wurde entwickelt, um einen PC in einen zuverlässigen Automaten zu verwandeln, ideal für Anwendungsfälle, in denen die Maschine einer einzigen Anwendung gewidmet ist (IoT-Server, Digital Signage, Überwachungsstation usw.). Es wird nicht für einen Allzweck-Büro- oder Alltagscomputer empfohlen.
+Dieses Projekt wurde entwickelt, um einen PC in einen zuverlässigen Automaten zu verwandeln, ideal für Anwendungsfälle, in denen die Maschine einer einzigen Anwendung gewidmet ist (Server für ein IoT-Gerät, Digital Signage, Überwachungsstation usw.). Es wird nicht für einen Allzweck-Büro- oder Alltagscomputer empfohlen.
 
 *   **Große Windows-Updates:** Bei bedeutenden Updates (z. B. Upgrade von Windows 10 auf 11) ist das sicherste Verfahren, WindowsAutoConfig vor dem Update zu **deinstallieren** und danach **neu zu installieren**.
 *   **Unternehmensumgebungen:** Wenn Ihr Computer Teil einer Unternehmensdomäne ist, die von Gruppenrichtlinienobjekten (GPOs) verwaltet wird, erkundigen Sie sich bei Ihrer IT-Abteilung, um sicherzustellen, dass die von diesem Skript vorgenommenen Änderungen nicht im Widerspruch zu den Richtlinien Ihrer Organisation stehen.

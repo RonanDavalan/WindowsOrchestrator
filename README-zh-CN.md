@@ -4,27 +4,58 @@
 
 **您的专用 Windows 工作站自动驾驶仪。一次配置，系统即可可靠地自行管理。**
 
-![许可证](https://img.shields.io/badge/Licence-GPLv3-blue.svg)![PowerShell 版本](https://img.shields.io/badge/PowerShell-5.1%2B-blue)![状态](https://img.shields.io/badge/Statut-Opérationnel-brightgreen.svg)![操作系统](https://img.shields.io/badge/OS-Windows_10_|_11-informational)![支持](https://img.shields.io/badge/Support-11_Langues-orange.svg)![贡献](https://img.shields.io/badge/Contributions-Bienvenues-brightgreen.svg)
+![许可证](https://img.shields.io/badge/Licence-GPLv3-blue.svg)![PowerShell 版本](https://img.shields.io/badge/PowerShell-5.1%2B-blue)![状态](https://img.shields.io/badge/Status-Operational-brightgreen.svg)![操作系统](https://img.shields.io/badge/OS-Windows_10_|_11-informational)![支持](https://img.shields.io/badge/Support-11_Languages-orange.svg)![贡献](https://img.shields.io/badge/Contributions-Welcome-brightgreen.svg)
 
 ---
 
 ## 🎯 我们的使命
 
-想象一下一个完全可靠和自主的 Windows 工作站。一台您只需为其任务配置一次的机器——无论是控制连接的设备、驱动数字显示器，还是作为监控站——然后您就可以忘记它了。一个确保您的应用程序**永久运行**而不会中断的系统。
+想象一下一个完全可靠和自主的 Windows 工作站。一台您只需为其任务配置一次的机器，然后就可以忘记它了。一个确保您的应用程序**永久运行**而不会中断的系统。
 
-这就是 **WindowsAutoConfig** 帮助您实现的目标。挑战在于，标准的 Windows 电脑并非天生就为这种耐用性而设计。它是为人机交互而构建的：它会为了省电而休眠，会在它认为合适的时候安装更新，并且在重新启动后不会自动重新启动应用程序。
+这就是 **WindowsAutoConfig** 帮助您实现的目标。挑战在于，标准的 Windows 电脑并非天生就为这种耐用性而设计。它是为人机交互而构建的：它会休眠，会在它认为合适的时候安装更新，并且在重新启动后不会自动重新启动应用程序。
 
 **WindowsAutoConfig** 就是解决方案：一套作为智能和永久监督者的脚本。它将任何电脑转变为可靠的自动机，确保您的关键应用程序始终在运行，无需人工干预。
 
-### 超越界面：直接系统控制
+### `WindowsAutoConfig` 为何被创建？一个真实需求的故事。
 
-WindowsAutoConfig 充当一个高级控制面板，使那些在标准 Windows 用户界面中不可用或难以管理的强大配置变得易于访问。
+`WindowsAutoConfig` 是一个工程解决方案，诞生于在桌面操作系统上确保**操作连续性**的需求。**作为我们 AllSys 本地人工智能解决方案的一部分开发，它现在是一个独立的开源工具，可用于任何应用程序。**
 
-*   **完全控制 Windows 更新：** 脚本不是简单地“暂停”更新，而是修改系统策略以停止自动机制，让您重新控制何时安装更新。
-*   **可靠的电源设置：** 脚本不仅将睡眠设置为“从不”，它还确保此设置在每次启动时都重新应用，使您的配置能够抵抗不必要的更改。
-*   **访问管理员级别的设置：** 诸如通过系统策略禁用OneDrive之类的功能，通常深藏在组策略编辑器中（在Windows家庭版中不可用）。此脚本使每个人都可以使用它们。
+我们面临的不是一种，而是两种类型的系统性故障：
+
+#### 1. 突然故障：意外中断
+
+情况很简单：一台配置为远程访问的机器和夜间停电。即使 BIOS 设置为自动重启，任务也会失败。Windows 重新启动但停留在登录屏幕上；关键应用程序没有重新启动，会话没有打开。系统无法访问。
+
+#### 2. 缓慢退化：长期不稳定性
+
+更隐蔽的是 Windows 随着时间的推移的行为。作为交互式操作系统设计，它没有针对不间断运行的进程进行优化。渐渐地，内存泄漏和性能下降出现，使系统不稳定并需要手动重启。
+
+### 答案：一个原生的可靠性层
+
+面对这些挑战，第三方实用程序被证明是不够的。因此，我们决定**构建我们自己的系统弹性层。**
+
+`WindowsAutoConfig` 充当一个自动驾驶仪，控制操作系统以：
+
+- **确保自动恢复：** 发生故障后，它保证会话打开和主应用程序重新启动。
+- **保证预防性维护：** 它允许您安排受控的每日重启，并预先执行自定义脚本。
+- **保护应用程序**免受 Windows 的不合时宜的中断（更新、睡眠模式...）。
+
+`WindowsAutoConfig` 对于任何需要 Windows 工作站**可靠、稳定且无需持续监控即可运行**的人来说都是必不可少的工具。
+
+---
+
+## 💡 典型用例
+
+*   **数字标牌：** 确保标牌软件在公共屏幕上 24/7 全天候运行。
+*   **家庭服务器和物联网：** 从 Windows 电脑控制 Plex 服务器、家庭助理网关或连接的对象。
+*   **监控站：** 保持监控应用程序（摄像头、网络日志）始终处于活动状态。
+*   **交互式信息亭：** 确保信息亭应用程序在每次重启后自动重新启动。
+*   **轻量级自动化：** 持续运行脚本或进程以执行数据挖掘或测试任务。
+
+---
 
 ## ✨ 主要功能
+
 *   **图形配置向导：** 无需编辑文件即可进行基本设置。
 *   **全面的多语言支持：** 界面和日志支持11种语言，并能自动检测系统语言。
 *   **电源管理：** 禁用机器睡眠、显示器睡眠和 Windows 快速启动，以实现最大稳定性。
