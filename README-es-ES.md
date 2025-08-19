@@ -4,11 +4,17 @@
 
 **Su piloto automático para estaciones de trabajo Windows dedicadas. Configure una vez y deje que el sistema se autogestione con total fiabilidad.**
 
+🔗 **[Descubrir el proyecto](https://wac.davalan.fr/)**
+
 ![Licencia](https://img.shields.io/badge/Licence-GPLv3-blue.svg)![Versión PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue)![Estado](https://img.shields.io/badge/Status-Operational-brightgreen.svg)![SO](https://img.shields.io/badge/OS-Windows_10_|_11-informational)![Soporte](https://img.shields.io/badge/Support-11_Languages-orange.svg)![Contribuciones](https://img.shields.io/badge/Contributions-Welcome-brightgreen.svg)
+
+
+        
+
 
 ---
 
-## 🎯 Nuestra Misión
+## ▸ Nuestra Misión
 
 Imagine una estación de trabajo Windows perfectamente fiable y autónoma. Una máquina que configura una vez para su misión y de la que luego puede olvidarse. Un sistema que garantiza que su aplicación permanezca **permanentemente operativa**, sin interrupciones.
 
@@ -88,6 +94,9 @@ Poner en marcha **WindowsAutoConfig** es un proceso sencillo y guiado.
 2.  Ejecute `1_install.bat`. El script le guiará a través de dos pasos:
     *   **Paso 1: Configuración a través del Asistente Gráfico.**
         Ajuste las opciones según sus necesidades. Las más importantes suelen ser el identificador para el inicio de sesión automático y la aplicación que se va a iniciar. Haga clic en `Guardar` para guardar.
+        
+![Asistente de configuración](assets/screenshot-wizard.png)
+*El asistente gráfico intuitivo para configurar WindowsAutoConfig*
     *   **Paso 2: Instalación de las Tareas del Sistema.**
         El script le pedirá una confirmación para continuar. Se abrirá una ventana de seguridad de Windows (UAC). **Debe aceptarla** para permitir que el script cree las tareas programadas necesarias.
 3.  ¡Eso es todo! En el próximo reinicio, se aplicarán sus configuraciones.

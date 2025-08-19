@@ -4,11 +4,17 @@
 
 **Autopilot Anda untuk stasiun kerja Windows khusus. Konfigurasikan sekali, dan biarkan sistem mengelola dirinya sendiri dengan andal.**
 
+🔗 **[Jelajahi proyek](https://wac.davalan.fr/)**
+
 ![Lisensi](https://img.shields.io/badge/Licence-GPLv3-blue.svg)![Versi PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue)![Status](https://img.shields.io/badge/Status-Operational-brightgreen.svg)![OS](https://img.shields.io/badge/OS-Windows_10_|_11-informational)![Dukungan](https://img.shields.io/badge/Support-11_Languages-orange.svg)![Kontribusi](https://img.shields.io/badge/Contributions-Welcome-brightgreen.svg)
+
+
+        
+
 
 ---
 
-## 🎯 Misi Kami
+## ▸ Misi Kami
 
 Bayangkan sebuah stasiun kerja Windows yang andal dan otonom. Sebuah mesin yang Anda konfigurasikan sekali untuk misinya dan kemudian dapat dilupakan. Sebuah sistem yang memastikan aplikasi Anda tetap **beroperasi secara permanen**, tanpa gangguan.
 
@@ -88,6 +94,9 @@ Menyiapkan **WindowsAutoConfig** adalah proses yang sederhana dan terpandu.
 2.  Jalankan `1_install.bat`. Skrip akan memandu Anda melalui dua langkah:
     *   **Langkah 1: Konfigurasi melalui Wizard Grafis.**
         Sesuaikan opsi sesuai dengan kebutuhan Anda. Yang paling penting biasanya adalah nama pengguna untuk login otomatis dan aplikasi yang akan diluncurkan. Klik `Simpan` untuk menyimpan.
+        
+![Wizard Konfigurasi](assets/screenshot-wizard.png)
+*Asisten grafis intuitif untuk mengonfigurasi WindowsAutoConfig*
     *   **Langkah 2: Instalasi Tugas Sistem.**
         Skrip akan meminta konfirmasi untuk melanjutkan. Jendela keamanan Windows (UAC) akan terbuka. **Anda harus menerimanya** untuk mengizinkan skrip membuat tugas terjadwal yang diperlukan.
 3.  Selesai! Pada reboot berikutnya, konfigurasi Anda akan diterapkan.

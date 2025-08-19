@@ -4,11 +4,17 @@
 
 **Ihr Autopilot für dedizierte Windows-Workstations. Einmal konfigurieren und das System zuverlässig sich selbst verwalten lassen.**
 
+🔗 **[Projekt entdecken](https://wac.davalan.fr/)**
+
 ![Lizenz](https://img.shields.io/badge/Licence-GPLv3-blue.svg)![PowerShell Version](https://img.shields.io/badge/PowerShell-5.1%2B-blue)![Status](https://img.shields.io/badge/Status-Operational-brightgreen.svg)![OS](https://img.shields.io/badge/OS-Windows_10_|_11-informational)![Unterstützung](https://img.shields.io/badge/Support-11_Languages-orange.svg)![Beiträge](https://img.shields.io/badge/Contributions-Welcome-brightgreen.svg)
+
+
+        
+
 
 ---
 
-## 🎯 Unsere Mission
+## ▸ Unsere Mission
 
 Stellen Sie sich eine absolut zuverlässige und autonome Windows-Workstation vor. Eine Maschine, die Sie einmal für ihre Aufgabe konfigurieren und dann vergessen können. Ein System, das sicherstellt, dass Ihre Anwendung **dauerhaft betriebsbereit** bleibt, ohne Unterbrechung.
 
@@ -88,6 +94,9 @@ Die Einrichtung von **WindowsAutoConfig** ist ein einfacher und geführter Proze
 2.  Führen Sie `1_install.bat` aus. Das Skript führt Sie durch zwei Schritte:
     *   **Schritt 1: Konfiguration über den grafischen Assistenten.**
         Passen Sie die Optionen an Ihre Bedürfnisse an. Die wichtigsten sind in der Regel die Benutzer-ID für die automatische Anmeldung und die zu startende Anwendung. Klicken Sie auf `Speichern`, um zu speichern.
+        
+![Konfigurationsassistent](assets/screenshot-wizard.png)
+*Der intuitive grafische Assistent zur Konfiguration von WindowsAutoConfig*
     *   **Schritt 2: Installation der Systemaufgaben.**
         Das Skript fragt Sie nach einer Bestätigung zum Fortfahren. Ein Windows-Sicherheitsfenster (UAC) wird geöffnet. **Sie müssen es akzeptieren**, um dem Skript die Erstellung der notwendigen geplanten Aufgaben zu ermöglichen.
 3.  Fertig! Beim nächsten Neustart werden Ihre Konfigurationen angewendet.

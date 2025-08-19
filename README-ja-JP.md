@@ -4,11 +4,17 @@
 
 **専用Windowsワークステーションのための自動操縦システム。一度設定すれば、システムは信頼性高く自己管理します。**
 
+🔗 **[プロジェクトを見る](https://wac.davalan.fr/)**
+
 ![ライセンス](https://img.shields.io/badge/Licence-GPLv3-blue.svg)![PowerShellバージョン](https://img.shields.io/badge/PowerShell-5.1%2B-blue)![ステータス](https://img.shields.io/badge/Status-Operational-brightgreen.svg)![OS](https://img.shields.io/badge/OS-Windows_10_|_11-informational)![サポート](https://img.shields.io/badge/Support-11_Languages-orange.svg)![貢献](https://img.shields.io/badge/Contributions-Welcome-brightgreen.svg)
+
+
+        
+
 
 ---
 
-## 🎯 私たちの使命
+## ▸ 私たちの使命
 
 完全に信頼性が高く、自律的なWindowsワークステーションを想像してみてください。一度設定すれば、あとは忘れてしまえるマシンです。アプリケーションが中断することなく**永続的に運用可能**であることを保証するシステムです。
 
@@ -88,6 +94,9 @@
 2.  `1_install.bat` を実行します。スクリプトは2つのステップで案内します。
     *   **ステップ1：グラフィカルウィザードによる設定。**
         必要に応じてオプションを調整します。最も重要なのは、通常、自動ログイン用のユーザーIDと起動するアプリケーションです。`保存`をクリックして保存します。
+        
+![構成ウィザード](assets/screenshot-wizard.png)
+*WindowsAutoConfigを構成するための直感的なグラフィカルアシスタント*
     *   **ステップ2：システムタスクのインストール。**
         スクリプトは続行の確認を求めます。Windowsセキュリティ（UAC）ウィンドウが開きます。必要なスケジュールされたタスクを作成するために、**これを受け入れる必要があります**。
 3.  完了です！次回の再起動時に、設定が適用されます。

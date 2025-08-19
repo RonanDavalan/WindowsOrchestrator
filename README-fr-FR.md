@@ -4,11 +4,17 @@
 
 **Votre pilote automatique pour postes de travail Windows dédiés. Configurez une fois, et laissez le système s'autogérer en toute fiabilité.**
 
+🔗 **[Découvrir le projet](https://wac.davalan.fr/)**
+
 ![Licence](https://img.shields.io/badge/Licence-GPLv3-blue.svg)![Version PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue)![Statut](https://img.shields.io/badge/Statut-Opérationnel-brightgreen.svg)![OS](https://img.shields.io/badge/OS-Windows_10_|_11-informational)![Support](https://img.shields.io/badge/Support-11_Langues-orange.svg)![Contributions](https://img.shields.io/badge/Contributions-Bienvenues-brightgreen.svg)
+
+
+        
+
 
 ---
 
-## 🎯 Notre Mission
+## ▸ Notre Mission
 
 Imaginez un poste Windows parfaitement fiable et autonome. Une machine que vous configurez une seule fois pour sa mission et que vous pouvez ensuite oublier. Un système qui assure que votre application reste **opérationnelle en permanence**, sans interruption.
 
@@ -88,6 +94,9 @@ Mettre en place **WindowsAutoConfig** est un processus simple et guidé.
 2.  Exécutez `1_install.bat`. Le script vous guidera à travers deux étapes :
     *   **Étape 1 : Configuration via l'Assistant Graphique.**
         Réglez les options selon vos besoins. Les plus importantes sont généralement l'identifiant pour la connexion automatique et l'application à lancer. Cliquez sur `Enregistrer` pour sauvegarder.
+        
+![Assistant de configuration](assets/screenshot-wizard.png)
+*L'assistant graphique intuitif pour configurer WindowsAutoConfig*
     *   **Étape 2 : Installation des Tâches Système.**
         Le script vous demandera une confirmation pour continuer. Une fenêtre de sécurité Windows (UAC) s'ouvrira. **Vous devez l'accepter** pour permettre au script de créer les tâches planifiées nécessaires.
 3.  C'est terminé ! Au prochain redémarrage, vos configurations seront appliquées.

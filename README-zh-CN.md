@@ -4,11 +4,15 @@
 
 **您的专用 Windows 工作站自动驾驶仪。一次配置，系统即可可靠地自行管理。**
 
+🔗 **[了解项目](https://wac.davalan.fr/)**
+
 ![许可证](https://img.shields.io/badge/Licence-GPLv3-blue.svg)![PowerShell 版本](https://img.shields.io/badge/PowerShell-5.1%2B-blue)![状态](https://img.shields.io/badge/Status-Operational-brightgreen.svg)![操作系统](https://img.shields.io/badge/OS-Windows_10_|_11-informational)![支持](https://img.shields.io/badge/Support-11_Languages-orange.svg)![贡献](https://img.shields.io/badge/Contributions-Welcome-brightgreen.svg)
+
+
 
 ---
 
-## 🎯 我们的使命
+## ▸ 我们的使命
 
 想象一下一个完全可靠和自主的 Windows 工作站。一台您只需为其任务配置一次的机器，然后就可以忘记它了。一个确保您的应用程序**永久运行**而不会中断的系统。
 
@@ -88,6 +92,9 @@
 2.  运行 `1_install.bat`。脚本将引导您完成两个步骤：
     *   **步骤 1：通过图形向导配置。**
         根据您的需要调整选项。最重要的通常是自动登录的用户名和要启动的应用程序。点击 `保存` 以保存。
+        
+![配置向导](assets/screenshot-wizard.png)
+*用于配置 WindowsAutoConfig 的直观图形助手*
     *   **步骤 2：安装系统任务。**
         脚本将要求您确认继续。将打开一个 Windows 安全（UAC）窗口。**您必须接受**，以允许脚本创建必要的计划任务。
 3.  完成！下次重启时，您的配置将生效。

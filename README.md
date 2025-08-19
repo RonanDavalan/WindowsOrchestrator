@@ -4,11 +4,13 @@
 
 **Your autopilot for dedicated Windows workstations. Configure once, and let the system reliably manage itself.**
 
+🔗 **[Discover the project](https://wac.davalan.fr/)**
+
 ![Licence](https://img.shields.io/badge/Licence-GPLv3-blue.svg)![PowerShell Version](https://img.shields.io/badge/PowerShell-5.1%2B-blue)![Status](https://img.shields.io/badge/Status-Operational-brightgreen.svg)![OS](https://img.shields.io/badge/OS-Windows_10_|_11-informational)![Support](https://img.shields.io/badge/Support-11_Languages-orange.svg)![Contributions](https://img.shields.io/badge/Contributions-Welcome-brightgreen.svg)
 
 ---
 
-## 🎯 Our Mission
+## ▸ Our Mission
 
 Imagine a perfectly reliable and autonomous Windows workstation. A machine you configure once for its mission and can then forget about. A system that ensures your application remains **permanently operational**, without interruption.
 
@@ -88,6 +90,9 @@ Setting up **WindowsAutoConfig** is a simple and guided process.
 2.  Run `1_install.bat`. The script will guide you through two steps:
     *   **Step 1: Configuration via the Graphical Wizard.**
         Adjust the options according to your needs. The most important ones are usually the username for automatic login and the application to launch. Click `Save` to save.
+        
+        ![Configuration Wizard](assets/screenshot-wizard.png)
+        
     *   **Step 2: System Tasks Installation.**
         The script will ask for confirmation to continue. A Windows security (UAC) window will open. **You must accept it** to allow the script to create the necessary scheduled tasks.
 3.  That's it! Upon the next reboot, your configurations will be applied.
