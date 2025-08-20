@@ -5,7 +5,7 @@ REM CHCP 1252 > NUL
 CLS
 
 ECHO #############################################################
-ECHO #          Uninstaller - WindowsAutoConfig                #
+ECHO #          Uninstaller - WindowsOrchestrator                #
 ECHO #############################################################
 ECHO.
 ECHO Starting the uninstallation of AllSysConfig...

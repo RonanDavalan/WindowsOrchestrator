@@ -4,8 +4,8 @@
     #=========================================
     Uninstall_ElevationWarning = "Не удалось повысить привилегии. Пожалуйста, запустите этот скрипт от имени администратора."
     Uninstall_PressEnterToExit = "Нажмите Enter для выхода."
-    Uninstall_StartMessage = "Начинается полное удаление WindowsAutoConfig..."
-    Uninstall_AutoLogonQuestion = "[ВОПРОС] WindowsAutoConfig мог включить автоматический вход в систему (auto-logon). Вы хотите отключить его сейчас? (д/н)"
+    Uninstall_StartMessage = "Начинается полное удаление WindowsOrchestrator..."
+    Uninstall_AutoLogonQuestion = "[ВОПРОС] WindowsOrchestrator мог включить автоматический вход в систему (auto-logon). Вы хотите отключить его сейчас? (д/н)"
     Uninstall_RestoringSettings = "Восстановление основных настроек Windows..."
     Uninstall_WindowsUpdateReactivated = "- Обновления Windows (Update и Auto-Reboot): Включены."
     Uninstall_WindowsUpdateError = "- ОШИБКА при повторном включении обновлений Windows: {0}"
@@ -36,7 +36,7 @@
     Install_ElevationWarning = "Не удалось повысить привилегии. Пожалуйста, запустите этот скрипт от имени администратора."
     Install_PressEnterToExit = "Нажмите Enter для выхода."
     Install_ConfigIniNotFoundWarning = "config.ini не найден в предполагаемом родительском каталоге ({0})."
-    Install_ProjectRootPrompt = "Пожалуйста, введите полный путь к корневому каталогу скриптов WindowsAutoConfig (например, C:\WindowsAutoConfig)"
+    Install_ProjectRootPrompt = "Пожалуйста, введите полный путь к корневому каталогу скриптов WindowsOrchestrator (например, C:\WindowsOrchestrator)"
     Install_InvalidProjectRootError = "Неверный корневой каталог проекта или не найден config.ini: '{0}'"
     Install_PathDeterminationError = "Ошибка при определении начальных путей: {0}"
     Install_MissingSystemFile = "Отсутствует необходимый системный файл: {0}"
@@ -46,10 +46,10 @@
     Install_UserTaskTarget = "Задача пользователя будет установлена для: {0}"
     Install_StartConfiguringTasks = "Начинается настройка запланированных задач..."
     Install_CreatingSystemTask = "Создание/обновление системной задачи '{0}'..."
-    Install_SystemTaskDescription = "WindowsAutoConfig: Выполняет скрипт конфигурации системы при запуске."
+    Install_SystemTaskDescription = "WindowsOrchestrator: Выполняет скрипт конфигурации системы при запуске."
     Install_SystemTaskConfiguredSuccess = "Задача '{0}' успешно настроена."
     Install_CreatingUserTask = "Создание/обновление задачи пользователя '{0}' для '{1}'..."
-    Install_UserTaskDescription = "WindowsAutoConfig: Выполняет скрипт конфигурации пользователя при входе в систему."
+    Install_UserTaskDescription = "WindowsOrchestrator: Выполняет скрипт конфигурации пользователя при входе в систему."
     Install_MainTasksConfigured = "Основные запланированные задачи настроены."
     Install_DailyRebootTasksNote = "Задачи для ежедневной перезагрузки ('AllSys_SystemScheduledReboot') и действия перед перезагрузкой ('AllSys_SystemPreRebootAction') будут создаваться/управляться скриптом '{0}' во время его выполнения."
     Install_AttemptingInitialLaunch = "Попытка первоначального запуска скриптов конфигурации..."
@@ -70,7 +70,7 @@
     #=========================================
     # --- firstconfig.ps1 Strings ---
     #=========================================
-    ConfigForm_Title = "Мастер настройки - WindowsAutoConfig"
+    ConfigForm_Title = "Мастер настройки - WindowsOrchestrator"
     ConfigForm_PathError = "Не удалось определить пути проекта. Ошибка: {0}. Скрипт будет закрыт."
     ConfigForm_PathErrorCaption = "Критическая ошибка пути"
     ConfigForm_ModelFileNotFoundError = "ОШИБКА: Файл шаблона 'management\defaults\default_config.ini' не найден, и файл 'config.ini' не существует. Установка невозможна."

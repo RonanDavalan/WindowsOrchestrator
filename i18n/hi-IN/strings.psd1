@@ -4,8 +4,8 @@
     #=========================================
     Uninstall_ElevationWarning = "विशेषाधिकार बढ़ाने में विफल। कृपया इस स्क्रिप्ट को व्यवस्थापक के रूप में चलाएँ।"
     Uninstall_PressEnterToExit = "बाहर निकलने के लिए एंटर दबाएँ।"
-    Uninstall_StartMessage = "WindowsAutoConfig की पूरी स्थापना रद्द करना शुरू हो रहा है..."
-    Uninstall_AutoLogonQuestion = "[प्रश्न] WindowsAutoConfig ने स्वचालित लॉगिन (ऑटो-लॉगऑन) सक्षम किया हो सकता है। क्या आप इसे अभी अक्षम करना चाहते हैं? (हाँ/नहीं)"
+    Uninstall_StartMessage = "WindowsOrchestrator की पूरी स्थापना रद्द करना शुरू हो रहा है..."
+    Uninstall_AutoLogonQuestion = "[प्रश्न] WindowsOrchestrator ने स्वचालित लॉगिन (ऑटो-लॉगऑन) सक्षम किया हो सकता है। क्या आप इसे अभी अक्षम करना चाहते हैं? (हाँ/नहीं)"
     Uninstall_RestoringSettings = "मुख्य विंडोज सेटिंग्स को पुनर्स्थापित किया जा रहा है..."
     Uninstall_WindowsUpdateReactivated = "- विंडोज अपडेट (अपडेट और ऑटो-रिबूट): पुनः सक्रिय।"
     Uninstall_WindowsUpdateError = "- विंडोज अपडेट को पुनः सक्रिय करने में त्रुटि: {0}"
@@ -36,7 +36,7 @@
     Install_ElevationWarning = "विशेषाधिकार बढ़ाने में विफल। कृपया इस स्क्रिप्ट को व्यवस्थापक के रूप में चलाएँ।"
     Install_PressEnterToExit = "बाहर निकलने के लिए एंटर दबाएँ।"
     Install_ConfigIniNotFoundWarning = "संभावित पैरेंट डायरेक्टरी ({0}) में config.ini नहीं मिला।"
-    Install_ProjectRootPrompt = "कृपया WindowsAutoConfig स्क्रिप्ट की रूट डायरेक्टरी का पूरा पथ दर्ज करें (जैसे, C:\WindowsAutoConfig)"
+    Install_ProjectRootPrompt = "कृपया WindowsOrchestrator स्क्रिप्ट की रूट डायरेक्टरी का पूरा पथ दर्ज करें (जैसे, C:\WindowsOrchestrator)"
     Install_InvalidProjectRootError = "अमान्य प्रोजेक्ट रूट डायरेक्टरी या config.ini नहीं मिला: '{0}'"
     Install_PathDeterminationError = "प्रारंभिक पथ निर्धारित करने में त्रुटि: {0}"
     Install_MissingSystemFile = "आवश्यक सिस्टम फ़ाइल गायब है: {0}"
@@ -46,10 +46,10 @@
     Install_UserTaskTarget = "उपयोगकर्ता कार्य इसके लिए स्थापित किया जाएगा: {0}"
     Install_StartConfiguringTasks = "अनुसूचित कार्य कॉन्फ़िगरेशन शुरू हो रहा है..."
     Install_CreatingSystemTask = "सिस्टम कार्य '{0}' बनाया/अपडेट किया जा रहा है..."
-    Install_SystemTaskDescription = "WindowsAutoConfig: स्टार्टअप पर सिस्टम कॉन्फ़िगरेशन स्क्रिप्ट निष्पादित करता है।"
+    Install_SystemTaskDescription = "WindowsOrchestrator: स्टार्टअप पर सिस्टम कॉन्फ़िगरेशन स्क्रिप्ट निष्पादित करता है।"
     Install_SystemTaskConfiguredSuccess = "कार्य '{0}' सफलतापूर्वक कॉन्फ़िगर किया गया।"
     Install_CreatingUserTask = "उपयोगकर्ता कार्य '{0}' को '{1}' के लिए बनाया/अपडेट किया जा रहा है..."
-    Install_UserTaskDescription = "WindowsAutoConfig: लॉगऑन पर उपयोगकर्ता कॉन्फ़िगरेशन स्क्रिप्ट निष्पादित करता है।"
+    Install_UserTaskDescription = "WindowsOrchestrator: लॉगऑन पर उपयोगकर्ता कॉन्फ़िगरेशन स्क्रिप्ट निष्पादित करता है।"
     Install_MainTasksConfigured = "मुख्य अनुसूचित कार्य कॉन्फ़िगर किए गए।"
     Install_DailyRebootTasksNote = "दैनिक रिबूट ('AllSys_SystemScheduledReboot') और प्री-रिबूट एक्शन ('AllSys_SystemPreRebootAction') के लिए कार्य '{0}' द्वारा इसके निष्पादन के दौरान बनाए/प्रबंधित किए जाएंगे।"
     Install_AttemptingInitialLaunch = "कॉन्फ़िगरेशन स्क्रिप्ट का प्रारंभिक लॉन्च करने का प्रयास किया जा रहा है..."
@@ -70,7 +70,7 @@
     #=========================================
     # --- firstconfig.ps1 Strings ---
     #=========================================
-    ConfigForm_Title = "कॉन्फ़िगरेशन विज़ार्ड - WindowsAutoConfig"
+    ConfigForm_Title = "कॉन्फ़िगरेशन विज़ार्ड - WindowsOrchestrator"
     ConfigForm_PathError = "प्रोजेक्ट पथ निर्धारित नहीं किए जा सके। त्रुटि: {0}। स्क्रिप्ट बंद हो जाएगी।"
     ConfigForm_PathErrorCaption = "गंभीर पथ त्रुटि"
     ConfigForm_ModelFileNotFoundError = "त्रुटि: टेम्पलेट फ़ाइल 'management\defaults\default_config.ini' नहीं मिली और कोई 'config.ini' मौजूद नहीं है। स्थापना असंभव है।"

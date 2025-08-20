@@ -4,8 +4,8 @@
     #=========================================
     Uninstall_ElevationWarning = "অনুমতি প্রদানে ব্যর্থ। অনুগ্রহ করে এই স্ক্রিপ্টটি প্রশাসক হিসাবে চালান।"
     Uninstall_PressEnterToExit = "প্রস্থান করতে এন্টার চাপুন।"
-    Uninstall_StartMessage = "WindowsAutoConfig সম্পূর্ণ আনইন্সটল করা শুরু হচ্ছে..."
-    Uninstall_AutoLogonQuestion = "[প্রশ্ন] WindowsAutoConfig স্বয়ংক্রিয় লগইন (auto-logon) সক্ষম করতে পারে। আপনি কি এটি এখন নিষ্ক্রিয় করতে চান? (হ্যাঁ/না)"
+    Uninstall_StartMessage = "WindowsOrchestrator সম্পূর্ণ আনইন্সটল করা শুরু হচ্ছে..."
+    Uninstall_AutoLogonQuestion = "[প্রশ্ন] WindowsOrchestrator স্বয়ংক্রিয় লগইন (auto-logon) সক্ষম করতে পারে। আপনি কি এটি এখন নিষ্ক্রিয় করতে চান? (হ্যাঁ/না)"
     Uninstall_RestoringSettings = "প্রধান উইন্ডোজ সেটিংস পুনরুদ্ধার করা হচ্ছে..."
     Uninstall_WindowsUpdateReactivated = "- উইন্ডোজ আপডেট (আপডেট এবং স্বয়ংক্রিয় রিবুট): পুনরায় সক্রিয় করা হয়েছে।"
     Uninstall_WindowsUpdateError = "- উইন্ডোজ আপডেট পুনরায় সক্রিয় করতে ত্রুটি: {0}"
@@ -36,7 +36,7 @@
     Install_ElevationWarning = "অনুমতি প্রদানে ব্যর্থ। অনুগ্রহ করে এই স্ক্রিপ্টটি প্রশাসক হিসাবে চালান।"
     Install_PressEnterToExit = "প্রস্থান করতে এন্টার চাপুন।"
     Install_ConfigIniNotFoundWarning = "config.ini ফাইলটি অনুমিত প্যারেন্ট ডিরেক্টরিতে ({0}) পাওয়া যায়নি।"
-    Install_ProjectRootPrompt = "অনুগ্রহ করে WindowsAutoConfig স্ক্রিপ্টের রুট ডিরেক্টরির সম্পূর্ণ পাথ লিখুন (যেমন, C:\WindowsAutoConfig)"
+    Install_ProjectRootPrompt = "অনুগ্রহ করে WindowsOrchestrator স্ক্রিপ্টের রুট ডিরেক্টরির সম্পূর্ণ পাথ লিখুন (যেমন, C:\WindowsOrchestrator)"
     Install_InvalidProjectRootError = "অবৈধ প্রজেক্ট রুট ডিরেক্টরি বা config.ini ফাইল পাওয়া যায়নি: '{0}'"
     Install_PathDeterminationError = "প্রাথমিক পাথ নির্ধারণে ত্রুটি: {0}"
     Install_MissingSystemFile = "প্রয়োজনীয় সিস্টেম ফাইল অনুপস্থিত: {0}"
@@ -46,10 +46,10 @@
     Install_UserTaskTarget = "ব্যবহারকারীর টাস্ক এর জন্য ইনস্টল করা হবে: {0}"
     Install_StartConfiguringTasks = "নির্ধারিত টাস্ক কনফিগারেশন শুরু হচ্ছে..."
     Install_CreatingSystemTask = "সিস্টেম টাস্ক '{0}' তৈরি/আপডেট করা হচ্ছে..."
-    Install_SystemTaskDescription = "WindowsAutoConfig: স্টার্টআপে সিস্টেম কনফিগারেশন স্ক্রিপ্ট চালায়।"
+    Install_SystemTaskDescription = "WindowsOrchestrator: স্টার্টআপে সিস্টেম কনফিগারেশন স্ক্রিপ্ট চালায়।"
     Install_SystemTaskConfiguredSuccess = "টাস্ক '{0}' সফলভাবে কনফিগার করা হয়েছে।"
     Install_CreatingUserTask = "ব্যবহারকারীর টাস্ক '{0}' '{1}' এর জন্য তৈরি/আপডেট করা হচ্ছে..."
-    Install_UserTaskDescription = "WindowsAutoConfig: লগঅন এ ব্যবহারকারী কনফিগারেশন স্ক্রিপ্ট চালায়।"
+    Install_UserTaskDescription = "WindowsOrchestrator: লগঅন এ ব্যবহারকারী কনফিগারেশন স্ক্রিপ্ট চালায়।"
     Install_MainTasksConfigured = "প্রধান নির্ধারিত টাস্ক কনফিগার করা হয়েছে।"
     Install_DailyRebootTasksNote = "দৈনিক রিবুট ('AllSys_SystemScheduledReboot') এবং প্রি-রিবুট অ্যাকশন ('AllSys_SystemPreRebootAction') এর জন্য টাস্কগুলি '{0}' দ্বারা এর এক্সিকিউশনের সময় তৈরি/পরিচালনা করা হবে।"
     Install_AttemptingInitialLaunch = "কনফিগারেশন স্ক্রিপ্টগুলির প্রাথমিক লঞ্চের চেষ্টা করা হচ্ছে..."
@@ -70,7 +70,7 @@
     #=========================================
     # --- firstconfig.ps1 Strings ---
     #=========================================
-    ConfigForm_Title = "কনফিগারেশন উইজার্ড - WindowsAutoConfig"
+    ConfigForm_Title = "কনফিগারেশন উইজার্ড - WindowsOrchestrator"
     ConfigForm_PathError = "প্রজেক্ট পাথ নির্ধারণ করা যায়নি। ত্রুটি: {0}। স্ক্রিপ্টটি বন্ধ হয়ে যাবে।"
     ConfigForm_PathErrorCaption = "গুরুতর পাথ ত্রুটি"
     ConfigForm_ModelFileNotFoundError = "ত্রুটি: টেমপ্লেট ফাইল 'management\defaults\default_config.ini' পাওয়া যায়নি এবং কোনো 'config.ini' নেই। ইনস্টলেশন অসম্ভব।"

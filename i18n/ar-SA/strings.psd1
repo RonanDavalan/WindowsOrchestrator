@@ -4,8 +4,8 @@
     #=========================================
     Uninstall_ElevationWarning = "فشل في رفع الامتيازات. يرجى تشغيل هذا البرنامج النصي كمسؤول."
     Uninstall_PressEnterToExit = "اضغط على Enter للخروج."
-    Uninstall_StartMessage = "بدء الإزالة الكاملة لـ WindowsAutoConfig..."
-    Uninstall_AutoLogonQuestion = "[سؤال] ربما قام WindowsAutoConfig بتمكين تسجيل الدخول التلقائي (auto-logon). هل تريد تعطيله الآن؟ (نعم/لا)"
+    Uninstall_StartMessage = "بدء الإزالة الكاملة لـ WindowsOrchestrator..."
+    Uninstall_AutoLogonQuestion = "[سؤال] ربما قام WindowsOrchestrator بتمكين تسجيل الدخول التلقائي (auto-logon). هل تريد تعطيله الآن؟ (نعم/لا)"
     Uninstall_RestoringSettings = "استعادة إعدادات ويندوز الرئيسية..."
     Uninstall_WindowsUpdateReactivated = "- تحديثات ويندوز (التحديث وإعادة التشغيل التلقائي): أعيد تفعيلها."
     Uninstall_WindowsUpdateError = "- خطأ في إعادة تفعيل تحديثات ويندوز: {0}"
@@ -36,7 +36,7 @@
     Install_ElevationWarning = "فشل في رفع الامتيازات. يرجى تشغيل هذا البرنامج النصي كمسؤول."
     Install_PressEnterToExit = "اضغط على Enter للخروج."
     Install_ConfigIniNotFoundWarning = "لم يتم العثور على config.ini في الدليل الأصلي المفترض ({0})."
-    Install_ProjectRootPrompt = "يرجى إدخال المسار الكامل إلى الدليل الجذر لبرامج WindowsAutoConfig (على سبيل المثال، C:\WindowsAutoConfig)"
+    Install_ProjectRootPrompt = "يرجى إدخال المسار الكامل إلى الدليل الجذر لبرامج WindowsOrchestrator (على سبيل المثال، C:\WindowsOrchestrator)"
     Install_InvalidProjectRootError = "دليل جذر المشروع غير صالح أو لم يتم العثور على config.ini: '{0}'"
     Install_PathDeterminationError = "خطأ في تحديد المسارات الأولية: {0}"
     Install_MissingSystemFile = "ملف النظام المطلوب مفقود: {0}"
@@ -46,10 +46,10 @@
     Install_UserTaskTarget = "سيتم تثبيت مهمة المستخدم لـ: {0}"
     Install_StartConfiguringTasks = "بدء تكوين المهام المجدولة..."
     Install_CreatingSystemTask = "إنشاء/تحديث مهمة النظام '{0}'..."
-    Install_SystemTaskDescription = "WindowsAutoConfig: يقوم بتنفيذ برنامج تكوين النظام عند بدء التشغيل."
+    Install_SystemTaskDescription = "WindowsOrchestrator: يقوم بتنفيذ برنامج تكوين النظام عند بدء التشغيل."
     Install_SystemTaskConfiguredSuccess = "تم تكوين المهمة '{0}' بنجاح."
     Install_CreatingUserTask = "إنشاء/تحديث مهمة المستخدم '{0}' لـ '{1}'..."
-    Install_UserTaskDescription = "WindowsAutoConfig: يقوم بتنفيذ برنامج تكوين المستخدم عند تسجيل الدخول."
+    Install_UserTaskDescription = "WindowsOrchestrator: يقوم بتنفيذ برنامج تكوين المستخدم عند تسجيل الدخول."
     Install_MainTasksConfigured = "تم تكوين المهام المجدولة الرئيسية."
     Install_DailyRebootTasksNote = "سيتم إنشاء/إدارة مهام إعادة التشغيل اليومية ('AllSys_SystemScheduledReboot') والإجراء السابق لإعادة التشغيل ('AllSys_SystemPreRebootAction') بواسطة '{0}' أثناء تنفيذه."
     Install_AttemptingInitialLaunch = "محاولة التشغيل الأولي لبرامج التكوين..."
@@ -70,7 +70,7 @@
     #=========================================
     # --- firstconfig.ps1 Strings ---
     #=========================================
-    ConfigForm_Title = "معالج التكوين - WindowsAutoConfig"
+    ConfigForm_Title = "معالج التكوين - WindowsOrchestrator"
     ConfigForm_PathError = "تعذر تحديد مسارات المشروع. خطأ: {0}. سيتم إغلاق البرنامج النصي."
     ConfigForm_PathErrorCaption = "خطأ فادح في المسار"
     ConfigForm_ModelFileNotFoundError = "خطأ: لم يتم العثور على ملف القالب 'management\defaults\default_config.ini' ولا يوجد 'config.ini'. التثبيت مستحيل."

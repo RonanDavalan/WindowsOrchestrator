@@ -50,7 +50,7 @@ try {
 
 
 #region GLOBAL CONFIG
-$ScriptIdentifierUser = "WindowsAutoConfig-User"
+$ScriptIdentifierUser = "WindowsOrchestrator-User"
 $ScriptInternalBuildUser = "Build-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
 $ScriptDir = $PSScriptRoot
 

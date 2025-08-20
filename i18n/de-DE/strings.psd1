@@ -4,8 +4,8 @@
     #=========================================
     Uninstall_ElevationWarning = "Rechteerhöhung fehlgeschlagen. Bitte führen Sie dieses Skript als Administrator aus."
     Uninstall_PressEnterToExit = "Drücken Sie die Eingabetaste, um zu beenden."
-    Uninstall_StartMessage = "Vollständige Deinstallation von WindowsAutoConfig wird gestartet..."
-    Uninstall_AutoLogonQuestion = "[FRAGE] WindowsAutoConfig hat möglicherweise die automatische Anmeldung (Auto-Logon) aktiviert. Möchten Sie sie jetzt deaktivieren? (j/n)"
+    Uninstall_StartMessage = "Vollständige Deinstallation von WindowsOrchestrator wird gestartet..."
+    Uninstall_AutoLogonQuestion = "[FRAGE] WindowsOrchestrator hat möglicherweise die automatische Anmeldung (Auto-Logon) aktiviert. Möchten Sie sie jetzt deaktivieren? (j/n)"
     Uninstall_RestoringSettings = "Wiederherstellung der Windows-Haupteinstellungen..."
     Uninstall_WindowsUpdateReactivated = "- Windows Updates (Update & Auto-Reboot): Reaktiviert."
     Uninstall_WindowsUpdateError = "- FEHLER bei der Reaktivierung von Windows Update: {0}"
@@ -36,7 +36,7 @@
     Install_ElevationWarning = "Rechteerhöhung fehlgeschlagen. Bitte führen Sie dieses Skript als Administrator aus."
     Install_PressEnterToExit = "Drücken Sie die Eingabetaste, um zu beenden."
     Install_ConfigIniNotFoundWarning = "config.ini nicht im vermuteten übergeordneten Verzeichnis ({0}) gefunden."
-    Install_ProjectRootPrompt = "Bitte geben Sie den vollständigen Pfad zum Stammverzeichnis der WindowsAutoConfig-Skripte ein (z.B. C:\WindowsAutoConfig)"
+    Install_ProjectRootPrompt = "Bitte geben Sie den vollständigen Pfad zum Stammverzeichnis der WindowsOrchestrator-Skripte ein (z.B. C:\WindowsOrchestrator)"
     Install_InvalidProjectRootError = "Ungültiges Projekt-Stammverzeichnis oder config.ini nicht gefunden: '{0}'"
     Install_PathDeterminationError = "Fehler bei der Bestimmung der ursprünglichen Pfade: {0}"
     Install_MissingSystemFile = "Erforderliche Systemdatei fehlt: {0}"
@@ -46,10 +46,10 @@
     Install_UserTaskTarget = "Die Benutzeraufgabe wird installiert für: {0}"
     Install_StartConfiguringTasks = "Konfiguration der geplanten Aufgaben wird gestartet..."
     Install_CreatingSystemTask = "Systemaufgabe '{0}' wird erstellt/aktualisiert..."
-    Install_SystemTaskDescription = "WindowsAutoConfig: Führt das Systemkonfigurationsskript beim Start aus."
+    Install_SystemTaskDescription = "WindowsOrchestrator: Führt das Systemkonfigurationsskript beim Start aus."
     Install_SystemTaskConfiguredSuccess = "Aufgabe '{0}' erfolgreich konfiguriert."
     Install_CreatingUserTask = "Benutzeraufgabe '{0}' für '{1}' wird erstellt/aktualisiert..."
-    Install_UserTaskDescription = "WindowsAutoConfig: Führt das Benutzerkonfigurationsskript bei der Anmeldung aus."
+    Install_UserTaskDescription = "WindowsOrchestrator: Führt das Benutzerkonfigurationsskript bei der Anmeldung aus."
     Install_MainTasksConfigured = "Hauptaufgaben geplant."
     Install_DailyRebootTasksNote = "Aufgaben für den täglichen Neustart ('AllSys_SystemScheduledReboot') und die Aktion vor dem Neustart ('AllSys_SystemPreRebootAction') werden von '{0}' während der Ausführung erstellt/verwaltet."
     Install_AttemptingInitialLaunch = "Versuch des erstmaligen Starts der Konfigurationsskripte..."
@@ -70,7 +70,7 @@
     #=========================================
     # --- firstconfig.ps1 Strings ---
     #=========================================
-    ConfigForm_Title = "Konfigurations-Assistent - WindowsAutoConfig"
+    ConfigForm_Title = "Konfigurations-Assistent - WindowsOrchestrator"
     ConfigForm_PathError = "Projektpfade konnten nicht ermittelt werden. Fehler: {0}. Das Skript wird geschlossen."
     ConfigForm_PathErrorCaption = "Kritischer Pfadfehler"
     ConfigForm_ModelFileNotFoundError = "FEHLER: Die Vorlagendatei 'management\defaults\default_config.ini' wurde nicht gefunden UND es existiert keine 'config.ini'. Eine Installation ist nicht möglich."

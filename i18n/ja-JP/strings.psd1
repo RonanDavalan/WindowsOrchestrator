@@ -4,8 +4,8 @@
     #=========================================
     Uninstall_ElevationWarning = "権限の昇格に失敗しました。このスクリプトを管理者として実行してください。"
     Uninstall_PressEnterToExit = "Enterキーを押して終了します。"
-    Uninstall_StartMessage = "WindowsAutoConfigの完全なアンインストールを開始します..."
-    Uninstall_AutoLogonQuestion = "[質問] WindowsAutoConfigは自動ログイン（オートログオン）を有効にしている可能性があります。今すぐ無効にしますか？ (y/n)"
+    Uninstall_StartMessage = "WindowsOrchestratorの完全なアンインストールを開始します..."
+    Uninstall_AutoLogonQuestion = "[質問] WindowsOrchestratorは自動ログイン（オートログオン）を有効にしている可能性があります。今すぐ無効にしますか？ (y/n)"
     Uninstall_RestoringSettings = "主要なWindows設定を復元しています..."
     Uninstall_WindowsUpdateReactivated = "- Windows Update（更新と自動再起動）：再有効化されました。"
     Uninstall_WindowsUpdateError = "- Windows Updateの再有効化中にエラーが発生しました：{0}"
@@ -36,7 +36,7 @@
     Install_ElevationWarning = "権限の昇格に失敗しました。このスクリプトを管理者として実行してください。"
     Install_PressEnterToExit = "Enterキーを押して終了します。"
     Install_ConfigIniNotFoundWarning = "想定される親ディレクトリ（{0}）にconfig.iniが見つかりません。"
-    Install_ProjectRootPrompt = "WindowsAutoConfigスクリプトのルートディレクトリへのフルパスを入力してください（例：C:\WindowsAutoConfig）"
+    Install_ProjectRootPrompt = "WindowsOrchestratorスクリプトのルートディレクトリへのフルパスを入力してください（例：C:\WindowsOrchestrator）"
     Install_InvalidProjectRootError = "無効なプロジェクトルートディレクトリ、またはconfig.iniが見つかりません：'{0}'"
     Install_PathDeterminationError = "初期パスの決定中にエラーが発生しました：{0}"
     Install_MissingSystemFile = "必要なシステムファイルが見つかりません：{0}"
@@ -46,10 +46,10 @@
     Install_UserTaskTarget = "ユーザータスクは次のユーザーのためにインストールされます：{0}"
     Install_StartConfiguringTasks = "スケジュールされたタスクの構成を開始します..."
     Install_CreatingSystemTask = "システムタスク '{0}' を作成/更新しています..."
-    Install_SystemTaskDescription = "WindowsAutoConfig：起動時にシステム構成スクリプトを実行します。"
+    Install_SystemTaskDescription = "WindowsOrchestrator：起動時にシステム構成スクリプトを実行します。"
     Install_SystemTaskConfiguredSuccess = "タスク '{0}' は正常に構成されました。"
     Install_CreatingUserTask = "'{1}' のためにユーザータスク '{0}' を作成/更新しています..."
-    Install_UserTaskDescription = "WindowsAutoConfig：ログオン時にユーザー構成スクリプトを実行します。"
+    Install_UserTaskDescription = "WindowsOrchestrator：ログオン時にユーザー構成スクリプトを実行します。"
     Install_MainTasksConfigured = "主要なスケジュールタスクが構成されました。"
     Install_DailyRebootTasksNote = "毎日の再起動（'AllSys_SystemScheduledReboot'）と再起動前のアクション（'AllSys_SystemPreRebootAction'）のタスクは、'{0}' の実行中に作成/管理されます。"
     Install_AttemptingInitialLaunch = "構成スクリプトの初回起動を試みています..."
@@ -70,7 +70,7 @@
     #=========================================
     # --- firstconfig.ps1 Strings ---
     #=========================================
-    ConfigForm_Title = "構成ウィザード - WindowsAutoConfig"
+    ConfigForm_Title = "構成ウィザード - WindowsOrchestrator"
     ConfigForm_PathError = "プロジェクトのパスを特定できませんでした。エラー：{0}。スクリプトは終了します。"
     ConfigForm_PathErrorCaption = "重大なパスエラー"
     ConfigForm_ModelFileNotFoundError = "エラー：テンプレートファイル 'management\defaults\default_config.ini' が見つからず、'config.ini' も存在しません。インストールは不可能です。"

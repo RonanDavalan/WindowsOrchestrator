@@ -4,8 +4,8 @@
     #=========================================
     Uninstall_ElevationWarning = "Error al elevar privilegios. Por favor, ejecute este script como administrador."
     Uninstall_PressEnterToExit = "Presione Enter para salir."
-    Uninstall_StartMessage = "Iniciando la desinstalación completa de WindowsAutoConfig..."
-    Uninstall_AutoLogonQuestion = "[PREGUNTA] WindowsAutoConfig puede haber habilitado el inicio de sesión automático (auto-logon). ¿Desea desactivarlo ahora? (s/n)"
+    Uninstall_StartMessage = "Iniciando la desinstalación completa de WindowsOrchestrator..."
+    Uninstall_AutoLogonQuestion = "[PREGUNTA] WindowsOrchestrator puede haber habilitado el inicio de sesión automático (auto-logon). ¿Desea desactivarlo ahora? (s/n)"
     Uninstall_RestoringSettings = "Restaurando la configuración principal de Windows..."
     Uninstall_WindowsUpdateReactivated = "- Actualizaciones de Windows (Update y Auto-Reboot): Reactivadas."
     Uninstall_WindowsUpdateError = "- ERROR al reactivar Windows Update: {0}"
@@ -36,7 +36,7 @@
     Install_ElevationWarning = "Error al elevar privilegios. Por favor, ejecute este script como administrador."
     Install_PressEnterToExit = "Presione Enter para salir."
     Install_ConfigIniNotFoundWarning = "config.ini no encontrado en el presunto directorio padre ({0})."
-    Install_ProjectRootPrompt = "Por favor, ingrese la ruta completa al directorio raíz de los scripts de WindowsAutoConfig (ej: C:\WindowsAutoConfig)"
+    Install_ProjectRootPrompt = "Por favor, ingrese la ruta completa al directorio raíz de los scripts de WindowsOrchestrator (ej: C:\WindowsOrchestrator)"
     Install_InvalidProjectRootError = "Directorio raíz del proyecto inválido o config.ini no encontrado: '{0}'"
     Install_PathDeterminationError = "Error al determinar las rutas iniciales: {0}"
     Install_MissingSystemFile = "Falta el archivo de sistema requerido: {0}"
@@ -46,10 +46,10 @@
     Install_UserTaskTarget = "La tarea de usuario se instalará para: {0}"
     Install_StartConfiguringTasks = "Iniciando la configuración de tareas programadas..."
     Install_CreatingSystemTask = "Creando/Actualizando la tarea de sistema '{0}'..."
-    Install_SystemTaskDescription = "WindowsAutoConfig: Ejecuta el script de configuración del sistema al inicio."
+    Install_SystemTaskDescription = "WindowsOrchestrator: Ejecuta el script de configuración del sistema al inicio."
     Install_SystemTaskConfiguredSuccess = "Tarea '{0}' configurada con éxito."
     Install_CreatingUserTask = "Creando/Actualizando la tarea de usuario '{0}' para '{1}'..."
-    Install_UserTaskDescription = "WindowsAutoConfig: Ejecuta el script de configuración del usuario al iniciar sesión."
+    Install_UserTaskDescription = "WindowsOrchestrator: Ejecuta el script de configuración del usuario al iniciar sesión."
     Install_MainTasksConfigured = "Tareas programadas principales configuradas."
     Install_DailyRebootTasksNote = "Las tareas para el reinicio diario ('AllSys_SystemScheduledReboot') y la acción previa al reinicio ('AllSys_SystemPreRebootAction') serán creadas/gestionadas por '{0}' durante su ejecución."
     Install_AttemptingInitialLaunch = "Intentando el lanzamiento inicial de los scripts de configuración..."
@@ -70,7 +70,7 @@
     #=========================================
     # --- firstconfig.ps1 Strings ---
     #=========================================
-    ConfigForm_Title = "Asistente de Configuración - WindowsAutoConfig"
+    ConfigForm_Title = "Asistente de Configuración - WindowsOrchestrator"
     ConfigForm_PathError = "No se pudieron determinar las rutas del proyecto. Error: {0}. El script se cerrará."
     ConfigForm_PathErrorCaption = "Error Crítico de Ruta"
     ConfigForm_ModelFileNotFoundError = "ERROR: El archivo de plantilla 'management\defaults\default_config.ini' no se encuentra Y no existe ningún 'config.ini'. La instalación es imposible."

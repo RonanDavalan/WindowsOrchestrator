@@ -1,26 +1,26 @@
-# WindowsAutoConfig ⚙️
+# Windows Orchestrator
 
 [🇫🇷 Français](README-fr-FR.md) | [🇩🇪 Deutsch](README-de-DE.md) | [🇪🇸 Español](README-es-ES.md) | [🇮🇳 हिंदी](README-hi-IN.md) | [🇯🇵 日本語](README-ja-JP.md) | [🇷🇺 Русский](README-ru-RU.md) | [🇨🇳 中文](README-zh-CN.md) | [🇸🇦 العربية](README-ar-SA.md) | [🇧🇩 বাংলা](README-bn-BD.md) | [🇮🇩 Bahasa Indonesia](README-id-ID.md)
 
 **Your autopilot for dedicated Windows workstations. Configure once, and let the system reliably manage itself.**
 
-🔗 **[Discover the project](https://wac.davalan.fr/)**
+<p align="center">
+  <a href="https://wo.davalan.fr/"><strong>🔗 Visit the Official Homepage for a full tour!</strong></a>
+</p>
 
 ![Licence](https://img.shields.io/badge/Licence-GPLv3-blue.svg)![PowerShell Version](https://img.shields.io/badge/PowerShell-5.1%2B-blue)![Status](https://img.shields.io/badge/Status-Operational-brightgreen.svg)![OS](https://img.shields.io/badge/OS-Windows_10_|_11-informational)![Support](https://img.shields.io/badge/Support-11_Languages-orange.svg)![Contributions](https://img.shields.io/badge/Contributions-Welcome-brightgreen.svg)
 
 ---
 
-## ▸ Our Mission
+## Our Mission
 
 Imagine a perfectly reliable and autonomous Windows workstation. A machine you configure once for its mission and can then forget about. A system that ensures your application remains **permanently operational**, without interruption.
 
-This is the goal that **WindowsAutoConfig** helps you achieve. The challenge is that a standard Windows PC is not natively designed for this endurance. It is designed for human interaction: it goes to sleep, installs updates when it deems it appropriate, and does not automatically restart an application after a reboot.
+This is the goal that **WindowsOrchestrator** helps you achieve. The challenge is that a standard Windows PC is not natively designed for this endurance. It is designed for human interaction: it goes to sleep, installs updates when it deems it appropriate, and does not automatically restart an application after a reboot.
 
-**WindowsAutoConfig** is the solution: a set of scripts that acts as an intelligent and permanent supervisor. It transforms any PC into a reliable automaton, ensuring that your critical application is always operational, without manual intervention.
+**WindowsOrchestrator** is the solution: a set of scripts that acts as an intelligent and permanent supervisor. It transforms any PC into a reliable automaton, ensuring that your critical application is always operational, without manual intervention.
 
-### Why was `WindowsAutoConfig` created? The story of a real need.
 
-`WindowsAutoConfig` is an engineering solution, born from the need to ensure **operational continuity** on a desktop operating system. **Developed as part of our AllSys local AI solution, it is now a standalone open-source tool that can be used for any application.**
 
 We were faced not with one, but with two types of systemic failures:
 
@@ -36,17 +36,17 @@ Even more insidious is the behavior of Windows over time. Designed as an interac
 
 Faced with these challenges, third-party utilities proved insufficient. We therefore made the decision to **architect our own system resilience layer.**
 
-`WindowsAutoConfig` acts as an autopilot that takes control of the OS to:
+`WindowsOrchestrator` acts as an autopilot that takes control of the OS to:
 
 - **Ensure Automatic Recovery:** After a failure, it guarantees session opening and the restart of your main application.
 - **Guarantee Preventive Maintenance:** It allows you to schedule a controlled daily restart with the execution of custom scripts beforehand.
 - **Protect the Application** from untimely interruptions from Windows (updates, sleep mode...).
 
-`WindowsAutoConfig` is the essential tool for anyone who needs a Windows workstation to remain **reliable, stable, and operational without continuous monitoring.**
+`WindowsOrchestrator` is the essential tool for anyone who needs a Windows workstation to remain **reliable, stable, and operational without continuous monitoring.**
 
 ---
 
-## 💡 Typical Use Cases
+## Typical Use Cases
 
 *   **Digital Signage:** Ensure that signage software runs 24/7 on a public screen.
 *   **Home Servers and IoT:** Control a Plex server, a Home Assistant gateway, or a connected object from a Windows PC.
@@ -56,7 +56,7 @@ Faced with these challenges, third-party utilities proved insufficient. We there
 
 ---
 
-## ✨ Key Features
+## Key Features
 
 *   **Graphical Configuration Wizard:** No need to edit files for basic settings.
 *   **Full Multilingual Support:** Interface and logs available in 11 languages, with automatic detection of the system's language.
@@ -71,20 +71,20 @@ Faced with these challenges, third-party utilities proved insufficient. We there
 
 ---
 
-## 🎯 Target Audience and Best Practices
+## Target Audience and Best Practices
 
 This project is designed to turn a PC into a reliable automaton, ideal for use cases where the machine is dedicated to a single application (server for an IoT device, digital signage, monitoring station, etc.). It is not recommended for a general-purpose office or everyday computer.
 
-*   **Major Windows Updates:** For significant updates (e.g., upgrading from Windows 10 to 11), the safest procedure is to **uninstall** WindowsAutoConfig before the update, then **reinstall** it afterward.
+*   **Major Windows Updates:** For significant updates (e.g., upgrading from Windows 10 to 11), the safest procedure is to **uninstall** WindowsOrchestrator before the update, then **reinstall** it afterward.
 *   **Corporate Environments:** If your computer is in a corporate domain managed by Group Policy Objects (GPOs), check with your IT department to ensure the modifications made by this script do not conflict with your organization's policies.
 
 ---
 
-## 🚀 Installation and Getting Started
+## Installation and Getting Started
 
 **Language Note:** The launch scripts (`1_install.bat` and `2_uninstall.bat`) display their instructions in **English**. This is normal. These files act as simple launchers. As soon as the graphical wizard or the PowerShell scripts take over, the interface will automatically adapt to your operating system's language.
 
-Setting up **WindowsAutoConfig** is a simple and guided process.
+Setting up **WindowsOrchestrator** is a simple and guided process.
 
 1.  **Download** or clone the project onto the computer to be configured.
 2.  Run `1_install.bat`. The script will guide you through two steps:
@@ -99,7 +99,7 @@ Setting up **WindowsAutoConfig** is a simple and guided process.
 
 ---
 
-## 🔧 Configuration
+## Configuration
 You can adjust settings at any time in two ways:
 
 ### 1. Graphical Wizard (Simple method)
@@ -109,7 +109,7 @@ Rerun `1_install.bat` to reopen the configuration interface. Modify your setting
 Open `config.ini` with a text editor for granular control.
 
 #### Important Note on Auto-Login and Passwords
-For security reasons, **WindowsAutoConfig never manages or stores passwords in plain text.** Here's how to configure auto-login effectively and securely:
+For security reasons, **WindowsOrchestrator never manages or stores passwords in plain text.** Here's how to configure auto-login effectively and securely:
 
 *   **Scenario 1: The user account has no password.**
     Simply enter the username in the graphical wizard or in `AutoLoginUsername` in the `config.ini` file.
@@ -117,7 +117,7 @@ For security reasons, **WindowsAutoConfig never manages or stores passwords in p
 *   **Scenario 2: The user account has a password (Recommended method).**
     1.  Download the official **[Sysinternals AutoLogon](https://download.sysinternals.com/files/AutoLogon.zip)** tool from Microsoft (direct download link).
     2.  Launch AutoLogon and enter the username, domain, and password. This tool will securely store the password in the Registry.
-    3.  In the **WindowsAutoConfig** configuration, you can now leave the `AutoLoginUsername` field empty (the script will detect the user configured by AutoLogon by reading the corresponding Registry key) or fill it in to be sure. Our script will ensure that the `AutoAdminLogon` Registry key is properly enabled to finalize the configuration.
+    3.  In the **WindowsOrchestrator** configuration, you can now leave the `AutoLoginUsername` field empty (the script will detect the user configured by AutoLogon by reading the corresponding Registry key) or fill it in to be sure. Our script will ensure that the `AutoAdminLogon` Registry key is properly enabled to finalize the configuration.
 
 #### Advanced Configuration: `PreRebootActionCommand`
 This powerful feature allows you to execute a script before the daily reboot. The path can be:
@@ -127,9 +127,9 @@ This powerful feature allows you to execute a script before the daily reboot. Th
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 ```
-WindowsAutoConfig/
+WindowsOrchestrator/
 ├── 1_install.bat                # Entry point for installation and configuration
 ├── 2_uninstall.bat              # Entry point for uninstallation
 ├── config.ini                   # Central configuration file
@@ -152,24 +152,24 @@ WindowsAutoConfig/
 
 ---
 
-## ⚙️ Detailed Operation
-The core of **WindowsAutoConfig** relies on the Windows Task Scheduler:
+## Detailed Operation
+The core of **WindowsOrchestrator** relies on the Windows Task Scheduler:
 
 1.  **At Windows Startup**
-    *   The `WindowsAutoConfig_SystemStartup` task runs with `SYSTEM` privileges.
+    *   The `WindowsOrchestrator_SystemStartup` task runs with `SYSTEM` privileges.
     *   The `config_systeme.ps1` script reads `config.ini` and applies all machine configurations. It also manages the creation/update of reboot tasks.
 
 2.  **At User Login**
-    *   The `WindowsAutoConfig_UserLogon` task runs.
+    *   The `WindowsOrchestrator_UserLogon` task runs.
     *   The `config_utilisateur.ps1` script reads the `[Process]` section of `config.ini` and ensures that your main application is properly launched. If it was already running, it is first stopped then cleanly relaunched.
 
 3.  **Daily (If configured)**
-    *   The `WindowsAutoConfig_PreRebootAction` task executes your backup/cleanup script.
-    *   A few minutes later, the `WindowsAutoConfig_ScheduledReboot` task reboots the computer.
+    *   The `WindowsOrchestrator_PreRebootAction` task executes your backup/cleanup script.
+    *   A few minutes later, the `WindowsOrchestrator_ScheduledReboot` task reboots the computer.
 
 ---
 
-### 🛠️ Diagnostic and Development Tools
+### Diagnostic and Development Tools
 
 The project includes useful scripts to help you configure and maintain the project.
 
@@ -178,7 +178,7 @@ The project includes useful scripts to help you configure and maintain the proje
 
 ---
 
-## 📄 Logging
+## Logging
 For easy troubleshooting, everything is logged.
 *   **Location:** In the `Logs/` subfolder.
 *   **Files:** `config_systeme_ps_log.txt` and `config_utilisateur_log.txt`.
@@ -186,7 +186,7 @@ For easy troubleshooting, everything is logged.
 
 ---
 
-## 🗑️ Uninstallation
+## Uninstallation
 To remove the system:
 1.  Run `2_uninstall.bat`.
 2.  **Accept the privilege request (UAC)**.
@@ -202,7 +202,7 @@ Your system thus returns to being a standard workstation, with no residual modif
 
 ---
 
-## ❤️ License and Contributions
+## License and Contributions
 This project is distributed under the **GPLv3** license. The full text is available in the `LICENSE` file.
 
 Contributions, whether in the form of bug reports, improvement suggestions, or pull requests, are welcome.

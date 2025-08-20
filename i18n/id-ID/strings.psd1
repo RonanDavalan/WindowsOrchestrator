@@ -4,8 +4,8 @@
     #=========================================
     Uninstall_ElevationWarning = "Gagal meningkatkan hak istimewa. Silakan jalankan skrip ini sebagai administrator."
     Uninstall_PressEnterToExit = "Tekan Enter untuk keluar."
-    Uninstall_StartMessage = "Memulai penghapusan instalasi penuh WindowsAutoConfig..."
-    Uninstall_AutoLogonQuestion = "[PERTANYAAN] WindowsAutoConfig mungkin telah mengaktifkan login otomatis (auto-logon). Apakah Anda ingin menonaktifkannya sekarang? (y/n)"
+    Uninstall_StartMessage = "Memulai penghapusan instalasi penuh WindowsOrchestrator..."
+    Uninstall_AutoLogonQuestion = "[PERTANYAAN] WindowsOrchestrator mungkin telah mengaktifkan login otomatis (auto-logon). Apakah Anda ingin menonaktifkannya sekarang? (y/n)"
     Uninstall_RestoringSettings = "Memulihkan pengaturan utama Windows..."
     Uninstall_WindowsUpdateReactivated = "- Pembaruan Windows (Update & Auto-Reboot): Diaktifkan kembali."
     Uninstall_WindowsUpdateError = "- ERROR saat mengaktifkan kembali Pembaruan Windows: {0}"
@@ -36,7 +36,7 @@
     Install_ElevationWarning = "Gagal meningkatkan hak istimewa. Silakan jalankan skrip ini sebagai administrator."
     Install_PressEnterToExit = "Tekan Enter untuk keluar."
     Install_ConfigIniNotFoundWarning = "config.ini tidak ditemukan di direktori induk yang seharusnya ({0})."
-    Install_ProjectRootPrompt = "Silakan masukkan path lengkap ke direktori root skrip WindowsAutoConfig (misalnya, C:\WindowsAutoConfig)"
+    Install_ProjectRootPrompt = "Silakan masukkan path lengkap ke direktori root skrip WindowsOrchestrator (misalnya, C:\WindowsOrchestrator)"
     Install_InvalidProjectRootError = "Direktori root proyek tidak valid atau config.ini tidak ditemukan: '{0}'"
     Install_PathDeterminationError = "Error saat menentukan path awal: {0}"
     Install_MissingSystemFile = "File sistem yang dibutuhkan hilang: {0}"
@@ -46,10 +46,10 @@
     Install_UserTaskTarget = "Tugas pengguna akan diinstal untuk: {0}"
     Install_StartConfiguringTasks = "Memulai konfigurasi tugas terjadwal..."
     Install_CreatingSystemTask = "Membuat/Memperbarui tugas sistem '{0}'..."
-    Install_SystemTaskDescription = "WindowsAutoConfig: Menjalankan skrip konfigurasi sistem saat startup."
+    Install_SystemTaskDescription = "WindowsOrchestrator: Menjalankan skrip konfigurasi sistem saat startup."
     Install_SystemTaskConfiguredSuccess = "Tugas '{0}' berhasil dikonfigurasi."
     Install_CreatingUserTask = "Membuat/Memperbarui tugas pengguna '{0}' untuk '{1}'..."
-    Install_UserTaskDescription = "WindowsAutoConfig: Menjalankan skrip konfigurasi pengguna saat logon."
+    Install_UserTaskDescription = "WindowsOrchestrator: Menjalankan skrip konfigurasi pengguna saat logon."
     Install_MainTasksConfigured = "Tugas terjadwal utama telah dikonfigurasi."
     Install_DailyRebootTasksNote = "Tugas untuk reboot harian ('AllSys_SystemScheduledReboot') dan tindakan pra-reboot ('AllSys_SystemPreRebootAction') akan dibuat/dikelola oleh '{0}' saat eksekusi."
     Install_AttemptingInitialLaunch = "Mencoba peluncuran awal skrip konfigurasi..."
@@ -70,7 +70,7 @@
     #=========================================
     # --- firstconfig.ps1 Strings ---
     #=========================================
-    ConfigForm_Title = "Wizard Konfigurasi - WindowsAutoConfig"
+    ConfigForm_Title = "Wizard Konfigurasi - WindowsOrchestrator"
     ConfigForm_PathError = "Tidak dapat menentukan path proyek. Error: {0}. Skrip akan ditutup."
     ConfigForm_PathErrorCaption = "Error Path Kritis"
     ConfigForm_ModelFileNotFoundError = "ERROR: File template 'management\defaults\default_config.ini' tidak ditemukan DAN tidak ada 'config.ini'. Instalasi tidak mungkin dilakukan."

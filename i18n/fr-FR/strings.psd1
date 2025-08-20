@@ -4,8 +4,8 @@
     #=========================================
     Uninstall_ElevationWarning = "Échec de l'élévation des privilèges. Veuillez exécuter ce script en tant qu'administrateur."
     Uninstall_PressEnterToExit = "Appuyez sur Entrée pour quitter."
-    Uninstall_StartMessage = "Début de la désinstallation complète de WindowsAutoConfig..."
-    Uninstall_AutoLogonQuestion = "[QUESTION] WindowsAutoConfig a peut-être activé la connexion automatique (auto-logon). Voulez-vous la désactiver maintenant ? (o/n)"
+    Uninstall_StartMessage = "Début de la désinstallation complète de WindowsOrchestrator..."
+    Uninstall_AutoLogonQuestion = "[QUESTION] WindowsOrchestrator a peut-être activé la connexion automatique (auto-logon). Voulez-vous la désactiver maintenant ? (o/n)"
     Uninstall_RestoringSettings = "Restauration des principaux paramètres Windows..."
     Uninstall_WindowsUpdateReactivated = "- Mises à jour Windows (Update & Auto-Reboot) : Réactivées."
     Uninstall_WindowsUpdateError = "- ERREUR lors de la réactivation de Windows Update : {0}"
@@ -36,7 +36,7 @@
     Install_ElevationWarning = "Échec de l'élévation des privilèges. Veuillez exécuter ce script en tant qu'administrateur."
     Install_PressEnterToExit = "Appuyez sur Entrée pour quitter."
     Install_ConfigIniNotFoundWarning = "config.ini non trouvé dans le répertoire parent présumé ({0})."
-    Install_ProjectRootPrompt = "Veuillez entrer le chemin complet du répertoire racine des scripts WindowsAutoConfig (ex: C:\WindowsAutoConfig)"
+    Install_ProjectRootPrompt = "Veuillez entrer le chemin complet du répertoire racine des scripts WindowsOrchestrator (ex: C:\WindowsOrchestrator)"
     Install_InvalidProjectRootError = "Répertoire racine du projet invalide ou config.ini introuvable : '{0}'"
     Install_PathDeterminationError = "Erreur lors de la détermination des chemins initiaux : {0}"
     Install_MissingSystemFile = "Fichier système requis manquant : {0}"
@@ -46,10 +46,10 @@
     Install_UserTaskTarget = "La tâche utilisateur sera installée pour : {0}"
     Install_StartConfiguringTasks = "Début de la configuration des tâches planifiées..."
     Install_CreatingSystemTask = "Création/Mise à jour de la tâche système '{0}'..."
-    Install_SystemTaskDescription = "WindowsAutoConfig: Exécute le script de configuration système au démarrage."
+    Install_SystemTaskDescription = "WindowsOrchestrator: Exécute le script de configuration système au démarrage."
     Install_SystemTaskConfiguredSuccess = "Tâche '{0}' configurée avec succès."
     Install_CreatingUserTask = "Création/Mise à jour de la tâche utilisateur '{0}' pour '{1}'..."
-    Install_UserTaskDescription = "WindowsAutoConfig: Exécute le script de configuration utilisateur à l'ouverture de session."
+    Install_UserTaskDescription = "WindowsOrchestrator: Exécute le script de configuration utilisateur à l'ouverture de session."
     Install_MainTasksConfigured = "Tâches planifiées principales configurées."
     Install_DailyRebootTasksNote = "Les tâches pour le redémarrage quotidien ('AllSys_SystemScheduledReboot') et l'action pré-redémarrage ('AllSys_SystemPreRebootAction') seront créées/gérées par '{0}' lors de son exécution."
     Install_AttemptingInitialLaunch = "Tentative de lancement initial des scripts de configuration..."
@@ -70,7 +70,7 @@
     #=========================================
     # --- firstconfig.ps1 Strings ---
     #=========================================
-    ConfigForm_Title = "Assistant de Configuration - WindowsAutoConfig"
+    ConfigForm_Title = "Assistant de Configuration - WindowsOrchestrator"
     ConfigForm_PathError = "Impossible de déterminer les chemins du projet. Erreur: {0}. Le script va se fermer."
     ConfigForm_PathErrorCaption = "Erreur Critique Path"
     ConfigForm_ModelFileNotFoundError = "ERREUR: Le fichier modèle 'management\defaults\default_config.ini' est introuvable ET aucun 'config.ini' n'existe. Installation impossible."

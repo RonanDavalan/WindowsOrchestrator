@@ -6,7 +6,7 @@ CLS
 
 
 ECHO #############################################################
-ECHO #           Installation Wizard - WindowsAutoConfig         #
+ECHO #           Installation Wizard - WindowsOrchestrator         #
 ECHO #############################################################
 ECHO.
 ECHO --- Step 1 of 2: Configuration ---

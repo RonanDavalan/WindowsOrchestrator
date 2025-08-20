@@ -5,7 +5,7 @@
 
 <#
 .SYNOPSIS
-    Assistant de configuration graphique pour WindowsAutoConfig.
+    Assistant de configuration graphique pour WindowsOrchestrator.
 .DESCRIPTION
     Gère la création du fichier config.ini à partir d'un modèle par défaut.
     Permet à l'utilisateur de configurer les options essentielles du fichier config.ini.

@@ -102,7 +102,7 @@ function Get-IniContent {
 
 
 #region GLOBAL CONFIG & EARLY LOGS SETUP
-$ScriptIdentifier = "WindowsAutoConfig-System"
+$ScriptIdentifier = "WindowsOrchestrator-System"
 $ScriptInternalBuild = "Build-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
 $ScriptDir = $PSScriptRoot
 
@@ -260,7 +260,7 @@ try {
     if(Get-ConfigValue "SystemConfig" "DisableAutoReboot" -Type ([bool])){ try{Set-ItemProperty $wuPolicyKey NoAutoRebootWithLoggedOnUsers 1 -Type DWord -Force -EA Stop; Add-Action -DefaultActionMessage "Auto-reboot (WU) disabled." -ActionId "Action_AutoRebootDisabled"}catch{Add-Error -DefaultErrorMessage "Failed to disable auto-reboot: $($_.Exception.Message)" -ErrorId "Error_DisableAutoRebootFailed" -ErrorArgs $_.Exception.Message}}
 
     $rebootTime = Get-ConfigValue "SystemConfig" "ScheduledRebootTime"
-    $rebootTaskName = "WindowsAutoConfig-SystemScheduledReboot"
+    $rebootTaskName = "WindowsOrchestrator-SystemScheduledReboot"
     if (-not [string]::IsNullOrWhiteSpace($rebootTime)) {
         $rebootDesc = "Daily reboot by AllSysConfig (Build: $ScriptInternalBuild)"
         $rebootAction = New-ScheduledTaskAction -Execute "shutdown.exe" -Argument "/r /f /t 60 /c `"$rebootDesc`""
@@ -274,7 +274,7 @@ try {
     $preRebootCmdFromFile = Get-ConfigValue -Section "SystemConfig" -Key "PreRebootActionCommand"
     $preRebootArgsFromFile = Get-ConfigValue -Section "SystemConfig" -Key "PreRebootActionArguments"
     $preRebootLaunchMethod = (Get-ConfigValue -Section "SystemConfig" -Key "PreRebootActionLaunchMethod" -DefaultValue "direct").ToLower()
-    $preRebootTaskName = "WindowsAutoConfig-SystemPreRebootAction"
+    $preRebootTaskName = "WindowsOrchestrator-SystemPreRebootAction"
 
     if ((-not [string]::IsNullOrWhiteSpace($preRebootActionTime)) -and (-not [string]::IsNullOrWhiteSpace($preRebootCmdFromFile))) {
         

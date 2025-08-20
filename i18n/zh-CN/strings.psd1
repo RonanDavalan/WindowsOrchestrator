@@ -4,8 +4,8 @@
     #=========================================
     Uninstall_ElevationWarning = "权限提升失败。请以管理员身份运行此脚本。"
     Uninstall_PressEnterToExit = "按 Enter 键退出。"
-    Uninstall_StartMessage = "开始完全卸载 WindowsAutoConfig..."
-    Uninstall_AutoLogonQuestion = "[问题] WindowsAutoConfig 可能已启用自动登录。您现在要禁用它吗？ (y/n)"
+    Uninstall_StartMessage = "开始完全卸载 WindowsOrchestrator..."
+    Uninstall_AutoLogonQuestion = "[问题] WindowsOrchestrator 可能已启用自动登录。您现在要禁用它吗？ (y/n)"
     Uninstall_RestoringSettings = "正在还原主要的 Windows 设置..."
     Uninstall_WindowsUpdateReactivated = "- Windows 更新（更新和自动重启）：已重新激活。"
     Uninstall_WindowsUpdateError = "- 重新激活 Windows 更新时出错：{0}"
@@ -36,7 +36,7 @@
     Install_ElevationWarning = "权限提升失败。请以管理员身份运行此脚本。"
     Install_PressEnterToExit = "按 Enter 键退出。"
     Install_ConfigIniNotFoundWarning = "在假定的父目录 ({0}) 中找不到 config.ini。"
-    Install_ProjectRootPrompt = "请输入 WindowsAutoConfig 脚本根目录的完整路径（例如，C:\WindowsAutoConfig）"
+    Install_ProjectRootPrompt = "请输入 WindowsOrchestrator 脚本根目录的完整路径（例如，C:\WindowsOrchestrator）"
     Install_InvalidProjectRootError = "项目根目录无效或找不到 config.ini：'{0}'"
     Install_PathDeterminationError = "确定初始路径时出错：{0}"
     Install_MissingSystemFile = "缺少必需的系统文件：{0}"
@@ -46,10 +46,10 @@
     Install_UserTaskTarget = "将为以下用户安装用户任务：{0}"
     Install_StartConfiguringTasks = "开始配置计划任务..."
     Install_CreatingSystemTask = "正在创建/更新系统任务 '{0}'..."
-    Install_SystemTaskDescription = "WindowsAutoConfig：在启动时执行系统配置脚本。"
+    Install_SystemTaskDescription = "WindowsOrchestrator：在启动时执行系统配置脚本。"
     Install_SystemTaskConfiguredSuccess = "任务 '{0}' 已成功配置。"
     Install_CreatingUserTask = "正在为 '{1}' 创建/更新用户任务 '{0}'..."
-    Install_UserTaskDescription = "WindowsAutoConfig：在登录时执行用户配置脚本。"
+    Install_UserTaskDescription = "WindowsOrchestrator：在登录时执行用户配置脚本。"
     Install_MainTasksConfigured = "主要计划任务已配置。"
     Install_DailyRebootTasksNote = "每日重启（'AllSys_SystemScheduledReboot'）和重启前操作（'AllSys_SystemPreRebootAction'）的任务将在 '{0}' 执行期间创建/管理。"
     Install_AttemptingInitialLaunch = "正在尝试首次启动配置脚本..."
@@ -70,7 +70,7 @@
     #=========================================
     # --- firstconfig.ps1 Strings ---
     #=========================================
-    ConfigForm_Title = "配置向导 - WindowsAutoConfig"
+    ConfigForm_Title = "配置向导 - WindowsOrchestrator"
     ConfigForm_PathError = "无法确定项目路径。错误：{0}。脚本将关闭。"
     ConfigForm_PathErrorCaption = "严重路径错误"
     ConfigForm_ModelFileNotFoundError = "错误：找不到模板文件 'management\defaults\default_config.ini' 且不存在 'config.ini'。无法安装。"

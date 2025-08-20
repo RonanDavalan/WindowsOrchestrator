@@ -5,7 +5,7 @@
 
 <#
 .SYNOPSIS
-    Désinstalle les tâches planifiées et restaure les paramètres système modifiés par WindowsAutoConfig.
+    Désinstalle les tâches planifiées et restaure les paramètres système modifiés par WindowsOrchestrator.
 .DESCRIPTION
     Ce script gère sa propre élévation de privilèges tout en préservant l'argument de langue.
 .NOTES
@@ -144,10 +144,10 @@ Write-Host ""
 Write-StyledHost $lang.Uninstall_DeletingScheduledTasks "INFO"
 
 $TasksToRemove = @(
-    "WindowsAutoConfig-SystemStartup",
-    "WindowsAutoConfig-UserLogon",
-    "WindowsAutoConfig-SystemScheduledReboot",
-    "WindowsAutoConfig-SystemPreRebootAction"
+    "WindowsOrchestrator-SystemStartup",
+    "WindowsOrchestrator-UserLogon",
+    "WindowsOrchestrator-SystemScheduledReboot",
+    "WindowsOrchestrator-SystemPreRebootAction"
 )
 $tasksFoundButNotRemoved = [System.Collections.Generic.List[string]]::new()
 

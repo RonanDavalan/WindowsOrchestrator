@@ -87,8 +87,8 @@ try {
     $SystemScriptPath = Join-Path $ProjectRootDir "config_systeme.ps1"
     $UserScriptPath   = Join-Path $ProjectRootDir "config_utilisateur.ps1"
     
-    $TaskNameSystem = "WindowsAutoConfig-SystemStartup"
-    $TaskNameUser   = "WindowsAutoConfig-UserLogon"
+    $TaskNameSystem = "WindowsOrchestrator-SystemStartup"
+    $TaskNameUser   = "WindowsOrchestrator-UserLogon"
 
     Write-StyledHost ($lang.Install_ProjectRootUsed -f $ProjectRootDir) "INFO"
 }
