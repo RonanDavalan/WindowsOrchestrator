@@ -2,207 +2,194 @@
 
 [🇫🇷 Français](README-fr-FR.md) | [🇩🇪 Deutsch](README-de-DE.md) | [🇪🇸 Español](README-es-ES.md) | [🇮🇳 हिंदी](README-hi-IN.md) | [🇯🇵 日本語](README-ja-JP.md) | [🇷🇺 Русский](README-ru-RU.md) | [🇨🇳 中文](README-zh-CN.md) | [🇸🇦 العربية](README-ar-SA.md) | [🇧🇩 বাংলা](README-bn-BD.md) | [🇮🇩 Bahasa Indonesia](README-id-ID.md)
 
-**Your autopilot for dedicated Windows workstations. Configure once, and let the system reliably manage itself.**
+Windows Orchestrator is a set of scripts that uses the Windows Task Scheduler to run PowerShell scripts (`.ps1`). A graphical wizard (`firstconfig.ps1`) allows the user to generate a `config.ini` configuration file. The main scripts (`config_systeme.ps1`, `config_utilisateur.ps1`) read this file to perform specific actions:
+*   Modifying Windows Registry keys.
+*   Executing system commands (`powercfg`, `shutdown`).
+*   Managing Windows services (changing the startup type and stopping the `wuauserv` service).
+*   Starting or stopping user-defined application processes.
+*   Sending HTTP POST requests to a Gotify notification service via the `Invoke-RestMethod` command.
+
+The scripts detect the user's operating system language and load strings (for logs, the GUI, and notifications) from the `.psd1` files located in the `i18n` directory.
 
 <p align="center">
-  <a href="https://wo.davalan.fr/"><strong>🔗 Visit the Official Homepage for a full tour!</strong></a>
+  <a href="https://wo.davalan.fr/"><strong>🔗 Visit the official homepage for a full presentation!</strong></a>
 </p>
 
-![Licence](https://img.shields.io/badge/Licence-GPLv3-blue.svg)![PowerShell Version](https://img.shields.io/badge/PowerShell-5.1%2B-blue)![Status](https://img.shields.io/badge/Status-Operational-brightgreen.svg)![OS](https://img.shields.io/badge/OS-Windows_10_|_11-informational)![Support](https://img.shields.io/badge/Support-11_Languages-orange.svg)![Contributions](https://img.shields.io/badge/Contributions-Welcome-brightgreen.svg)
+<p align="center">
+  <img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License">
+  <img src="https://img.shields.io/badge/PowerShell_Version-5.1%2B-blue" alt="PowerShell Version">
+  <img src="https://img.shields.io/badge/Status-Operational-brightgreen.svg" alt="Status">
+  <img src="https://img.shields.io/badge/OS-Windows_10_|_11-informational" alt="OS">
+  <img src="https://img.shields.io/badge/Support-11_Languages-orange.svg" alt="Support">
+  <img src="https://img.shields.io/badge/Contributions-Welcome-brightgreen.svg" alt="Contributions">
+</p>
 
 ---
 
-## Our Mission
+## Script Actions
 
-Imagine a perfectly reliable and autonomous Windows workstation. A machine you configure once for its mission and can then forget about. A system that ensures your application remains **permanently operational**, without interruption.
+The `1_install.bat` script runs `management\install.ps1`, which creates two main Scheduled Tasks.
+*   The first, **`WindowsOrchestrator-SystemStartup`**, runs `config_systeme.ps1` when Windows starts.
+*   The second, **`WindowsOrchestrator-UserLogon`**, runs `config_utilisateur.ps1` when the user logs on.
 
-This is the goal that **WindowsOrchestrator** helps you achieve. The challenge is that a standard Windows PC is not natively designed for this endurance. It is designed for human interaction: it goes to sleep, installs updates when it deems it appropriate, and does not automatically restart an application after a reboot.
+Depending on the settings in the `config.ini` file, the scripts perform the following actions:
 
-**WindowsOrchestrator** is the solution: a set of scripts that acts as an intelligent and permanent supervisor. It transforms any PC into a reliable automaton, ensuring that your critical application is always operational, without manual intervention.
+*   **Automatic Logon Management:**
+    *   `Script Action:` The script writes the value `1` to the `HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\AutoAdminLogon` Registry key.
+    *   `User Action:` For this function to be operational, the user must first save the password in the Registry. The script does not handle this information. The **Sysinternals AutoLogon** utility is an external tool that can perform this action.
 
+*   **Changing Power Settings:**
+    *   Runs the commands `powercfg /change standby-timeout-ac 0` and `powercfg /change hibernate-timeout-ac 0` to disable sleep mode.
+    *   Runs the command `powercfg /change monitor-timeout-ac 0` to disable the display from turning off.
+    *   Writes the value `0` to the `HiberbootEnabled` Registry key to disable Fast Startup.
 
+*   **Managing Windows Updates:**
+    *   Writes the value `1` to the `NoAutoUpdate` and `NoAutoRebootWithLoggedOnUsers` Registry keys.
+    *   Changes the startup type of the `wuauserv` Windows service to `Disabled` and runs the `Stop-Service` command on it.
 
-We were faced not with one, but with two types of systemic failures:
+*   **Scheduling a Daily Reboot:**
+    *   Creates a Scheduled Task named `WindowsOrchestrator-SystemScheduledReboot` that runs `shutdown.exe /r /f /t 60` at the defined time.
+    *   Creates a Scheduled Task named `WindowsOrchestrator-SystemPreRebootAction` that runs a user-defined command before the reboot.
 
-#### 1. The Abrupt Failure: The Unexpected Outage
+*   **Logging Actions:**
+    *   Writes timestamped lines to `.txt` files in the `Logs` folder.
+    *   A `Rotate-LogFile` function renames and archives existing log files. The number of files to keep is defined by the `MaxSystemLogsToKeep` and `MaxUserLogsToKeep` keys in `config.ini`.
 
-The scenario is simple: a machine configured for remote access and a nighttime power outage. Even with a BIOS set for automatic restart, the mission fails. Windows restarts but remains on the login screen; the critical application is not relaunched, the session is not opened. The system is inaccessible.
+*   **Sending Gotify Notifications:**
+    *   If the `EnableGotify` key is set to `true` in `config.ini`, the scripts send an HTTP POST request to the specified URL.
+    *   The request contains a JSON payload with a title and a message. The message is a list of actions performed and errors encountered.
 
-#### 2. The Slow Degradation: Long-Term Instability
+## Prerequisites
 
-Even more insidious is the behavior of Windows over time. Designed as an interactive OS, it is not optimized for processes running without interruption. Gradually, memory leaks and performance degradation appear, making the system unstable and requiring a manual restart.
+- **Operating System**: Windows 10 or Windows 11. The source code includes the `#Requires -Version 5.1` directive for PowerShell scripts.
+- **Permissions**: The user must accept User Account Control (UAC) prompts for privilege elevation when running `1_install.bat` and `2_uninstall.bat`. This action is necessary to allow the scripts to create scheduled tasks and modify system-level Registry keys.
+- **Automatic Logon (Auto-Login)**: If the user enables this option, they must use an external tool like **Microsoft Sysinternals AutoLogon** to save their password in the Registry.
 
-### The Answer: A Native Reliability Layer
+## Installation and First-Time Setup
 
-Faced with these challenges, third-party utilities proved insufficient. We therefore made the decision to **architect our own system resilience layer.**
+The user runs the **`1_install.bat`** file.
 
-`WindowsOrchestrator` acts as an autopilot that takes control of the OS to:
+1.  **Configuration (`firstconfig.ps1`)**
+    *   The `management\firstconfig.ps1` script runs and displays a graphical interface.
+    *   If the `config.ini` file does not exist, it is created from the `management\defaults\default_config.ini` template.
+    *   If it exists, the script asks the user if they want to replace it with the template.
+    *   The user enters the settings. By clicking "Save and Close," the script writes the values to `config.ini`.
 
-- **Ensure Automatic Recovery:** After a failure, it guarantees session opening and the restart of your main application.
-- **Guarantee Preventive Maintenance:** It allows you to schedule a controlled daily restart with the execution of custom scripts beforehand.
-- **Protect the Application** from untimely interruptions from Windows (updates, sleep mode...).
+2.  **Task Installation (`install.ps1`)**
+    *   After the wizard closes, `1_install.bat` runs `management\install.ps1`, requesting privilege elevation.
+    *   The `install.ps1` script creates the two Scheduled Tasks:
+        *   **`WindowsOrchestrator-SystemStartup`**: Runs `config_systeme.ps1` at Windows startup with the `NT AUTHORITY\SYSTEM` account.
+        *   **`WindowsOrchestrator-UserLogon`**: Runs `config_utilisateur.ps1` at the logon of the user who launched the installation.
+    *   To apply the configuration without waiting for a restart, `install.ps1` runs `config_systeme.ps1` and then `config_utilisateur.ps1` once at the end of the process.
 
-`WindowsOrchestrator` is the essential tool for anyone who needs a Windows workstation to remain **reliable, stable, and operational without continuous monitoring.**
+## Usage and Post-Installation Configuration
 
----
+Any configuration changes after installation are made via the `config.ini` file.
 
-## Typical Use Cases
+### 1. Manual Modification of the `config.ini` file
 
-*   **Digital Signage:** Ensure that signage software runs 24/7 on a public screen.
-*   **Home Servers and IoT:** Control a Plex server, a Home Assistant gateway, or a connected object from a Windows PC.
-*   **Supervision Stations:** Keep a monitoring application (cameras, network logs) always active.
-*   **Interactive Kiosks:** Ensure that the kiosk application restarts automatically after each reboot.
-*   **Lightweight Automation:** Run scripts or processes continuously for data-mining or testing tasks.
+*   **User Action:** The user opens the `config.ini` file with a text editor and modifies the desired values.
+*   **Script Action:**
+    *   Changes in the `[SystemConfig]` section are read and applied by `config_systeme.ps1` **at the next computer restart**.
+    *   Changes in the `[Process]` section are read and applied by `config_utilisateur.ps1` **at the next user logon**.
 
----
+### 2. Using the GUI Assistant
 
-## Key Features
-
-*   **Graphical Configuration Wizard:** No need to edit files for basic settings.
-*   **Full Multilingual Support:** Interface and logs available in 11 languages, with automatic detection of the system's language.
-*   **Power Management:** Disable machine sleep, display sleep, and Windows Fast Startup for maximum stability.
-*   **Automatic Login (Auto-Login):** Manages auto-login, including in synergy with the **Sysinternals AutoLogon** tool for secure password management.
-*   **Windows Update Control:** Prevent forced updates and reboots from disrupting your application.
-*   **Process Manager:** Automatically launches, monitors, and relaunches your main application with each session.
-*   **Scheduled Daily Reboot:** Schedule a daily reboot to maintain system freshness.
-*   **Pre-Reboot Action:** Execute a custom script (backup, cleanup...) before the scheduled reboot.
-*   **Detailed Logging:** All actions are recorded in log files for easy diagnosis.
-*   **Notifications (Optional):** Send status reports via Gotify.
-
----
-
-## Target Audience and Best Practices
-
-This project is designed to turn a PC into a reliable automaton, ideal for use cases where the machine is dedicated to a single application (server for an IoT device, digital signage, monitoring station, etc.). It is not recommended for a general-purpose office or everyday computer.
-
-*   **Major Windows Updates:** For significant updates (e.g., upgrading from Windows 10 to 11), the safest procedure is to **uninstall** WindowsOrchestrator before the update, then **reinstall** it afterward.
-*   **Corporate Environments:** If your computer is in a corporate domain managed by Group Policy Objects (GPOs), check with your IT department to ensure the modifications made by this script do not conflict with your organization's policies.
-
----
-
-## Installation and Getting Started
-
-**Language Note:** The launch scripts (`1_install.bat` and `2_uninstall.bat`) display their instructions in **English**. This is normal. These files act as simple launchers. As soon as the graphical wizard or the PowerShell scripts take over, the interface will automatically adapt to your operating system's language.
-
-Setting up **WindowsOrchestrator** is a simple and guided process.
-
-1.  **Download** or clone the project onto the computer to be configured.
-2.  Run `1_install.bat`. The script will guide you through two steps:
-    *   **Step 1: Configuration via the Graphical Wizard.**
-        Adjust the options according to your needs. The most important ones are usually the username for automatic login and the application to launch. Click `Save` to save.
-        
-        ![Configuration Wizard](assets/screenshot-wizard.png)
-        
-    *   **Step 2: System Tasks Installation.**
-        The script will ask for confirmation to continue. A Windows security (UAC) window will open. **You must accept it** to allow the script to create the necessary scheduled tasks.
-3.  That's it! Upon the next reboot, your configurations will be applied.
-
----
-
-## Configuration
-You can adjust settings at any time in two ways:
-
-### 1. Graphical Wizard (Simple method)
-Rerun `1_install.bat` to reopen the configuration interface. Modify your settings and save.
-
-### 2. `config.ini` File (Advanced method)
-Open `config.ini` with a text editor for granular control.
-
-#### Important Note on Auto-Login and Passwords
-For security reasons, **WindowsOrchestrator never manages or stores passwords in plain text.** Here's how to configure auto-login effectively and securely:
-
-*   **Scenario 1: The user account has no password.**
-    Simply enter the username in the graphical wizard or in `AutoLoginUsername` in the `config.ini` file.
-
-*   **Scenario 2: The user account has a password (Recommended method).**
-    1.  Download the official **[Sysinternals AutoLogon](https://download.sysinternals.com/files/AutoLogon.zip)** tool from Microsoft (direct download link).
-    2.  Launch AutoLogon and enter the username, domain, and password. This tool will securely store the password in the Registry.
-    3.  In the **WindowsOrchestrator** configuration, you can now leave the `AutoLoginUsername` field empty (the script will detect the user configured by AutoLogon by reading the corresponding Registry key) or fill it in to be sure. Our script will ensure that the `AutoAdminLogon` Registry key is properly enabled to finalize the configuration.
-
-#### Advanced Configuration: `PreRebootActionCommand`
-This powerful feature allows you to execute a script before the daily reboot. The path can be:
-- **Absolute:** `C:\Scripts\my_backup.bat`
-- **Relative to the project:** `PreReboot.bat` (the script will look for this file at the root of the project).
-- **Using `%USERPROFILE%`:** `%USERPROFILE%\Desktop\cleanup.ps1` (the script will intelligently replace `%USERPROFILE%` with the path to the auto-login user's profile).
-
----
-
-## Project Structure
-```
-WindowsOrchestrator/
-├── 1_install.bat                # Entry point for installation and configuration
-├── 2_uninstall.bat              # Entry point for uninstallation
-├── config.ini                   # Central configuration file
-├── config_systeme.ps1           # Main script for machine settings (runs at startup)
-├── config_utilisateur.ps1       # Main script for user process management (runs at login)
-├── LaunchApp.bat                # (Example) Portable launcher for your main application
-├── PreReboot.bat                # Example script for the pre-reboot action
-├── Logs/                        # (Automatically created) Contains log files
-├── i18n/                        # Contains all translation files
-│   ├── en-US/strings.psd1
-│   └── ... (other languages)
-└── management/
-    ├── defaults/default_config.ini # Initial configuration template
-    ├── tools/                   # Diagnostic tools
-    │   └── Find-WindowInfo.ps1
-    ├── firstconfig.ps1          # The graphical configuration wizard code
-    ├── install.ps1              # The technical script for task installation
-    └── uninstall.ps1            # The technical script for task deletion
-```
-
----
-
-## Detailed Operation
-The core of **WindowsOrchestrator** relies on the Windows Task Scheduler:
-
-1.  **At Windows Startup**
-    *   The `WindowsOrchestrator_SystemStartup` task runs with `SYSTEM` privileges.
-    *   The `config_systeme.ps1` script reads `config.ini` and applies all machine configurations. It also manages the creation/update of reboot tasks.
-
-2.  **At User Login**
-    *   The `WindowsOrchestrator_UserLogon` task runs.
-    *   The `config_utilisateur.ps1` script reads the `[Process]` section of `config.ini` and ensures that your main application is properly launched. If it was already running, it is first stopped then cleanly relaunched.
-
-3.  **Daily (If configured)**
-    *   The `WindowsOrchestrator_PreRebootAction` task executes your backup/cleanup script.
-    *   A few minutes later, the `WindowsOrchestrator_ScheduledReboot` task reboots the computer.
-
----
-
-### Diagnostic and Development Tools
-
-The project includes useful scripts to help you configure and maintain the project.
-
-*   **`management/tools/Find-WindowInfo.ps1`**: If you don't know the exact title of an application's window (for example, to configure it in `Close-AppByTitle.ps1`), run this script. It will list all visible windows and their process names, helping you find the precise information.
-*   **`Fix-Encoding.ps1`**: If you modify the scripts, this tool ensures they are saved with the correct encoding (UTF-8 with BOM) for perfect compatibility with PowerShell 5.1 and international characters.
-
----
-
-## Logging
-For easy troubleshooting, everything is logged.
-*   **Location:** In the `Logs/` subfolder.
-*   **Files:** `config_systeme_ps_log.txt` and `config_utilisateur_log.txt`.
-*   **Rotation:** Old logs are automatically archived to prevent them from becoming too large.
-
----
+*   **User Action:** The user runs `1_install.bat` again. The graphical interface opens, pre-filled with the current values from `config.ini`. The user modifies the settings and clicks "Save and Close."
+*   **Script Action:** The `firstconfig.ps1` script writes the new values to `config.ini`.
+*   **Usage Context:** After the wizard closes, the command prompt offers to proceed with task installation. The user can close this window to only update the configuration.
 
 ## Uninstallation
-To remove the system:
-1.  Run `2_uninstall.bat`.
-2.  **Accept the privilege request (UAC)**.
-3.  The script will cleanly remove all scheduled tasks and restore the main system settings.
 
-**Note on Reversibility:** Uninstallation doesn't just remove the scheduled tasks. It also restores the main system settings to their default state to give you a clean system:
-*   Windows updates are re-enabled.
-*   Fast Startup is re-enabled.
-*   The policy blocking OneDrive is removed.
-*   The script will offer to disable automatic login.
+The user runs the **`2_uninstall.bat`** file. This file executes `management\uninstall.ps1` after a User Account Control (UAC) prompt for privilege elevation.
 
-Your system thus returns to being a standard workstation, with no residual modifications.
+The `uninstall.ps1` script performs the following actions:
 
----
+1.  **Automatic Logon:** The script displays a prompt asking if automatic logon should be disabled. If the user answers `y` (yes), the script writes the value `0` to the `AutoAdminLogon` Registry key.
+2.  **Restoring certain system settings:**
+    *   **Updates:** It sets the `NoAutoUpdate` Registry value to `0` and configures the startup type of the `wuauserv` service to `Automatic`.
+    *   **Fast Startup:** It sets the `HiberbootEnabled` Registry value to `1`.
+    *   **OneDrive:** It deletes the `DisableFileSyncNGSC` Registry value.
+3.  **Deleting Scheduled Tasks:** The script finds and deletes the `WindowsOrchestrator-SystemStartup`, `WindowsOrchestrator-UserLogon`, `WindowsOrchestrator-SystemScheduledReboot`, and `WindowsOrchestrator-SystemPreRebootAction` tasks.
+
+### Note on Restoring Settings
+
+**The uninstallation script does not restore the power settings** that were modified by the `powercfg` command.
+*   **Consequence for the user:** If the machine's or display's sleep mode was disabled by the scripts, it will remain so after uninstallation.
+*   **Required user action:** To re-enable sleep mode, the user must manually reconfigure these options in Windows "Power & sleep settings."
+
+The uninstallation process **does not delete any files**. The project directory and its contents remain on the disk.
+
+## Project Structure
+
+```
+WindowsOrchestrator/
+├── 1_install.bat                # Runs the graphical configuration then the task installation.
+├── 2_uninstall.bat              # Runs the uninstallation script.
+├── Close-App.bat                # Runs the Close-AppByTitle.ps1 PowerShell script.
+├── Close-AppByTitle.ps1         # Script that finds a window by its title and sends it a key sequence.
+├── config.ini                   # Configuration file read by the main scripts.
+├── config_systeme.ps1           # Script for machine settings, executed at startup.
+├── config_utilisateur.ps1       # Script for process management, executed at logon.
+├── Fix-Encoding.ps1             # Tool to convert script files to UTF-8 with BOM encoding.
+├── LaunchApp.bat                # Example batch script to launch an external application.
+├── List-VisibleWindows.ps1      # Utility that lists visible windows and their processes.
+├── i18n/
+│   ├── en-US/
+│   │   └── strings.psd1         # String file for English.
+│   └── ... (other languages)
+└── management/
+    ├── firstconfig.ps1          # Displays the graphical configuration wizard.
+    ├── install.ps1              # Creates the scheduled tasks and runs the scripts once.
+    ├── uninstall.ps1            # Deletes tasks and restores system settings.
+    └── defaults/
+        └── default_config.ini   # Template to create the initial config.ini file.
+```
+
+## Technical Principles
+
+*   **Native Commands**: The project exclusively uses native Windows and PowerShell commands. No external dependencies need to be installed.
+*   **System Libraries**: Advanced interactions with the system rely solely on libraries built into Windows (e.g., `user32.dll`).
+
+## Key File Descriptions
+
+### `1_install.bat`
+This batch file is the entry point for the installation process. It runs `management\firstconfig.ps1` for configuration, then executes `management\install.ps1` with elevated privileges.
+
+### `2_uninstall.bat`
+This batch file is the entry point for uninstallation. It runs `management\uninstall.ps1` with elevated privileges.
+
+### `config.ini`
+This is the central configuration file. It contains the instructions (keys and values) that are read by the `config_systeme.ps1` and `config_utilisateur.ps1` scripts to determine which actions to perform.
+
+### `config_systeme.ps1`
+Executed at computer startup by a Scheduled Task, this script reads the `[SystemConfig]` section of the `config.ini` file. It applies settings by modifying the Windows Registry, running system commands (`powercfg`), and managing services (`wuauserv`).
+
+### `config_utilisateur.ps1`
+Executed at user logon by a Scheduled Task, this script reads the `[Process]` section of the `config.ini` file. Its role is to stop any existing instance of the target process and then restart it using the provided parameters.
+
+### `management\firstconfig.ps1`
+This PowerShell script displays the graphical interface that allows reading and writing settings to the `config.ini` file.
+
+### `management\install.ps1`
+This script contains the logic for creating the `WindowsOrchestrator-SystemStartup` and `WindowsOrchestrator-UserLogon` Scheduled Tasks.
+
+### `management\uninstall.ps1`
+This script contains the logic for deleting the Scheduled Tasks and restoring system Registry keys to their default values.
+
+## Management by Scheduled Tasks
+
+Automation relies on the Windows Task Scheduler (`taskschd.msc`). The following tasks are created by the scripts:
+
+*   **`WindowsOrchestrator-SystemStartup`**: Triggers at PC startup and runs `config_systeme.ps1`.
+*   **`WindowsOrchestrator-UserLogon`**: Triggers at user logon and runs `config_utilisateur.ps1`.
+*   **`WindowsOrchestrator-SystemScheduledReboot`**: Created by `config_systeme.ps1` if `ScheduledRebootTime` is defined in `config.ini`.
+*   **`WindowsOrchestrator-SystemPreRebootAction`**: Created by `config_systeme.ps1` if `PreRebootActionCommand` is defined in `config.ini`.
+
+**Important**: Deleting these tasks manually via the Task Scheduler stops the automation but does not restore system settings. The user must use `2_uninstall.bat` for a complete and controlled uninstallation.
 
 ## License and Contributions
+
 This project is distributed under the **GPLv3** license. The full text is available in the `LICENSE` file.
 
-Contributions, whether in the form of bug reports, improvement suggestions, or pull requests, are welcome.
+Contributions, whether bug reports, improvement suggestions, or pull requests, are welcome.

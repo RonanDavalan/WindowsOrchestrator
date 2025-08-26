@@ -1,208 +1,195 @@
-# Windows Orchestrator
+# Der Windows-Orchestrator
 
-[🇫🇷 Französisch](README-fr-FR.md) | [🇩🇪 Deutsch](README-de-DE.md) | [🇪🇸 Spanisch](README-es-ES.md) | [🇮🇳 Hindi](README-hi-IN.md) | [🇯🇵 Japanisch](README-ja-JP.md) | [🇷🇺 Russisch](README-ru-RU.md) | [🇨🇳 Chinesisch](README-zh-CN.md) | [🇸🇦 Arabisch](README-ar-SA.md) | [🇧🇩 Bengali](README-bn-BD.md) | [🇮🇩 Indonesisch](README-id-ID.md)
+[🇺🇸 English](README.md) | [🇫🇷 Français](README-fr-FR.md) | [🇪🇸 Español](README-es-ES.md) | [🇮🇳 हिंदी](README-hi-IN.md) | [🇯🇵 日本語](README-ja-JP.md) | [🇷🇺 Русский](README-ru-RU.md) | [🇨🇳 中文](README-zh-CN.md) | [🇸🇦 العربية](README-ar-SA.md) | [🇧🇩 বাংলা](README-bn-BD.md) | [🇮🇩 Bahasa Indonesia](README-id-ID.md)
 
-**Ihr Autopilot für dedizierte Windows-Workstations. Einmal konfigurieren und das System zuverlässig selbst verwalten lassen.**
+Der Windows-Orchestrator ist eine Sammlung von Skripten, die die Windows-Aufgabenplanung verwenden, um PowerShell-Skripte (`.ps1`) auszuführen. Ein grafischer Assistent (`firstconfig.ps1`) ermöglicht es dem Benutzer, eine Konfigurationsdatei `config.ini` zu erstellen. Die Hauptskripte (`config_systeme.ps1`, `config_utilisateur.ps1`) lesen diese Datei, um spezifische Aktionen durchzuführen:
+*   Änderung von Schlüsseln in der Windows-Registrierung.
+*   Ausführung von Systembefehlen (`powercfg`, `shutdown`).
+*   Verwaltung von Windows-Diensten (Änderung des Starttyps und Beenden des `wuauserv`-Dienstes).
+*   Starten oder Beenden von benutzerdefinierten Anwendungsprozessen.
+*   Senden von HTTP-POST-Anfragen an einen Gotify-Benachrichtigungsdienst über den Befehl `Invoke-RestMethod`.
+
+Die Skripte erkennen die Sprache des Betriebssystems des Benutzers und laden die Zeichenketten (für Protokolle, die grafische Benutzeroberfläche und Benachrichtigungen) aus den `.psd1`-Dateien im Verzeichnis `i18n`.
 
 <p align="center">
-  <a href="https://wo.davalan.fr/"><strong>🔗 Besuchen Sie die offizielle Homepage für eine vollständige Tour!</strong></a>
+  <a href="https://wo.davalan.fr/"><strong>🔗 Besuchen Sie die offizielle Homepage für eine vollständige Vorstellung!</strong></a>
 </p>
 
-![Lizenz](https://img.shields.io/badge/Lizenz-GPLv3-blue.svg)![PowerShell Version](https://img.shields.io/badge/PowerShell-5.1%2B-blue)![Status](https://img.shields.io/badge/Status-Betriebsbereit-brightgreen.svg)![OS](https://img.shields.io/badge/OS-Windows_10_|_11-informational)![Support](https://img.shields.io/badge/Support-11_Sprachen-orange.svg)![Beiträge](https://img.shields.io/badge/Contributions-Willkommen-brightgreen.svg)
+<p align="center">
+  <img src="https://img.shields.io/badge/Lizenz-GPLv3-blue.svg" alt="Lizenz">
+  <img src="https://img.shields.io/badge/PowerShell_Version-5.1%2B-blue" alt="PowerShell Version">
+  <img src="https://img.shields.io/badge/Status-Betriebsbereit-brightgreen.svg" alt="Status">
+  <img src="https://img.shields.io/badge/Betriebssystem-Windows_10_|_11-informational" alt="Betriebssystem">
+  <img src="https://img.shields.io/badge/Unterstützung-11_Sprachen-orange.svg" alt="Unterstützung">
+  <img src="https://img.shields.io/badge/Beiträge-Willkommen-brightgreen.svg" alt="Beiträge">
+</p>
 
 ---
 
-## Unsere Mission
+## Aktionen der Skripte
 
-Stellen Sie sich eine perfekt zuverlässige und autonome Windows-Workstation vor. Eine Maschine, die Sie einmal für ihre Aufgabe konfigurieren und dann vergessen können. Ein System, das sicherstellt, dass Ihre Anwendung **dauerhaft betriebsbereit** bleibt, ohne Unterbrechung.
+Das Skript `1_install.bat` führt `management\install.ps1` aus, welches zwei geplante Hauptaufgaben erstellt.
+*   Die erste, **`WindowsOrchestrator-SystemStartup`**, führt `config_systeme.ps1` beim Start von Windows aus.
+*   Die zweite, **`WindowsOrchestrator-UserLogon`**, führt `config_utilisateur.ps1` bei der Benutzeranmeldung aus.
 
-Dies ist das Ziel, das **Windows Orchestrator** Ihnen hilft zu erreichen. Die Herausforderung besteht darin, dass ein Standard-Windows-PC nicht nativ für diese Ausdauer ausgelegt ist. Er ist für die menschliche Interaktion konzipiert: Er geht in den Ruhezustand, installiert Updates, wenn er es für angebracht hält, und startet eine Anwendung nach einem Neustart nicht automatisch neu.
+Abhängig von den Einstellungen in der `config.ini`-Datei führen die Skripte die folgenden Aktionen aus:
 
-**Windows Orchestrator** ist die Lösung: Eine Reihe von Skripten, die als intelligenter und permanenter Supervisor fungieren. Es verwandelt jeden PC in einen zuverlässigen Automaten, der sicherstellt, dass Ihre kritische Anwendung immer betriebsbereit ist, ohne manuelles Eingreifen.
+*   **Verwaltung der automatischen Anmeldung:**
+    *   `Aktion des Skripts:` Das Skript schreibt den Wert `1` in den Registrierungsschlüssel `HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\AutoAdminLogon`.
+    *   `Aktion des Benutzers:` Damit diese Funktion betriebsbereit ist, muss der Benutzer zuvor das Passwort in der Registrierung speichern. Das Skript verwaltet diese Information nicht. Das Dienstprogramm **Sysinternals AutoLogon** ist ein externes Werkzeug, das diese Aktion durchführen kann.
 
+*   **Änderung der Energieeinstellungen:**
+    *   Führt die Befehle `powercfg /change standby-timeout-ac 0` und `powercfg /change hibernate-timeout-ac 0` aus, um den Standby-Modus und den Ruhezustand zu deaktivieren.
+    *   Führt den Befehl `powercfg /change monitor-timeout-ac 0` aus, um das Ausschalten des Bildschirms zu deaktivieren.
+    *   Schreibt den Wert `0` in den Registrierungsschlüssel `HiberbootEnabled`, um den Schnellstart zu deaktivieren.
 
+*   **Verwaltung von Windows-Updates:**
+    *   Schreibt den Wert `1` in die Registrierungsschlüssel `NoAutoUpdate` und `NoAutoRebootWithLoggedOnUsers`.
+    *   Ändert den Starttyp des Windows-Dienstes `wuauserv` auf `Disabled` (Deaktiviert) und führt den Befehl `Stop-Service` darauf aus.
 
-Wir waren nicht mit einer, sondern mit zwei Arten von systemischen Fehlern konfrontiert:
+*   **Planung eines täglichen Neustarts:**
+    *   Erstellt eine geplante Aufgabe namens `WindowsOrchestrator-SystemScheduledReboot`, die `shutdown.exe /r /f /t 60` zur festgelegten Zeit ausführt.
+    *   Erstellt eine geplante Aufgabe namens `WindowsOrchestrator-SystemPreRebootAction`, die einen vom Benutzer definierten Befehl vor dem Neustart ausführt.
 
-#### 1. Der abrupte Fehler: Der unerwartete Ausfall
+*   **Protokollierung der Aktionen:**
+    *   Schreibt zeitgestempelte Zeilen in `.txt`-Dateien im Ordner `Logs`.
+    *   Eine Funktion `Rotate-LogFile` benennt vorhandene Protokolldateien um und archiviert sie. Die Anzahl der aufzubewahrenden Dateien wird durch die Schlüssel `MaxSystemLogsToKeep` und `MaxUserLogsToKeep` in der `config.ini` festgelegt.
 
-Das Szenario ist einfach: Eine Maschine, die für den Fernzugriff konfiguriert ist, und ein nächtlicher Stromausfall. Selbst wenn das BIOS für den automatischen Neustart eingestellt ist, schlägt die Mission fehl. Windows startet neu, bleibt aber auf dem Anmeldebildschirm; die kritische Anwendung wird nicht neu gestartet, die Sitzung wird nicht geöffnet. Das System ist nicht zugänglich.
+*   **Senden von Gotify-Benachrichtigungen:**
+    *   Wenn der Schlüssel `EnableGotify` in der `config.ini` auf `true` gesetzt ist, senden die Skripte eine HTTP-POST-Anfrage an die angegebene URL.
+    *   Die Anfrage enthält eine JSON-Payload mit einem Titel und einer Nachricht. Die Nachricht ist eine Liste der durchgeführten Aktionen und aufgetretenen Fehler.
 
-#### 2. Die langsame Degradation: Langfristige Instabilität
+## Voraussetzungen
 
-Noch heimtückischer ist das Verhalten von Windows im Laufe der Zeit. Als interaktives Betriebssystem konzipiert, ist es nicht für Prozesse optimiert, die ohne Unterbrechung laufen. Allmählich treten Speicherlecks und Leistungsabfälle auf, die das System instabil machen und einen manuellen Neustart erfordern.
+- **Betriebssystem**: Windows 10 oder Windows 11. Der Quellcode enthält die Direktive `#Requires -Version 5.1` für PowerShell-Skripte.
+- **Berechtigungen**: Der Benutzer muss die Anfragen zur Erhöhung der Berechtigungen (UAC) bei der Ausführung von `1_install.bat` und `2_uninstall.bat` akzeptieren. Diese Aktion ist erforderlich, um den Skripten zu erlauben, geplante Aufgaben zu erstellen und Registrierungsschlüssel auf Systemebene zu ändern.
+- **Automatische Anmeldung (Auto-Login)**: Wenn der Benutzer diese Option aktiviert, muss er ein externes Werkzeug wie **Microsoft Sysinternals AutoLogon** verwenden, um sein Passwort in der Registrierung zu speichern.
 
-### Die Antwort: Eine native Zuverlässigkeitsschicht
+## Installation und Erstkonfiguration
 
-Angesichts dieser Herausforderungen erwiesen sich Drittanbieter-Dienstprogramme als unzureichend. Daher haben wir uns entschieden, **unsere eigene Systemresilienzschicht zu entwickeln.**
+Der Benutzer führt die Datei **`1_install.bat`** aus.
 
-`Windows Orchestrator` fungiert als Autopilot, der die Kontrolle über das Betriebssystem übernimmt, um:
+1.  **Konfiguration (`firstconfig.ps1`)**
+    *   Das Skript `management\firstconfig.ps1` wird ausgeführt und zeigt eine grafische Benutzeroberfläche an.
+    *   Wenn die Datei `config.ini` nicht existiert, wird sie aus der Vorlage `management\defaults\default_config.ini` erstellt.
+    *   Wenn sie existiert, fragt das Skript den Benutzer, ob er sie durch die Vorlage ersetzen möchte.
+    *   Der Benutzer gibt die Parameter ein. Durch Klicken auf "Speichern und Schließen" schreibt das Skript die Werte in die `config.ini`.
 
-- **Automatische Wiederherstellung sicherstellen:** Nach einem Fehler garantiert es die Sitzungsöffnung und den Neustart Ihrer Hauptanwendung.
-- **Präventive Wartung garantieren:** Es ermöglicht Ihnen, einen kontrollierten täglichen Neustart mit der vorherigen Ausführung benutzerdefinierter Skripte zu planen.
-- **Die Anwendung** vor unzeitgemäßen Unterbrechungen durch Windows (Updates, Schlafmodus...) **schützen**.
+2.  **Installation der Aufgaben (`install.ps1`)**
+    *   Nach dem Schließen des Assistenten führt `1_install.bat` das Skript `management\install.ps1` aus und fordert eine Erhöhung der Berechtigungen an.
+    *   Das Skript `install.ps1` erstellt die beiden geplanten Aufgaben:
+        *   **`WindowsOrchestrator-SystemStartup`**: Führt `config_systeme.ps1` beim Start von Windows mit dem Konto `NT AUTHORITY\SYSTEM` aus.
+        *   **`WindowsOrchestrator-UserLogon`**: Führt `config_utilisateur.ps1` bei der Anmeldung des Benutzers aus, der die Installation gestartet hat.
+    *   Um die Konfiguration anzuwenden, ohne auf einen Neustart zu warten, führt `install.ps1` am Ende des Prozesses einmalig `config_systeme.ps1` und dann `config_utilisateur.ps1` aus.
 
-`Windows Orchestrator` ist das unverzichtbare Werkzeug für jeden, der eine Windows-Workstation benötigt, die **zuverlässig, stabil und ohne ständige Überwachung betriebsbereit** bleibt.
+## Verwendung und Konfiguration nach der Installation
 
----
+Jede Änderung der Konfiguration nach der Installation erfolgt über die Datei `config.ini`.
 
-## Typische Anwendungsfälle
+### 1. Manuelle Änderung der `config.ini`-Datei
 
-*   **Digital Signage:** Sicherstellen, dass die Signage-Software 24/7 auf einem öffentlichen Bildschirm läuft.
-*   **Heimserver und IoT:** Steuern Sie einen Plex-Server, ein Home Assistant-Gateway oder ein verbundenes Objekt von einem Windows-PC aus.
-*   **Überwachungsstationen:** Eine Überwachungsanwendung (Kameras, Netzwerkprotokolle) immer aktiv halten.
-*   **Interaktive Kioske:** Sicherstellen, dass die Kiosk-Anwendung nach jedem Neustart automatisch neu startet.
-*   **Leichte Automatisierung:** Skripte oder Prozesse kontinuierlich für Data-Mining- oder Testaufgaben ausführen.
+*   **Aktion des Benutzers:** Der Benutzer öffnet die Datei `config.ini` mit einem Texteditor und ändert die gewünschten Werte.
+*   **Aktion der Skripte:**
+    *   Änderungen im Abschnitt `[SystemConfig]` werden von `config_systeme.ps1` gelesen und **beim nächsten Neustart des Computers** angewendet.
+    *   Änderungen im Abschnitt `[Process]` werden von `config_utilisateur.ps1` gelesen und **bei der nächsten Benutzeranmeldung** angewendet.
 
----
+### 2. Verwendung des grafischen Assistenten
 
-## Hauptmerkmale
-
-*   **Grafischer Konfigurationsassistent:** Keine Notwendigkeit, Dateien für grundlegende Einstellungen zu bearbeiten.
-*   **Volle Mehrsprachigkeit:** Benutzeroberfläche und Protokolle in 11 Sprachen verfügbar, mit automatischer Erkennung der Systemsprache.
-*   **Energieverwaltung:** Deaktivieren Sie den Ruhezustand des Computers, den Bildschirm-Ruhezustand und den Windows-Schnellstart für maximale Stabilität.
-*   **Automatische Anmeldung (Auto-Login):** Verwaltet die automatische Anmeldung, auch in Synergie mit dem **Sysinternals AutoLogon**-Tool für eine sichere Passwortverwaltung.
-*   **Windows Update-Steuerung:** Verhindern Sie, dass erzwungene Updates und Neustarts Ihre Anwendung stören.
-*   **Prozessmanager:** Startet, überwacht und startet Ihre Hauptanwendung bei jeder Sitzung automatisch neu.
-*   **Geplanter täglicher Neustart:** Planen Sie einen täglichen Neustart, um die Systemfrische zu erhalten.
-*   **Aktion vor dem Neustart:** Führen Sie ein benutzerdefiniertes Skript (Sicherung, Bereinigung...) vor dem geplanten Neustart aus.
-*   **Detaillierte Protokollierung:** Alle Aktionen werden in Protokolldateien zur einfachen Diagnose aufgezeichnet.
-*   **Benachrichtigungen (Optional):** Senden Sie Statusberichte über Gotify.
-
----
-
-## Zielgruppe und Best Practices
-
-Dieses Projekt wurde entwickelt, um einen PC in einen zuverlässigen Automaten zu verwandeln, ideal für Anwendungsfälle, bei denen die Maschine einer einzigen Anwendung gewidmet ist (Server für ein IoT-Gerät, Digital Signage, Überwachungsstation usw.). Es wird nicht für einen allgemeinen Büro- oder Alltagscomputer empfohlen.
-
-*   **Wichtige Windows-Updates:** Bei wichtigen Updates (z. B. Upgrade von Windows 10 auf 11) ist das sicherste Verfahren, Windows Orchestrator vor dem Update zu **deinstallieren** und es danach **neu zu installieren**.
-*   **Unternehmensumgebungen:** Wenn sich Ihr Computer in einer Unternehmensdomäne befindet, die von Gruppenrichtlinienobjekten (GPOs) verwaltet wird, erkundigen Sie sich bei Ihrer IT-Abteilung, ob die von diesem Skript vorgenommenen Änderungen nicht mit den Richtlinien Ihrer Organisation in Konflikt stehen.
-
----
-
-## Installation und Erste Schritte
-
-**Sprachhinweis:** Die Startskripte (`1_install.bat` und `2_uninstall.bat`) zeigen ihre Anweisungen in **Englisch** an. Das ist normal. Diese Dateien fungieren als einfache Starter. Sobald der grafische Assistent oder die PowerShell-Skripte die Kontrolle übernehmen, passt sich die Benutzeroberfläche automatisch an die Sprache Ihres Betriebssystems an.
-
-Die Einrichtung von **Windows Orchestrator** ist ein einfacher und geführter Prozess.
-
-1.  **Laden Sie** das Projekt auf den zu konfigurierenden Computer **herunter** oder klonen Sie es.
-2.  Führen Sie `1_install.bat` aus. Das Skript führt Sie durch zwei Schritte:
-    *   **Schritt 1: Konfiguration über den grafischen Assistenten.**
-        Passen Sie die Optionen an Ihre Bedürfnisse an. Die wichtigsten sind in der Regel der Benutzername für die automatische Anmeldung und die zu startende Anwendung. Klicken Sie auf `Speichern`, um zu speichern.
-        
-        ![Konfigurationsassistent](assets/screenshot-wizard.png)
-        
-    *   **Schritt 2: Installation der Systemaufgaben.**
-        Das Skript fordert eine Bestätigung zum Fortfahren an. Ein Windows-Sicherheitsfenster (UAC) wird geöffnet. **Sie müssen es akzeptieren**, damit das Skript die erforderlichen geplanten Aufgaben erstellen kann.
-3.  Das war's! Beim nächsten Neustart werden Ihre Konfigurationen angewendet.
-
----
-
-## Konfiguration
-Sie können die Einstellungen jederzeit auf zwei Arten anpassen:
-
-### 1. Grafischer Assistent (einfache Methode)
-Führen Sie `1_install.bat` erneut aus, um die Konfigurationsoberfläche wieder zu öffnen. Ändern Sie Ihre Einstellungen und speichern Sie.
-
-### 2. `config.ini`-Datei (erweiterte Methode)
-Öffnen Sie `config.ini` mit einem Texteditor für eine detaillierte Steuerung.
-
-#### Wichtiger Hinweis zu Auto-Login und Passwörtern
-Aus Sicherheitsgründen **verwaltet oder speichert Windows Orchestrator niemals Passwörter im Klartext.** So konfigurieren Sie die automatische Anmeldung effektiv und sicher:
-
-*   **Szenario 1: Das Benutzerkonto hat kein Passwort.**
-    Geben Sie einfach den Benutzernamen im grafischen Assistenten oder in `AutoLoginUsername` in der `config.ini`-Datei ein.
-
-*   **Szenario 2: Das Benutzerkonto hat ein Passwort (empfohlene Methode).**
-    1.  Laden Sie das offizielle **[Sysinternals AutoLogon](https://download.sysinternals.com/files/AutoLogon.zip)**-Tool von Microsoft herunter (direkter Download-Link).
-    2.  Starten Sie AutoLogon und geben Sie den Benutzernamen, die Domäne und das Passwort ein. Dieses Tool speichert das Passwort sicher in der Registrierung.
-    3.  In der Konfiguration von **Windows Orchestrator** können Sie das Feld `AutoLoginUsername` jetzt leer lassen (das Skript erkennt den von AutoLogon konfigurierten Benutzer, indem es den entsprechenden Registrierungsschlüssel liest) oder es aus Sicherheitsgründen ausfüllen. Unser Skript stellt sicher, dass der Registrierungsschlüssel `AutoAdminLogon` ordnungsgemäß aktiviert ist, um die Konfiguration abzuschließen.
-
-#### Erweiterte Konfiguration: `PreRebootActionCommand`
-Diese leistungsstarke Funktion ermöglicht es Ihnen, ein Skript vor dem täglichen Neustart auszuführen. Der Pfad kann sein:
-- **Absolut:** `C:\Scripts\my_backup.bat`
-- **Relativ zum Projekt:** `PreReboot.bat` (das Skript sucht diese Datei im Stammverzeichnis des Projekts).
-- **Verwendung von `%USERPROFILE%`:** `%USERPROFILE%\Desktop\cleanup.ps1` (das Skript ersetzt `%USERPROFILE%` intelligent durch den Pfad zum Profil des Auto-Login-Benutzers).
-
----
-
-## Projektstruktur
-```
-WindowsOrchestrator/
-├── 1_install.bat                # Einstiegspunkt für Installation und Konfiguration
-├── 2_uninstall.bat              # Einstiegspunkt für Deinstallation
-├── config.ini                   # Zentrale Konfigurationsdatei
-├── config_systeme.ps1           # Hauptskript für Maschineneinstellungen (wird beim Start ausgeführt)
-├── config_utilisateur.ps1       # Hauptskript für Benutzerprozessverwaltung (wird bei Anmeldung ausgeführt)
-├── LaunchApp.bat                # (Beispiel) Portabler Launcher für Ihre Hauptanwendung
-├── PreReboot.bat                # Beispielskript für die Aktion vor dem Neustart
-├── Logs/                        # (Automatisch erstellt) Enthält Protokolldateien
-├── i18n/                        # Enthält alle Übersetzungsdateien
-│   ├── en-US/strings.psd1
-│   └── ... (andere Sprachen)
-└── management/
-    ├── defaults/default_config.ini # Vorlage für die Erstkonfiguration
-    ├── tools/                   # Diagnosetools
-    │   └── Find-WindowInfo.ps1
-    ├── firstconfig.ps1          # Der Code des grafischen Konfigurationsassistenten
-    ├── install.ps1              # Das technische Skript für die Aufgabeninstallation
-    └── uninstall.ps1            # Das technische Skript für die Aufgabenlöschung
-```
-
----
-
-## Detaillierte Funktionsweise
-Der Kern von **Windows Orchestrator** basiert auf dem Windows Taskplaner:
-
-1.  **Beim Windows-Start**
-    *   Die Aufgabe `WindowsOrchestrator_SystemStartup` wird mit `SYSTEM`-Berechtigungen ausgeführt.
-    *   Das Skript `config_systeme.ps1` liest `config.ini` und wendet alle Maschinenkonfigurationen an. Es verwaltet auch die Erstellung/Aktualisierung von Neustartaufgaben.
-
-2.  **Bei Benutzeranmeldung**
-    *   Die Aufgabe `WindowsOrchestrator_UserLogon` wird ausgeführt.
-    *   Das Skript `config_utilisateur.ps1` liest den Abschnitt `[Process]` der `config.ini` und stellt sicher, dass Ihre Hauptanwendung ordnungsgemäß gestartet wird. Wenn sie bereits ausgeführt wurde, wird sie zuerst beendet und dann sauber neu gestartet.
-
-3.  **Täglich (falls konfiguriert)**
-    *   Die Aufgabe `WindowsOrchestrator_PreRebootAction` führt Ihr Sicherungs-/Bereinigungsskript aus.
-    *   Einige Minuten später startet die Aufgabe `WindowsOrchestrator_ScheduledReboot` den Computer neu.
-
----
-
-### Diagnose- und Entwicklungstools
-
-Das Projekt enthält nützliche Skripte, die Ihnen bei der Konfiguration und Wartung des Projekts helfen.
-
-*   **`management/tools/Find-WindowInfo.ps1`**: Wenn Sie den genauen Titel des Fensters einer Anwendung nicht kennen (z. B. um sie in `Close-AppByTitle.ps1` zu konfigurieren), führen Sie dieses Skript aus. Es listet alle sichtbaren Fenster und ihre Prozessnamen auf, um Ihnen bei der Suche nach den genauen Informationen zu helfen.
-*   **`Fix-Encoding.ps1`**: Wenn Sie die Skripte ändern, stellt dieses Tool sicher, dass sie mit der richtigen Kodierung (UTF-8 mit BOM) gespeichert werden, um eine perfekte Kompatibilität mit PowerShell 5.1 und internationalen Zeichen zu gewährleisten.
-
----
-
-## Protokollierung
-Zur einfachen Fehlerbehebung wird alles protokolliert.
-*   **Speicherort:** Im Unterordner `Logs/`.
-*   **Dateien:** `config_systeme_ps_log.txt` und `config_utilisateur_log.txt`.
-*   **Rotation:** Alte Protokolle werden automatisch archiviert, um zu verhindern, dass sie zu groß werden.
-
----
+*   **Aktion des Benutzers:** Der Benutzer führt `1_install.bat` erneut aus. Die grafische Benutzeroberfläche öffnet sich, vorausgefüllt mit den aktuellen Werten aus der `config.ini`. Der Benutzer ändert die Einstellungen und klickt auf "Speichern und Schließen".
+*   **Aktion des Skripts:** Das Skript `firstconfig.ps1` schreibt die neuen Werte in die `config.ini`.
+*   **Anwendungskontext:** Nach dem Schließen des Assistenten bietet die Eingabeaufforderung an, mit der Installation der Aufgaben fortzufahren. Der Benutzer kann dieses Fenster schließen, um nur die Konfiguration zu aktualisieren.
 
 ## Deinstallation
-Um das System zu entfernen:
-1.  Führen Sie `2_uninstall.bat` aus.
-2.  **Akzeptieren Sie die Berechtigungsanfrage (UAC)**.
-3.  Das Skript entfernt sauber alle geplanten Aufgaben und stellt die Haupteinstellungen des Systems wieder her.
 
-**Hinweis zur Reversibilität:** Die Deinstallation entfernt nicht nur die geplanten Aufgaben. Sie stellt auch die Haupteinstellungen des Systems auf ihren Standardzustand zurück, um Ihnen ein sauberes System zu bieten:
-*   Windows-Updates werden wieder aktiviert.
-*   Der Schnellstart wird wieder aktiviert.
-*   Die Richtlinie, die OneDrive blockiert, wird entfernt.
-*   Das Skript bietet an, die automatische Anmeldung zu deaktivieren.
+Der Benutzer führt die Datei **`2_uninstall.bat`** aus. Diese führt `management\uninstall.ps1` nach einer Anforderung zur Erhöhung der Berechtigungen (UAC) aus.
 
-Ihr System kehrt somit zu einer Standard-Workstation zurück, ohne Restmodifikationen.
+Das Skript `uninstall.ps1` führt die folgenden Aktionen aus:
 
----
+1.  **Automatische Anmeldung:** Das Skript zeigt eine Aufforderung an, ob die automatische Anmeldung deaktiviert werden soll. Wenn der Benutzer mit `j` (ja) antwortet, schreibt das Skript den Wert `0` in den Registrierungsschlüssel `AutoAdminLogon`.
+2.  **Wiederherstellung einiger Systemeinstellungen:**
+    *   **Updates:** Es setzt den Registrierungswert `NoAutoUpdate` auf `0` und konfiguriert den Starttyp des Dienstes `wuauserv` auf `Automatic` (Automatisch).
+    *   **Schnellstart:** Es setzt den Registrierungswert `HiberbootEnabled` auf `1`.
+    *   **OneDrive:** Es löscht den Registrierungswert `DisableFileSyncNGSC`.
+3.  **Löschen der geplanten Aufgaben:** Das Skript sucht und löscht die Aufgaben `WindowsOrchestrator-SystemStartup`, `WindowsOrchestrator-UserLogon`, `WindowsOrchestrator-SystemScheduledReboot` und `WindowsOrchestrator-SystemPreRebootAction`.
+
+### Hinweis zur Wiederherstellung der Einstellungen
+
+**Das Deinstallationsskript stellt die Energieeinstellungen nicht wieder her**, die durch den `powercfg`-Befehl geändert wurden.
+*   **Konsequenz für den Benutzer:** Wenn der Ruhezustand des Computers oder des Bildschirms durch die Skripte deaktiviert wurde, bleibt er auch nach der Deinstallation deaktiviert.
+*   **Erforderliche Aktion des Benutzers:** Um den Ruhezustand wieder zu aktivieren, muss der Benutzer diese Optionen manuell in den "Energie- und Ruhezustandseinstellungen" von Windows neu konfigurieren.
+
+Der Deinstallationsprozess **löscht keine Dateien**. Das Projektverzeichnis und sein Inhalt bleiben auf der Festplatte.
+
+## Projektstruktur
+
+```
+WindowsOrchestrator/
+├── 1_install.bat                # Führt die grafische Konfiguration und dann die Installation der Aufgaben aus.
+├── 2_uninstall.bat              # Führt das Deinstallationsskript aus.
+├── Close-App.bat                # Führt das PowerShell-Skript Close-AppByTitle.ps1 aus.
+├── Close-AppByTitle.ps1         # Skript, das ein Fenster nach seinem Titel findet und ihm eine Tastenfolge sendet.
+├── config.ini                   # Konfigurationsdatei, die von den Hauptskripten gelesen wird.
+├── config_systeme.ps1           # Skript für Maschineneinstellungen, wird beim Start ausgeführt.
+├── config_utilisateur.ps1       # Skript zur Prozessverwaltung, wird bei der Anmeldung ausgeführt.
+├── Fix-Encoding.ps1             # Werkzeug zum Konvertieren von Skriptdateien in die Kodierung UTF-8 mit BOM.
+├── LaunchApp.bat                # Beispiel-Batch-Skript zum Starten einer externen Anwendung.
+├── List-VisibleWindows.ps1      # Dienstprogramm, das sichtbare Fenster und ihre Prozesse auflistet.
+├── i18n/
+│   ├── en-US/
+│   │   └── strings.psd1         # Datei mit Zeichenketten für Englisch.
+│   └── ... (andere Sprachen)
+└── management/
+    ├── firstconfig.ps1          # Zeigt den grafischen Konfigurationsassistenten an.
+    ├── install.ps1              # Erstellt die geplanten Aufgaben und führt die Skripte einmal aus.
+    ├── uninstall.ps1            # Löscht die Aufgaben und stellt die Systemeinstellungen wieder her.
+    └── defaults/
+        └── default_config.ini   # Vorlage zum Erstellen der anfänglichen config.ini-Datei.
+```
+
+## Technische Grundlagen
+
+*   **Native Befehle**: Das Projekt verwendet ausschließlich native Befehle von Windows und PowerShell. Es müssen keine externen Abhängigkeiten installiert werden.
+*   **Systembibliotheken**: Fortgeschrittene Interaktionen mit dem System stützen sich ausschließlich auf in Windows integrierte Bibliotheken (z.B. `user32.dll`).
+
+## Beschreibung der Schlüsseldateien
+
+### `1_install.bat`
+Diese Batch-Datei ist der Einstiegspunkt für den Installationsprozess. Sie führt `management\firstconfig.ps1` für die Konfiguration aus und anschließend `management\install.ps1` mit erhöhten Berechtigungen.
+
+### `2_uninstall.bat`
+Diese Batch-Datei ist der Einstiegspunkt für die Deinstallation. Sie führt `management\uninstall.ps1` mit erhöhten Berechtigungen aus.
+
+### `config.ini`
+Dies ist die zentrale Konfigurationsdatei. Sie enthält die Anweisungen (Schlüssel und Werte), die von den Skripten `config_systeme.ps1` und `config_utilisateur.ps1` gelesen werden, um zu bestimmen, welche Aktionen durchgeführt werden sollen.
+
+### `config_systeme.ps1`
+Dieses Skript wird beim Start des Computers durch eine geplante Aufgabe ausgeführt und liest den Abschnitt `[SystemConfig]` der Datei `config.ini`. Es wendet die Einstellungen an, indem es die Windows-Registrierung ändert, Systembefehle (`powercfg`) ausführt und Dienste (`wuauserv`) verwaltet.
+
+### `config_utilisateur.ps1`
+Dieses Skript wird bei der Benutzeranmeldung durch eine geplante Aufgabe ausgeführt und liest den Abschnitt `[Process]` der Datei `config.ini`. Seine Aufgabe ist es, alle vorhandenen Instanzen des Zielprozesses zu beenden und ihn dann mit den angegebenen Parametern neu zu starten.
+
+### `management\firstconfig.ps1`
+Dieses PowerShell-Skript zeigt die grafische Benutzeroberfläche an, mit der die Parameter in der Datei `config.ini` gelesen und geschrieben werden können.
+
+### `management\install.ps1`
+Dieses Skript enthält die Logik zur Erstellung der geplanten Aufgaben `WindowsOrchestrator-SystemStartup` und `WindowsOrchestrator-UserLogon`.
+
+### `management\uninstall.ps1`
+Dieses Skript enthält die Logik zum Löschen der geplanten Aufgaben und zur Wiederherstellung der Systemregistrierungsschlüssel auf ihre Standardwerte.
+
+## Verwaltung durch die Aufgabenplanung
+
+Die Automatisierung basiert auf der Windows-Aufgabenplanung (`taskschd.msc`). Die folgenden Aufgaben werden von den Skripten erstellt:
+
+*   **`WindowsOrchestrator-SystemStartup`**: Wird beim Start des PCs ausgelöst und führt `config_systeme.ps1` aus.
+*   **`WindowsOrchestrator-UserLogon`**: Wird bei der Benutzeranmeldung ausgelöst und führt `config_utilisateur.ps1` aus.
+*   **`WindowsOrchestrator-SystemScheduledReboot`**: Wird von `config_systeme.ps1` erstellt, wenn `ScheduledRebootTime` in `config.ini` definiert ist.
+*   **`WindowsOrchestrator-SystemPreRebootAction`**: Wird von `config_systeme.ps1` erstellt, wenn `PreRebootActionCommand` in `config.ini` definiert ist.
+
+**Wichtig**: Das manuelle Löschen dieser Aufgaben über die Aufgabenplanung stoppt die Automatisierung, stellt jedoch die Systemeinstellungen nicht wieder her. Der Benutzer muss unbedingt `2_uninstall.bat` für eine vollständige und kontrollierte Deinstallation verwenden.
 
 ## Lizenz und Beiträge
+
 Dieses Projekt wird unter der **GPLv3**-Lizenz vertrieben. Der vollständige Text ist in der Datei `LICENSE` verfügbar.
 
-Beiträge, sei es in Form von Fehlerberichten, Verbesserungsvorschlägen oder Pull-Requests, sind willkommen.
+Beiträge, ob in Form von Fehlerberichten, Verbesserungsvorschlägen oder Pull-Requests, sind willkommen.

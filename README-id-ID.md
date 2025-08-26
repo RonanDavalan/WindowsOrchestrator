@@ -1,208 +1,195 @@
-# Windows Orchestrator
+# Orkestrator Windows
 
-[🇫🇷 Prancis](README-fr-FR.md) | [🇩🇪 Jerman](README-de-DE.md) | [🇪🇸 Spanyol](README-es-ES.md) | [🇮🇳 Hindi](README-hi-IN.md) | [🇯🇵 Jepang](README-ja-JP.md) | [🇷🇺 Rusia](README-ru-RU.md) | [🇨🇳 Tiongkok](README-zh-CN.md) | [🇸🇦 Arab](README-ar-SA.md) | [🇧🇩 Bengali](README-bn-BD.md) | [🇮🇩 Bahasa Indonesia](README-id-ID.md)
+[🇺🇸 English](README.md) | [🇫🇷 Français](README-fr-FR.md) | [🇩🇪 Deutsch](README-de-DE.md) | [🇪🇸 Español](README-es-ES.md) | [🇮🇳 हिंदी](README-hi-IN.md) | [🇯🇵 日本語](README-ja-JP.md) | [🇷🇺 Русский](README-ru-RU.md) | [🇨🇳 中文](README-zh-CN.md) | [🇸🇦 العربية](README-ar-SA.md) | [🇧🇩 বাংলা](README-bn-BD.md)
 
-**Autopilot Anda untuk workstation Windows khusus. Konfigurasi sekali, dan biarkan sistem mengelola dirinya sendiri dengan andal.**
+Orkestrator Windows adalah sekumpulan skrip yang menggunakan Tugas Terjadwal Windows untuk menjalankan skrip PowerShell (`.ps1`). Sebuah asisten grafis (`firstconfig.ps1`) memungkinkan pengguna untuk membuat file konfigurasi `config.ini`. Skrip utama (`config_systeme.ps1`, `config_utilisateur.ps1`) membaca file ini untuk melakukan tindakan spesifik:
+*   Modifikasi kunci Registri Windows.
+*   Eksekusi perintah sistem (`powercfg`, `shutdown`).
+*   Manajemen layanan Windows (mengubah tipe startup dan menghentikan layanan `wuauserv`).
+*   Memulai atau menghentikan proses aplikasi yang ditentukan oleh pengguna.
+*   Mengirim permintaan HTTP POST ke layanan notifikasi Gotify melalui perintah `Invoke-RestMethod`.
+
+Skrip mendeteksi bahasa sistem operasi pengguna dan memuat string (untuk log, antarmuka grafis, dan notifikasi) dari file `.psd1` yang terletak di direktori `i18n`.
 
 <p align="center">
-  <a href="https://wo.davalan.fr/"><strong>🔗 Kunjungi Halaman Utama Resmi untuk tur lengkap!</strong></a>
+  <a href="https://wo.davalan.fr/"><strong>🔗 Kunjungi halaman beranda resmi untuk presentasi lengkap!</strong></a>
 </p>
 
-![Lisensi](https://img.shields.io/badge/Lisensi-GPLv3-blue.svg)![Versi PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue)![Status](https://img.shields.io/badge/Status-Operasional-brightgreen.svg)![OS](https://img.shields.io/badge/OS-Windows_10_|_11-informational)![Dukungan](https://img.shields.io/badge/Support-11_Bahasa-orange.svg)![Kontribusi](https://img.shields.io/badge/Contributions-Selamat_Datang-brightgreen.svg)
+<p align="center">
+  <img src="https://img.shields.io/badge/Lisensi-GPLv3-blue.svg" alt="Lisensi">
+  <img src="https://img.shields.io/badge/Versi_PowerShell-5.1%2B-blue" alt="Versi PowerShell">
+  <img src="https://img.shields.io/badge/Status-Beroperasi-brightgreen.svg" alt="Status">
+  <img src="https://img.shields.io/badge/Sistem_Operasi-Windows_10_|_11-informational" alt="Sistem Operasi">
+  <img src="https://img.shields.io/badge/Dukungan-11_Bahasa-orange.svg" alt="Dukungan">
+  <img src="https://img.shields.io/badge/Kontribusi-Selamat_Datang-brightgreen.svg" alt="Kontribusi">
+</p>
 
 ---
 
-## Misi Kami
+## Aksi Skrip
 
-Bayangkan workstation Windows yang sangat andal dan otonom. Mesin yang Anda konfigurasi sekali untuk misinya dan kemudian dapat melupakannya. Sistem yang memastikan aplikasi Anda tetap **beroperasi secara permanen**, tanpa gangguan.
+Skrip `1_install.bat` menjalankan `management\install.ps1`, yang membuat dua Tugas Terjadwal utama.
+*   Yang pertama, **`WindowsOrchestrator-SystemStartup`**, menjalankan `config_systeme.ps1` saat Windows dimulai.
+*   Yang kedua, **`WindowsOrchestrator-UserLogon`**, menjalankan `config_utilisateur.ps1` saat pengguna masuk (login).
 
-Inilah tujuan yang **Windows Orchestrator** bantu Anda capai. Tantangannya adalah PC Windows standar tidak dirancang secara native untuk ketahanan ini. Ini dirancang untuk interaksi manusia: ia masuk ke mode tidur, menginstal pembaruan ketika dianggap sesuai, dan tidak secara otomatis memulai ulang aplikasi setelah reboot.
+Berdasarkan parameter dalam file `config.ini`, skrip menjalankan tindakan berikut:
 
-**Windows Orchestrator** adalah solusinya: seperangkat skrip yang bertindak sebagai pengawas cerdas dan permanen. Ini mengubah PC apa pun menjadi automaton yang andal, memastikan aplikasi kritis Anda selalu beroperasi, tanpa intervensi manual.
+*   **Manajemen login otomatis:**
+    *   `Aksi skrip:` Skrip menulis nilai `1` ke kunci Registri `HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\AutoAdminLogon`.
+    *   `Aksi pengguna:` Agar fungsi ini beroperasi, pengguna harus terlebih dahulu menyimpan kata sandi di Registri. Skrip tidak mengelola informasi ini. Utilitas **Sysinternals AutoLogon** adalah alat eksternal yang dapat melakukan tindakan ini.
 
+*   **Modifikasi pengaturan daya:**
+    *   Menjalankan perintah `powercfg /change standby-timeout-ac 0` dan `powercfg /change hibernate-timeout-ac 0` untuk menonaktifkan mode tidur (sleep).
+    *   Menjalankan perintah `powercfg /change monitor-timeout-ac 0` untuk menonaktifkan mode tidur layar.
+    *   Menulis nilai `0` ke kunci Registri `HiberbootEnabled` untuk menonaktifkan Fast Startup.
 
+*   **Manajemen Pembaruan Windows:**
+    *   Menulis nilai `1` ke kunci Registri `NoAutoUpdate` dan `NoAutoRebootWithLoggedOnUsers`.
+    *   Mengubah tipe startup layanan Windows `wuauserv` menjadi `Disabled` dan menjalankan perintah `Stop-Service` padanya.
 
-Kami dihadapkan bukan pada satu, tetapi pada dua jenis kegagalan sistemik:
+*   **Menjadwalkan restart harian:**
+    *   Membuat Tugas Terjadwal bernama `WindowsOrchestrator-SystemScheduledReboot` yang menjalankan `shutdown.exe /r /f /t 60` pada waktu yang ditentukan.
+    *   Membuat Tugas Terjadwal bernama `WindowsOrchestrator-SystemPreRebootAction` yang menjalankan perintah yang ditentukan pengguna sebelum restart.
 
-#### 1. Kegagalan Mendadak: Pemadaman Tak Terduga
+*   **Pencatatan (Logging) Aksi:**
+    *   Menulis baris berstempel waktu ke dalam file `.txt` yang terletak di folder `Logs`.
+    *   Sebuah fungsi `Rotate-LogFile` mengganti nama dan mengarsipkan file log yang ada. Jumlah file yang akan disimpan ditentukan oleh kunci `MaxSystemLogsToKeep` dan `MaxUserLogsToKeep` di `config.ini`.
 
-Skenarionya sederhana: mesin yang dikonfigurasi untuk akses jarak jauh dan pemadaman listrik di malam hari. Bahkan dengan BIOS yang diatur untuk restart otomatis, misi gagal. Windows restart tetapi tetap di layar login; aplikasi kritis tidak diluncurkan ulang, sesi tidak dibuka. Sistem tidak dapat diakses.
+*   **Mengirim notifikasi Gotify:**
+    *   Jika kunci `EnableGotify` diatur ke `true` di `config.ini`, skrip akan mengirim permintaan HTTP POST ke URL yang ditentukan.
+    *   Permintaan tersebut berisi payload JSON dengan judul dan pesan. Pesan tersebut adalah daftar tindakan yang dilakukan dan kesalahan yang ditemui.
 
-#### 2. Degradasi Lambat: Ketidakstabilan Jangka Panjang
+## Prasyarat
 
-Yang lebih berbahaya adalah perilaku Windows seiring waktu. Dirancang sebagai OS interaktif, ia tidak dioptimalkan untuk proses yang berjalan tanpa gangguan. Secara bertahap, kebocoran memori dan degradasi kinerja muncul, membuat sistem tidak stabil dan memerlukan restart manual.
+- **Sistem Operasi**: Windows 10 atau Windows 11. Kode sumber berisi direktif `#Requires -Version 5.1` untuk skrip PowerShell.
+- **Hak Akses**: Pengguna harus menyetujui permintaan peningkatan hak akses (UAC) saat menjalankan `1_install.bat` dan `2_uninstall.bat`. Tindakan ini diperlukan untuk mengizinkan skrip membuat tugas terjadwal dan memodifikasi kunci Registri tingkat sistem.
+- **Login Otomatis (Auto-Login)**: Jika pengguna mengaktifkan opsi ini, ia harus menggunakan alat eksternal seperti **Microsoft Sysinternals AutoLogon** untuk menyimpan kata sandinya di Registri.
 
-### Jawabannya: Lapisan Keandalan Native
+## Instalasi dan Konfigurasi Awal
 
-Menghadapi tantangan ini, utilitas pihak ketiga terbukti tidak memadai. Oleh karena itu, kami memutuskan untuk **membangun lapisan ketahanan sistem kami sendiri.**
+Pengguna menjalankan file **`1_install.bat`**.
 
-`Windows Orchestrator` bertindak sebagai autopilot yang mengambil kendali OS untuk:
+1.  **Konfigurasi (`firstconfig.ps1`)**
+    *   Skrip `management\firstconfig.ps1` berjalan dan menampilkan antarmuka grafis.
+    *   Jika file `config.ini` tidak ada, file tersebut akan dibuat dari template `management\defaults\default_config.ini`.
+    *   Jika ada, skrip akan bertanya kepada pengguna apakah ingin menggantinya dengan template.
+    *   Pengguna memasukkan parameter. Dengan mengklik "Simpan dan Tutup", skrip akan menulis nilai-nilai tersebut ke `config.ini`.
 
-- **Memastikan Pemulihan Otomatis:** Setelah kegagalan, ia menjamin pembukaan sesi dan restart aplikasi utama Anda.
-- **Menjamin Pemeliharaan Preventif:** Ini memungkinkan Anda untuk menjadwalkan restart harian yang terkontrol dengan eksekusi skrip kustom sebelumnya.
-- **Melindungi Aplikasi** dari gangguan yang tidak tepat waktu dari Windows (pembaruan, mode tidur...).
+2.  **Instalasi Tugas (`install.ps1`)**
+    *   Setelah asisten ditutup, `1_install.bat` menjalankan `management\install.ps1` dengan meminta peningkatan hak akses.
+    *   Skrip `install.ps1` membuat dua Tugas Terjadwal:
+        *   **`WindowsOrchestrator-SystemStartup`**: Menjalankan `config_systeme.ps1` saat Windows dimulai dengan akun `NT AUTHORITY\SYSTEM`.
+        *   **`WindowsOrchestrator-UserLogon`**: Menjalankan `config_utilisateur.ps1` saat pengguna yang meluncurkan instalasi masuk (login).
+    *   Untuk menerapkan konfigurasi tanpa menunggu restart, `install.ps1` menjalankan `config_systeme.ps1` lalu `config_utilisateur.ps1` satu kali di akhir proses.
 
-`Windows Orchestrator` adalah alat penting bagi siapa pun yang membutuhkan workstation Windows untuk tetap **andal, stabil, dan beroperasi tanpa pemantauan terus-menerus.**
+## Penggunaan dan Konfigurasi Pasca-Instalasi
 
----
+Setiap modifikasi konfigurasi setelah instalasi dilakukan melalui file `config.ini`.
 
-## Kasus Penggunaan Umum
+### 1. Modifikasi Manual File `config.ini`
 
-*   **Digital Signage:** Pastikan perangkat lunak signage berjalan 24/7 di layar publik.
-*   **Server Rumah dan IoT:** Kontrol server Plex, gateway Home Assistant, atau objek yang terhubung dari PC Windows.
-*   **Stasiun Pengawasan:** Jaga agar aplikasi pemantauan (kamera, log jaringan) selalu aktif.
-*   **Kios Interaktif:** Pastikan aplikasi kios restart secara otomatis setelah setiap reboot.
-*   **Otomatisasi Ringan:** Jalankan skrip atau proses terus-menerus untuk tugas penambangan data atau pengujian.
+*   **Aksi pengguna:** Pengguna membuka file `config.ini` dengan editor teks dan mengubah nilai yang diinginkan.
+*   **Aksi skrip:**
+    *   Modifikasi pada bagian `[SystemConfig]` akan dibaca dan diterapkan oleh `config_systeme.ps1` **pada saat komputer di-restart berikutnya**.
+    *   Modifikasi pada bagian `[Process]` akan dibaca dan diterapkan oleh `config_utilisateur.ps1` **pada saat pengguna login berikutnya**.
 
----
+### 2. Menggunakan Asisten Grafis
 
-## Fitur Utama
+*   **Aksi pengguna:** Pengguna menjalankan kembali `1_install.bat`. Antarmuka grafis akan terbuka, terisi dengan nilai-nilai saat ini dari `config.ini`. Pengguna mengubah parameter dan mengklik "Simpan dan Tutup".
+*   **Aksi skrip:** Skrip `firstconfig.ps1` menulis nilai-nilai baru ke `config.ini`.
+*   **Konteks penggunaan:** Setelah asisten ditutup, command prompt akan menawarkan untuk melanjutkan ke instalasi tugas. Pengguna dapat menutup jendela ini untuk hanya memperbarui konfigurasi.
 
-*   **Wizard Konfigurasi Grafis:** Tidak perlu mengedit file untuk pengaturan dasar.
-*   **Dukungan Multibahasa Penuh:** Antarmuka dan log tersedia dalam 11 bahasa, dengan deteksi otomatis bahasa sistem.
-*   **Manajemen Daya:** Nonaktifkan mode tidur mesin, mode tidur tampilan, dan Mulai Cepat Windows untuk stabilitas maksimum.
-*   **Login Otomatis (Auto-Login):** Mengelola login otomatis, termasuk bersinergi dengan alat **Sysinternals AutoLogon** untuk manajemen kata sandi yang aman.
-*   **Kontrol Pembaruan Windows:** Mencegah pembaruan paksa dan reboot mengganggu aplikasi Anda.
-*   **Manajer Proses:** Secara otomatis meluncurkan, memantau, dan meluncurkan ulang aplikasi utama Anda dengan setiap sesi.
-*   **Reboot Harian Terjadwal:** Jadwalkan reboot harian untuk menjaga kesegaran sistem.
-*   **Tindakan Pra-Reboot:** Jalankan skrip kustom (cadangan, pembersihan...) sebelum reboot terjadwal.
-*   **Pencatatan Rinci:** Semua tindakan dicatat dalam file log untuk diagnosis yang mudah.
-*   **Pemberitahuan (Opsional):** Kirim laporan status melalui Gotify.
+## Uninstalasi
 
----
+Pengguna menjalankan file **`2_uninstall.bat`**. File ini menjalankan `management\uninstall.ps1` setelah permintaan peningkatan hak akses (UAC).
 
-## Target Audiens dan Praktik Terbaik
+Skrip `uninstall.ps1` melakukan tindakan berikut:
 
-Proyek ini dirancang untuk mengubah PC menjadi automaton yang andal, ideal untuk kasus penggunaan di mana mesin didedikasikan untuk satu aplikasi (server untuk perangkat IoT, digital signage, stasiun pemantauan, dll.). Ini tidak direkomendasikan untuk komputer kantor tujuan umum atau sehari-hari.
+1.  **Login Otomatis:** Skrip menampilkan prompt yang menanyakan apakah login otomatis harus dinonaktifkan. Jika pengguna menjawab `y` (yes/ya), skrip akan menulis nilai `0` ke kunci Registri `AutoAdminLogon`.
+2.  **Pemulihan beberapa pengaturan sistem:**
+    *   **Pembaruan:** Mengatur nilai Registri `NoAutoUpdate` menjadi `0` dan mengonfigurasi tipe startup layanan `wuauserv` menjadi `Automatic`.
+    *   **Fast Startup:** Mengatur nilai Registri `HiberbootEnabled` menjadi `1`.
+    *   **OneDrive:** Menghapus nilai Registri `DisableFileSyncNGSC`.
+3.  **Penghapusan Tugas Terjadwal:** Skrip mencari dan menghapus tugas `WindowsOrchestrator-SystemStartup`, `WindowsOrchestrator-UserLogon`, `WindowsOrchestrator-SystemScheduledReboot`, dan `WindowsOrchestrator-SystemPreRebootAction`.
 
-*   **Pembaruan Windows Utama:** Untuk pembaruan signifikan (misalnya, peningkatan dari Windows 10 ke 11), prosedur teraman adalah **mencopot pemasangan** Windows Orchestrator sebelum pembaruan, lalu **memasang kembali** setelahnya.
-*   **Lingkungan Perusahaan:** Jika komputer Anda berada di domain perusahaan yang dikelola oleh Objek Kebijakan Grup (GPO), periksa dengan departemen IT Anda untuk memastikan modifikasi yang dilakukan oleh skrip ini tidak bertentangan dengan kebijakan organisasi Anda.
+### Catatan tentang Pemulihan Pengaturan
 
----
+**Skrip uninstalasi tidak memulihkan pengaturan daya** yang telah diubah oleh perintah `powercfg`.
+*   **Konsekuensi bagi pengguna:** Jika mode tidur mesin atau layar telah dinonaktifkan oleh skrip, mode tersebut akan tetap nonaktif setelah uninstalasi.
+*   **Tindakan yang diperlukan dari pengguna:** Untuk mengaktifkan kembali mode tidur, pengguna harus mengonfigurasi ulang opsi ini secara manual di "Pengaturan daya & tidur" Windows.
 
-## Instalasi dan Memulai
-
-**Catatan Bahasa:** Skrip peluncuran (`1_install.bat` dan `2_uninstall.bat`) menampilkan instruksinya dalam **Bahasa Inggris**. Ini normal. File-file ini bertindak sebagai peluncur sederhana. Segera setelah wizard grafis atau skrip PowerShell mengambil alih, antarmuka akan secara otomatis beradaptasi dengan bahasa sistem operasi Anda.
-
-Menyiapkan **Windows Orchestrator** adalah proses yang sederhana dan terpandu.
-
-1.  **Unduh** atau klon proyek ke komputer yang akan dikonfigurasi.
-2.  Jalankan `1_install.bat`. Skrip akan memandu Anda melalui dua langkah:
-    *   **Langkah 1: Konfigurasi melalui Wizard Grafis.**
-        Sesuaikan opsi sesuai kebutuhan Anda. Yang paling penting biasanya adalah nama pengguna untuk login otomatis dan aplikasi yang akan diluncurkan. Klik `Simpan` untuk menyimpan.
-        
-        ![Wizard Konfigurasi](assets/screenshot-wizard.png)
-        
-    *   **Langkah 2: Instalasi Tugas Sistem.**
-        Skrip akan meminta konfirmasi untuk melanjutkan. Jendela keamanan Windows (UAC) akan terbuka. **Anda harus menerimanya** untuk memungkinkan skrip membuat tugas terjadwal yang diperlukan.
-3.  Itu saja! Setelah reboot berikutnya, konfigurasi Anda akan diterapkan.
-
----
-
-## Konfigurasi
-Anda dapat menyesuaikan pengaturan kapan saja dengan dua cara:
-
-### 1. Wizard Grafis (Metode sederhana)
-Jalankan kembali `1_install.bat` untuk membuka kembali antarmuka konfigurasi. Ubah pengaturan Anda dan simpan.
-
-### 2. File `config.ini` (Metode lanjutan)
-Buka `config.ini` dengan editor teks untuk kontrol granular.
-
-#### Catatan Penting tentang Login Otomatis dan Kata Sandi
-Untuk alasan keamanan, **Windows Orchestrator tidak pernah mengelola atau menyimpan kata sandi dalam teks biasa.** Berikut cara mengonfigurasi login otomatis secara efektif dan aman:
-
-*   **Skenario 1: Akun pengguna tidak memiliki kata sandi.**
-    Cukup masukkan nama pengguna di wizard grafis atau di `AutoLoginUsername` di file `config.ini`.
-
-*   **Skenario 2: Akun pengguna memiliki kata sandi (Metode yang direkomendasikan).**
-    1.  Unduh alat resmi **[Sysinternals AutoLogon](https://download.sysinternals.com/files/AutoLogon.zip)** dari Microsoft (tautan unduhan langsung).
-    2.  Luncurkan AutoLogon dan masukkan nama pengguna, domain, dan kata sandi. Alat ini akan menyimpan kata sandi dengan aman di Registri.
-    3.  Dalam konfigurasi **Windows Orchestrator**, Anda sekarang dapat membiarkan bidang `AutoLoginUsername` kosong (skrip akan mendeteksi pengguna yang dikonfigurasi oleh AutoLogon dengan membaca kunci Registri yang sesuai) atau mengisinya untuk memastikan. Skrip kami akan memastikan bahwa kunci Registri `AutoAdminLogon` diaktifkan dengan benar untuk menyelesaikan konfigurasi.
-
-#### Konfigurasi Lanjutan: `PreRebootActionCommand`
-Fitur canggih ini memungkinkan Anda untuk menjalankan skrip sebelum reboot harian. Jalurnya bisa:
-- **Absolut:** `C:\Scripts\my_backup.bat`
-- **Relatif terhadap proyek:** `PreReboot.bat` (skrip akan mencari file ini di root proyek).
-- **Menggunakan `%USERPROFILE%`:** `%USERPROFILE%\Desktop\cleanup.ps1` (skrip akan secara cerdas mengganti `%USERPROFILE%` dengan jalur ke profil pengguna login otomatis).
-
----
+Proses uninstalasi **tidak menghapus file apa pun**. Direktori proyek dan isinya tetap ada di disk.
 
 ## Struktur Proyek
+
 ```
 WindowsOrchestrator/
-├── 1_install.bat                # Titik masuk untuk instalasi dan konfigurasi
-├── 2_uninstall.bat              # Titik masuk untuk uninstalasi
-├── config.ini                   # File konfigurasi pusat
-├── config_systeme.ps1           # Skrip utama untuk pengaturan mesin (berjalan saat startup)
-├── config_utilisateur.ps1       # Skrip utama untuk manajemen proses pengguna (berjalan saat login)
-├── LaunchApp.bat                # (Contoh) Peluncur portabel untuk aplikasi utama Anda
-├── PreReboot.bat                # Contoh skrip untuk tindakan pra-reboot
-├── Logs/                        # (Dibuat secara otomatis) Berisi file log
-├── i18n/                        # Berisi semua file terjemahan
-│   ├── en-US/strings.psd1
+├── 1_install.bat                # Menjalankan konfigurasi grafis lalu instalasi tugas.
+├── 2_uninstall.bat              # Menjalankan skrip uninstalasi.
+├── Close-App.bat                # Menjalankan skrip PowerShell Close-AppByTitle.ps1.
+├── Close-AppByTitle.ps1         # Skrip yang menemukan jendela berdasarkan judulnya dan mengirimkan urutan tombol.
+├── config.ini                   # File konfigurasi yang dibaca oleh skrip utama.
+├── config_systeme.ps1           # Skrip untuk pengaturan mesin, dieksekusi saat startup.
+├── config_utilisateur.ps1       # Skrip untuk manajemen proses, dieksekusi saat login.
+├── Fix-Encoding.ps1             # Alat untuk mengonversi file skrip ke encoding UTF-8 with BOM.
+├── LaunchApp.bat                # Contoh skrip batch untuk meluncurkan aplikasi eksternal.
+├── List-VisibleWindows.ps1      # Utilitas yang mendaftar jendela yang terlihat dan prosesnya.
+├── i18n/
+│   ├── en-US/
+│   │   └── strings.psd1         # File string untuk bahasa Inggris.
 │   └── ... (bahasa lain)
 └── management/
-    ├── defaults/default_config.ini # Template konfigurasi awal
-    ├── tools/                   # Alat diagnostik
-    │   └── Find-WindowInfo.ps1
-    ├── firstconfig.ps1          # Kode wizard konfigurasi grafis
-    ├── install.ps1              # Skrip teknis untuk instalasi tugas
-    └── uninstall.ps1            # Skrip teknis untuk penghapusan tugas
+    ├── firstconfig.ps1          # Menampilkan asisten konfigurasi grafis.
+    ├── install.ps1              # Membuat tugas terjadwal dan menjalankan skrip satu kali.
+    ├── uninstall.ps1            # Menghapus tugas dan memulihkan pengaturan sistem.
+    └── defaults/
+        └── default_config.ini   # Template untuk membuat file config.ini awal.
 ```
 
----
+## Prinsip Teknis
 
-## Operasi Rinci
-Inti dari **Windows Orchestrator** bergantung pada Penjadwal Tugas Windows:
+*   **Perintah Bawaan (Native)**: Proyek ini secara eksklusif menggunakan perintah bawaan Windows dan PowerShell. Tidak ada dependensi eksternal yang perlu diinstal.
+*   **Pustaka Sistem**: Interaksi tingkat lanjut dengan sistem hanya mengandalkan pustaka yang terintegrasi dengan Windows (misalnya: `user32.dll`).
 
-1.  **Saat Startup Windows**
-    *   Tugas `WindowsOrchestrator_SystemStartup` berjalan dengan hak istimewa `SYSTEM`.
-    *   Skrip `config_systeme.ps1` membaca `config.ini` dan menerapkan semua konfigurasi mesin. Ini juga mengelola pembuatan/pembaruan tugas reboot.
+## Deskripsi File Kunci
 
-2.  **Saat Login Pengguna**
-    *   Tugas `WindowsOrchestrator_UserLogon` berjalan.
-    *   Skrip `config_utilisateur.ps1` membaca bagian `[Process]` dari `config.ini` dan memastikan bahwa aplikasi utama Anda diluncurkan dengan benar. Jika sudah berjalan, itu pertama-tama dihentikan kemudian diluncurkan ulang dengan bersih.
+### `1_install.bat`
+File batch ini adalah titik masuk untuk proses instalasi. Ini menjalankan `management\firstconfig.ps1` untuk konfigurasi, kemudian menjalankan `management\install.ps1` dengan hak akses yang lebih tinggi.
 
-3.  **Harian (Jika dikonfigurasi)**
-    *   Tugas `WindowsOrchestrator_PreRebootAction` menjalankan skrip cadangan/pembersihan Anda.
-    *   Beberapa menit kemudian, tugas `WindowsOrchestrator_ScheduledReboot` me-reboot komputer.
+### `2_uninstall.bat`
+File batch ini adalah titik masuk untuk uninstalasi. Ini menjalankan `management\uninstall.ps1` dengan hak akses yang lebih tinggi.
 
----
+### `config.ini`
+Ini adalah file konfigurasi pusat. Ini berisi instruksi (kunci dan nilai) yang dibaca oleh skrip `config_systeme.ps1` dan `config_utilisateur.ps1` untuk menentukan tindakan apa yang harus dilakukan.
 
-### Alat Diagnostik dan Pengembangan
+### `config_systeme.ps1`
+Dijalankan saat komputer dinyalakan oleh Tugas Terjadwal, skrip ini membaca bagian `[SystemConfig]` dari file `config.ini`. Ini menerapkan pengaturan dengan memodifikasi Registri Windows, menjalankan perintah sistem (`powercfg`), dan mengelola layanan (`wuauserv`).
 
-Proyek ini mencakup skrip yang berguna untuk membantu Anda mengonfigurasi dan memelihara proyek.
+### `config_utilisateur.ps1`
+Dijalankan saat pengguna masuk oleh Tugas Terjadwal, skrip ini membaca bagian `[Process]` dari file `config.ini`. Perannya adalah untuk menghentikan setiap instance yang ada dari proses target, kemudian memulainya kembali menggunakan parameter yang disediakan.
 
-*   **`management/tools/Find-WindowInfo.ps1`**: Jika Anda tidak tahu judul pasti jendela aplikasi (misalnya, untuk mengonfigurasinya di `Close-AppByTitle.ps1`), jalankan skrip ini. Ini akan mencantumkan semua jendela yang terlihat dan nama prosesnya, membantu Anda menemukan informasi yang tepat.
-*   **`Fix-Encoding.ps1`**: Jika Anda memodifikasi skrip, alat ini memastikan bahwa mereka disimpan dengan pengkodean yang benar (UTF-8 dengan BOM) untuk kompatibilitas sempurna dengan PowerShell 5.1 dan karakter internasional.
+### `management\firstconfig.ps1`
+Skrip PowerShell ini menampilkan antarmuka grafis yang memungkinkan untuk membaca dan menulis parameter ke file `config.ini`.
 
----
+### `management\install.ps1`
+Skrip ini berisi logika untuk membuat Tugas Terjadwal `WindowsOrchestrator-SystemStartup` dan `WindowsOrchestrator-UserLogon`.
 
-## Pencatatan
-Untuk pemecahan masalah yang mudah, semuanya dicatat.
-*   **Lokasi:** Di subfolder `Logs/`.
-*   **File:** `config_systeme_ps_log.txt` dan `config_utilisateur_log.txt`.
-*   **Rotasi:** Log lama secara otomatis diarsipkan untuk mencegahnya menjadi terlalu besar.
+### `management\uninstall.ps1`
+Skrip ini berisi logika untuk menghapus Tugas Terjadwal dan memulihkan kunci Registri sistem ke nilai defaultnya.
 
----
+## Manajemen oleh Tugas Terjadwal
 
-## Pencopotan Pemasangan
-Untuk menghapus sistem:
-1.  Jalankan `2_uninstall.bat`.
-2.  **Terima permintaan hak istimewa (UAC)**.
-3.  Skrip akan menghapus semua tugas terjadwal dengan bersih dan mengembalikan pengaturan sistem utama.
+Otomatisasi ini bergantung pada Penjadwal Tugas Windows (`taskschd.msc`). Tugas-tugas berikut dibuat oleh skrip:
 
-**Catatan tentang Reversibilitas:** Pencopotan pemasangan tidak hanya menghapus tugas terjadwal. Ini juga mengembalikan pengaturan sistem utama ke keadaan default untuk memberi Anda sistem yang bersih:
-*   Pembaruan Windows diaktifkan kembali.
-*   Mulai Cepat diaktifkan kembali.
-*   Kebijakan yang memblokir OneDrive dihapus.
-*   Skrip akan menawarkan untuk menonaktifkan login otomatis.
+*   **`WindowsOrchestrator-SystemStartup`**: Memicu saat PC dinyalakan dan menjalankan `config_systeme.ps1`.
+*   **`WindowsOrchestrator-UserLogon`**: Memicu saat pengguna masuk dan menjalankan `config_utilisateur.ps1`.
+*   **`WindowsOrchestrator-SystemScheduledReboot`**: Dibuat oleh `config_systeme.ps1` jika `ScheduledRebootTime` didefinisikan di `config.ini`.
+*   **`WindowsOrchestrator-SystemPreRebootAction`**: Dibuat oleh `config_systeme.ps1` jika `PreRebootActionCommand` didefinisikan di `config.ini`.
 
-Sistem Anda dengan demikian kembali menjadi workstation standar, tanpa modifikasi sisa.
-
----
+**Penting**: Menghapus tugas-tugas ini secara manual melalui penjadwal tugas akan menghentikan otomatisasi tetapi tidak akan memulihkan pengaturan sistem. Pengguna harus menggunakan `2_uninstall.bat` untuk uninstalasi yang lengkap dan terkontrol.
 
 ## Lisensi dan Kontribusi
+
 Proyek ini didistribusikan di bawah lisensi **GPLv3**. Teks lengkap tersedia di file `LICENSE`.
 
-Kontribusi, baik dalam bentuk laporan bug, saran perbaikan, atau permintaan tarik, disambut baik.
+Kontribusi, baik itu laporan bug, saran perbaikan, atau pull request, sangat diterima.
