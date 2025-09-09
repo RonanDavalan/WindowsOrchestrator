@@ -51,7 +51,7 @@
     Install_CreatingUserTask = "'{1}' のためにユーザータスク '{0}' を作成/更新しています..."
     Install_UserTaskDescription = "WindowsOrchestrator：ログオン時にユーザー構成スクリプトを実行します。"
     Install_MainTasksConfigured = "主要なスケジュールタスクが構成されました。"
-    Install_DailyRebootTasksNote = "毎日の再起動（'AllSys_SystemScheduledReboot'）と再起動前のアクション（'AllSys_SystemPreRebootAction'）のタスクは、'{0}' の実行中に作成/管理されます。"
+    Install_DailyRebootTasksNote = "毎日の再起動（'WindowsOrchestrator_SystemScheduledReboot'）と再起動前のアクション（'AllSys_SystemPreRebootAction'）のタスクは、'{0}' の実行中に作成/管理されます。"
     Install_AttemptingInitialLaunch = "構成スクリプトの初回起動を試みています..."
     Install_ExecutingSystemScript = "初期システム構成を適用するためにconfig_systeme.ps1を実行しています..."
     Install_SystemScriptSuccess = "config_systeme.ps1は正常に実行されました（終了コード0）。"

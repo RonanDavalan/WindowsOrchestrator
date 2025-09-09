@@ -6,41 +6,78 @@
 .DESCRIPTION
     Ce script s'assure d'être exécuté en tant qu'administrateur et utilise la méthode de chargement de langue
     qui a été prouvée fonctionnelle.
+.EXAMPLE
+    PS C:\Chemin\Vers\Script\> .\install.ps1
+
+    Lance le script d'installation. Le script demandera automatiquement une élévation de privilèges si nécessaire.
 .NOTES
     Auteur: Ronan Davalan & Gemini
     Version: i18n - Logique de chargement Corrigée
 #>
 
+#=======================================================================================================================
+# --- Définition des Fonctions ---
+#=======================================================================================================================
+
+<#
+.SYNOPSIS
+    Affiche un message stylisé dans la console avec un préfixe coloré (INFO, SUCCESS, etc.).
+.DESCRIPTION
+    Cette fonction utilitaire facilite l'affichage de messages formatés dans la console.
+    Elle prend un message en entrée et un type (INFO, SUCCESS, WARNING, ERROR) qui détermine la couleur
+    du préfixe pour améliorer la lisibilité des logs du script.
+.PARAMETER Message
+    La chaîne de caractères à afficher après le préfixe stylisé.
+.PARAMETER Type
+    Le type de message qui détermine la couleur du préfixe. Les valeurs valides sont "INFO", "SUCCESS", "WARNING", "ERROR".
+    Si une valeur non valide est fournie, la couleur par défaut sera le blanc. La valeur par défaut est "INFO".
+.EXAMPLE
+    PS C:\> Write-StyledHost -Message "L'opération a été complétée avec succès." -Type "SUCCESS"
+
+    Affiche "[SUCCESS] L'opération a été complétée avec succès." avec le mot "[SUCCESS]" en vert.
+#>
+function Write-StyledHost {
+    param([string]$Message, [string]$Type = "INFO")
+    $color = switch ($Type.ToUpper()) { "INFO"{"Cyan"}; "SUCCESS"{"Green"}; "WARNING"{"Yellow"}; "ERROR"{"Red"}; default{"White"} }
+    Write-Host "[$Type] " -ForegroundColor $color -NoNewline; Write-Host $Message
+}
+
+
+#=======================================================================================================================
+# --- DÉBUT DU SCRIPT PRINCIPAL ---
+#=======================================================================================================================
+
 # --- Internationalization (i18n) ---
 $lang = @{}
 try {
-    # Définition des chemins de base
-    if ($MyInvocation.MyCommand.CommandType -eq 'ExternalScript') { $PSScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition } 
+    # La détermination du chemin du script doit gérer plusieurs environnements d'exécution (console, ISE, etc.),
+    # d'où la nécessité de tester le type de commande pour trouver le chemin de manière fiable.
+    if ($MyInvocation.MyCommand.CommandType -eq 'ExternalScript') { $PSScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition }
     else { try { $PSScriptRoot = Split-Path -Parent $script:MyInvocation.MyCommand.Path -ErrorAction Stop } catch { $PSScriptRoot = Get-Location } }
     $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\")).Path
-    
+
     # Détection automatique et exclusive de la culture du système.
     $cultureName = (Get-Culture).Name
 
     # Construction du chemin vers le fichier de langue
     $langFilePath = Join-Path $projectRoot "i18n\$cultureName\strings.psd1"
-    if (-not (Test-Path $langFilePath)) { 
+    if (-not (Test-Path $langFilePath)) {
         # Si le fichier de la langue système n'existe pas, on se rabat sur l'anglais.
-        $langFilePath = Join-Path $projectRoot "i18n\en-US\strings.psd1" 
+        $langFilePath = Join-Path $projectRoot "i18n\en-US\strings.psd1"
     }
 
     # Chargement du fichier de langue
     if (Test-Path $langFilePath) {
         $langContent = Get-Content -Path $langFilePath -Raw -Encoding UTF8
         $lang = Invoke-Expression $langContent
-    } else { 
+    } else {
         # Erreur si même le fichier anglais est introuvable
-        throw "Aucun fichier de langue valide trouvé, y compris le fichier de secours en-US." 
+        throw "Aucun fichier de langue valide trouvé, y compris le fichier de secours en-US."
     }
 
     # Vérification que le fichier chargé n'est pas vide
-    if ($null -eq $lang -or $lang.Count -eq 0) { 
-        throw "Le fichier de langue '$langFilePath' est vide ou invalide." 
+    if ($null -eq $lang -or $lang.Count -eq 0) {
+        throw "Le fichier de langue '$langFilePath' est vide ou invalide."
     }
 
 } catch {
@@ -66,12 +103,6 @@ if (-Not $currentUserPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]:
 
 
 # --- Configuration et Vérifications Préliminaires ---
-function Write-StyledHost {
-    param([string]$Message, [string]$Type = "INFO")
-    $color = switch ($Type.ToUpper()) { "INFO"{"Cyan"}; "SUCCESS"{"Green"}; "WARNING"{"Yellow"}; "ERROR"{"Red"}; default{"White"} }
-    Write-Host "[$Type] " -ForegroundColor $color -NoNewline; Write-Host $Message
-}
-
 $OriginalErrorActionPreference = $ErrorActionPreference
 $ErrorActionPreference = "Stop"
 $errorOccurredInScript = $false
@@ -83,10 +114,10 @@ try {
     if (-not (Test-Path (Join-Path $ProjectRootDir "config.ini"))) {
         throw ($lang.Install_InvalidProjectRootError -f $ProjectRootDir)
     }
-    
+
     $SystemScriptPath = Join-Path $ProjectRootDir "config_systeme.ps1"
     $UserScriptPath   = Join-Path $ProjectRootDir "config_utilisateur.ps1"
-    
+
     $TaskNameSystem = "WindowsOrchestrator-SystemStartup"
     $TaskNameUser   = "WindowsOrchestrator-UserLogon"
 
@@ -115,8 +146,9 @@ Write-StyledHost ($lang.Install_UserTaskTarget -f $TargetUserForUserTask) "INFO"
 Write-StyledHost $lang.Install_StartConfiguringTasks "INFO"
 
 # --- Préparation des arguments pour les tâches en fonction de la langue ---
-# La variable $cultureName (ex: "fr-FR") est déjà définie par le bloc i18n en début de script.
-# Nous l'injectons directement dans la commande pour forcer la culture de la tâche planifiée.
+# Forcer la culture de l'interface utilisateur (CurrentUICulture) dans les arguments des tâches planifiées est crucial.
+# Cela garantit que les scripts s'exécuteront toujours dans la langue de l'installeur, indépendamment des paramètres régionaux
+# du compte SYSTEM ou de l'utilisateur qui se connecte, assurant une cohérence des logs et des messages.
 $finalArgumentSystem = "-NoProfile -ExecutionPolicy Bypass -Command `"& { [System.Threading.Thread]::CurrentThread.CurrentUICulture = '$cultureName'; . '$SystemScriptPath' }`""
 $finalArgumentUser = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -Command `"& { [System.Threading.Thread]::CurrentThread.CurrentUICulture = '$cultureName'; . '$UserScriptPath' }`""
 # --- Fin de la préparation ---

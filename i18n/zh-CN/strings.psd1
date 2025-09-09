@@ -51,7 +51,7 @@
     Install_CreatingUserTask = "正在为 '{1}' 创建/更新用户任务 '{0}'..."
     Install_UserTaskDescription = "WindowsOrchestrator：在登录时执行用户配置脚本。"
     Install_MainTasksConfigured = "主要计划任务已配置。"
-    Install_DailyRebootTasksNote = "每日重启（'AllSys_SystemScheduledReboot'）和重启前操作（'AllSys_SystemPreRebootAction'）的任务将在 '{0}' 执行期间创建/管理。"
+    Install_DailyRebootTasksNote = "每日重启（'WindowsOrchestrator_SystemScheduledReboot'）和重启前操作（'AllSys_SystemPreRebootAction'）的任务将在 '{0}' 执行期间创建/管理。"
     Install_AttemptingInitialLaunch = "正在尝试首次启动配置脚本..."
     Install_ExecutingSystemScript = "正在执行 config_systeme.ps1 以应用初始系统配置..."
     Install_SystemScriptSuccess = "config_systeme.ps1 已成功执行（退出代码 0）。"
