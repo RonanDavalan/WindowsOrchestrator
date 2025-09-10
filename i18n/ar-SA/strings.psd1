@@ -51,7 +51,7 @@
     Install_CreatingUserTask = "إنشاء/تحديث مهمة المستخدم '{0}' لـ '{1}'..."
     Install_UserTaskDescription = "WindowsOrchestrator: يقوم بتنفيذ برنامج تكوين المستخدم عند تسجيل الدخول."
     Install_MainTasksConfigured = "تم تكوين المهام المجدولة الرئيسية."
-    Install_DailyRebootTasksNote = "سيتم إنشاء/إدارة مهام إعادة التشغيل اليومية ('AllSys_SystemScheduledReboot') والإجراء السابق لإعادة التشغيل ('AllSys_SystemPreRebootAction') بواسطة '{0}' أثناء تنفيذه."
+    Install_DailyRebootTasksNote = "سيتم إنشاء/إدارة مهام إعادة التشغيل اليومية ('WindowsOrchestrator_SystemScheduledReboot') والإجراء السابق لإعادة التشغيل ('AllSys_SystemPreRebootAction') بواسطة '{0}' أثناء تنفيذه."
     Install_AttemptingInitialLaunch = "محاولة التشغيل الأولي لبرامج التكوين..."
     Install_ExecutingSystemScript = "تنفيذ config_systeme.ps1 لتطبيق تكوينات النظام الأولية..."
     Install_SystemScriptSuccess = "تم تنفيذ config_systeme.ps1 بنجاح (رمز الخروج 0)."

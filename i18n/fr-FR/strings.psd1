@@ -51,7 +51,7 @@
     Install_CreatingUserTask = "Création/Mise à jour de la tâche utilisateur '{0}' pour '{1}'..."
     Install_UserTaskDescription = "WindowsOrchestrator: Exécute le script de configuration utilisateur à l'ouverture de session."
     Install_MainTasksConfigured = "Tâches planifiées principales configurées."
-    Install_DailyRebootTasksNote = "Les tâches pour le redémarrage quotidien ('AllSys_SystemScheduledReboot') et l'action pré-redémarrage ('AllSys_SystemPreRebootAction') seront créées/gérées par '{0}' lors de son exécution."
+    Install_DailyRebootTasksNote = "Les tâches pour le redémarrage quotidien ('WindowsOrchestrator_SystemScheduledReboot') et l'action pré-redémarrage ('AllSys_SystemPreRebootAction') seront créées/gérées par '{0}' lors de son exécution."
     Install_AttemptingInitialLaunch = "Tentative de lancement initial des scripts de configuration..."
     Install_ExecutingSystemScript = "Exécution de config_systeme.ps1 pour appliquer les configurations système initiales..."
     Install_SystemScriptSuccess = "config_systeme.ps1 exécuté avec succès (code de sortie 0)."

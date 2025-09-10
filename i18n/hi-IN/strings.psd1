@@ -51,7 +51,7 @@
     Install_CreatingUserTask = "उपयोगकर्ता कार्य '{0}' को '{1}' के लिए बनाया/अपडेट किया जा रहा है..."
     Install_UserTaskDescription = "WindowsOrchestrator: लॉगऑन पर उपयोगकर्ता कॉन्फ़िगरेशन स्क्रिप्ट निष्पादित करता है।"
     Install_MainTasksConfigured = "मुख्य अनुसूचित कार्य कॉन्फ़िगर किए गए।"
-    Install_DailyRebootTasksNote = "दैनिक रिबूट ('AllSys_SystemScheduledReboot') और प्री-रिबूट एक्शन ('AllSys_SystemPreRebootAction') के लिए कार्य '{0}' द्वारा इसके निष्पादन के दौरान बनाए/प्रबंधित किए जाएंगे।"
+    Install_DailyRebootTasksNote = "दैनिक रिबूट ('WindowsOrchestrator_SystemScheduledReboot') और प्री-रिबूट एक्शन ('AllSys_SystemPreRebootAction') के लिए कार्य '{0}' द्वारा इसके निष्पादन के दौरान बनाए/प्रबंधित किए जाएंगे।"
     Install_AttemptingInitialLaunch = "कॉन्फ़िगरेशन स्क्रिप्ट का प्रारंभिक लॉन्च करने का प्रयास किया जा रहा है..."
     Install_ExecutingSystemScript = "प्रारंभिक सिस्टम कॉन्फ़िगरेशन लागू करने के लिए config_systeme.ps1 निष्पादित किया जा रहा है..."
     Install_SystemScriptSuccess = "config_systeme.ps1 सफलतापूर्वक निष्पादित हुआ (निकास कोड 0)।"

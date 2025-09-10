@@ -8,6 +8,18 @@
     Désinstalle les tâches planifiées et restaure les paramètres système modifiés par WindowsOrchestrator.
 .DESCRIPTION
     Ce script gère sa propre élévation de privilèges tout en préservant l'argument de langue.
+    Il supprime les tâches planifiées créées par l'installeur et propose de restaurer plusieurs
+    paramètres système (Windows Update, Démarrage Rapide, OneDrive, Auto-Logon) à leurs valeurs par défaut.
+.EXAMPLE
+    PS C:\Chemin\Vers\Script\> .\uninstall.ps1
+
+    Lance le script de désinstallation. Le script demandera automatiquement une élévation de privilèges
+    si nécessaire et utilisera la langue détectée du système.
+.EXAMPLE
+    PS C:\Chemin\ver\Script\> .\uninstall.ps1 -LanguageOverride "en-US"
+
+    DEPRECATED: Force le script à s'exécuter en anglais. La langue est maintenant détectée
+    automatiquement. Ce paramètre sera supprimé dans une future version.
 .NOTES
     Auteur: Ronan Davalan & Gemini
     Version: i18n - Logique d'élévation Corrigée et Finalisée
@@ -18,7 +30,8 @@ $currentUserPrincipal = New-Object Security.Principal.WindowsPrincipal ([Securit
 if (-Not $currentUserPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     # Prépare les arguments pour le nouveau processus élevé
     $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$($MyInvocation.MyCommand.Path)`""
-    # Ajoute l'argument de langue SEULEMENT s'il a été fourni
+    # L'argument de langue doit être préservé lors de la relance avec élévation pour garantir que
+    # le choix de l'utilisateur n'est pas perdu après la demande de privilèges.
     if (-not [string]::IsNullOrWhiteSpace($LanguageOverride)) {
         $arguments += " -LanguageOverride '$($LanguageOverride)'"
     }
@@ -38,6 +51,8 @@ if (-Not $currentUserPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]:
 # Ce bloc s'exécute maintenant avec la certitude que le script est élevé.
 $lang = @{}
 try {
+    # La détermination du chemin du script doit gérer plusieurs environnements d'exécution (console, ISE, etc.),
+    # d'où la nécessité de tester le type de commande pour trouver le chemin de manière fiable.
     if ($MyInvocation.MyCommand.CommandType -eq 'ExternalScript') { $PSScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition }
     else { try { $PSScriptRoot = Split-Path -Parent $script:MyInvocation.MyCommand.Path -ErrorAction Stop } catch { $PSScriptRoot = Get-Location } }
     
@@ -63,6 +78,23 @@ try {
 }
 
 # --- Configuration et Fonctions ---
+<#
+.SYNOPSIS
+    Affiche un message stylisé dans la console avec un préfixe coloré (INFO, SUCCESS, etc.).
+.DESCRIPTION
+    Cette fonction utilitaire facilite l'affichage de messages formatés dans la console.
+    Elle prend un message en entrée et un type (INFO, SUCCESS, WARNING, ERROR) qui détermine la couleur
+    du préfixe pour améliorer la lisibilité des logs du script.
+.PARAMETER Message
+    La chaîne de caractères à afficher après le préfixe stylisé.
+.PARAMETER Type
+    Le type de message qui détermine la couleur du préfixe. Les valeurs valides sont "INFO", "SUCCESS", "WARNING", "ERROR".
+    Si une valeur non valide est fournie, la couleur par défaut sera le blanc. La valeur par défaut est "INFO".
+.EXAMPLE
+    PS C:\> Write-StyledHost -Message "La tâche a été supprimée avec succès." -Type "SUCCESS"
+
+    Affiche "[SUCCESS] La tâche a été supprimée avec succès." avec le mot "[SUCCESS]" en vert.
+#>
 function Write-StyledHost {
     param([string]$Message, [string]$Type = "INFO")
     $color = switch ($Type.ToUpper()) {
@@ -80,6 +112,8 @@ Write-Host ""
 
 # --- Étape 1: Interaction avec l'utilisateur pour l'Auto-Logon ---
 $disableAutoLogonChoice = Read-Host -Prompt $lang.Uninstall_AutoLogonQuestion
+# La réponse de l'utilisateur est vérifiée pour 'o' (oui) et 'y' (yes) afin de fonctionner
+# de manière intuitive que l'interface soit en français ou en anglais.
 $shouldDisableAutoLogon = if ($disableAutoLogonChoice.Trim().ToLower() -eq 'o' -or $disableAutoLogonChoice.Trim().ToLower() -eq 'y') { $true } else { $false }
 Write-Host ""
 
@@ -159,6 +193,8 @@ foreach ($taskName in $TasksToRemove) {
         Write-Host $lang.Uninstall_TaskFoundAttemptingDeletion -ForegroundColor Cyan -NoNewline
         try {
             Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction Stop
+            # Après la suppression, une vérification explicite est faite pour s'assurer que la tâche
+            # n'existe plus, car Unregister-ScheduledTask ne retourne pas toujours une erreur fiable.
             if (-not (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue)) {
                 Write-Host $lang.Uninstall_TaskSuccessfullyRemoved -ForegroundColor Green
             } else {

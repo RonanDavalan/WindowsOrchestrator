@@ -51,7 +51,7 @@
     Install_CreatingUserTask = "Membuat/Memperbarui tugas pengguna '{0}' untuk '{1}'..."
     Install_UserTaskDescription = "WindowsOrchestrator: Menjalankan skrip konfigurasi pengguna saat logon."
     Install_MainTasksConfigured = "Tugas terjadwal utama telah dikonfigurasi."
-    Install_DailyRebootTasksNote = "Tugas untuk reboot harian ('AllSys_SystemScheduledReboot') dan tindakan pra-reboot ('AllSys_SystemPreRebootAction') akan dibuat/dikelola oleh '{0}' saat eksekusi."
+    Install_DailyRebootTasksNote = "Tugas untuk reboot harian ('WindowsOrchestrator_SystemScheduledReboot') dan tindakan pra-reboot ('AllSys_SystemPreRebootAction') akan dibuat/dikelola oleh '{0}' saat eksekusi."
     Install_AttemptingInitialLaunch = "Mencoba peluncuran awal skrip konfigurasi..."
     Install_ExecutingSystemScript = "Menjalankan config_systeme.ps1 untuk menerapkan konfigurasi sistem awal..."
     Install_SystemScriptSuccess = "config_systeme.ps1 berhasil dijalankan (kode keluar 0)."

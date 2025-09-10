@@ -51,7 +51,7 @@
     Install_CreatingUserTask = "Создание/обновление задачи пользователя '{0}' для '{1}'..."
     Install_UserTaskDescription = "WindowsOrchestrator: Выполняет скрипт конфигурации пользователя при входе в систему."
     Install_MainTasksConfigured = "Основные запланированные задачи настроены."
-    Install_DailyRebootTasksNote = "Задачи для ежедневной перезагрузки ('AllSys_SystemScheduledReboot') и действия перед перезагрузкой ('AllSys_SystemPreRebootAction') будут создаваться/управляться скриптом '{0}' во время его выполнения."
+    Install_DailyRebootTasksNote = "Задачи для ежедневной перезагрузки ('WindowsOrchestrator_SystemScheduledReboot') и действия перед перезагрузкой ('AllSys_SystemPreRebootAction') будут создаваться/управляться скриптом '{0}' во время его выполнения."
     Install_AttemptingInitialLaunch = "Попытка первоначального запуска скриптов конфигурации..."
     Install_ExecutingSystemScript = "Выполнение config_systeme.ps1 для применения начальных системных конфигураций..."
     Install_SystemScriptSuccess = "config_systeme.ps1 успешно выполнен (код выхода 0)."

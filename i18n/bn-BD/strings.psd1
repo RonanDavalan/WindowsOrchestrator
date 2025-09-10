@@ -51,7 +51,7 @@
     Install_CreatingUserTask = "ব্যবহারকারীর টাস্ক '{0}' '{1}' এর জন্য তৈরি/আপডেট করা হচ্ছে..."
     Install_UserTaskDescription = "WindowsOrchestrator: লগঅন এ ব্যবহারকারী কনফিগারেশন স্ক্রিপ্ট চালায়।"
     Install_MainTasksConfigured = "প্রধান নির্ধারিত টাস্ক কনফিগার করা হয়েছে।"
-    Install_DailyRebootTasksNote = "দৈনিক রিবুট ('AllSys_SystemScheduledReboot') এবং প্রি-রিবুট অ্যাকশন ('AllSys_SystemPreRebootAction') এর জন্য টাস্কগুলি '{0}' দ্বারা এর এক্সিকিউশনের সময় তৈরি/পরিচালনা করা হবে।"
+    Install_DailyRebootTasksNote = "দৈনিক রিবুট ('WindowsOrchestrator_SystemScheduledReboot') এবং প্রি-রিবুট অ্যাকশন ('AllSys_SystemPreRebootAction') এর জন্য টাস্কগুলি '{0}' দ্বারা এর এক্সিকিউশনের সময় তৈরি/পরিচালনা করা হবে।"
     Install_AttemptingInitialLaunch = "কনফিগারেশন স্ক্রিপ্টগুলির প্রাথমিক লঞ্চের চেষ্টা করা হচ্ছে..."
     Install_ExecutingSystemScript = "প্রাথমিক সিস্টেম কনফিগারেশন প্রয়োগ করতে config_systeme.ps1 চালানো হচ্ছে..."
     Install_SystemScriptSuccess = "config_systeme.ps1 সফলভাবে চালানো হয়েছে (এক্সিট কোড 0)।"
