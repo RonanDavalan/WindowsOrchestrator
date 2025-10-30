@@ -1,7 +1,3 @@
-# Dossier contenant les ressources statiques (images, vidéos, etc.)
-# Ces fichiers sont souvent volumineux et ne nécessitent pas de versionnage.
-/assets/
-
 # Dossier de logs généré automatiquement
 /Logs/
 
@@ -12,4 +8,3 @@
 # Fichiers temporaires
 *.tmp
 *~
-clean-mirror/
