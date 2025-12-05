@@ -1,689 +1,1500 @@
----
-title: "Entwickler-Leitfaden"
-version: 1.71.0
-date: 2025-09-08
-authors:
-  - Ronan Davalan
-  - Gemini
+# ENTWICKLER-LEITFADEN - WindowsOrchestrator 1.72
+
 ---
 
-# Technische Dokumentation für WindowsOrchestrator
+📘 **[Benutzerhandbuch](BENUTZERHANDBUCH.md)**
+*Zielgerichtet an Systemadministratoren und Bereitstellungstechniker.*
+Enthält Schritt-für-Schritt-Anleitungen, Assistenten-Screenshots und Fehlerbehebungsanleitungen.
 
-Dieses Dokument ist eine technische Referenz für das WindowsOrchestrator-Projekt. Es beschreibt die Architektur, die Komponenten und die Ausführungssequenz jedes Skripts.
+🏠 **[Zurück zur Startseite](README.md)**
+*Zurück zur deutschen Dokumentationsportal.*
 
-* [1. Projektübersicht](#1-projektübersicht)
-  * [1.1. Zweck des Projekts](#11-zweck-des-projekts)
-  * [1.2. Funktionsprinzipien](#12-funktionsprinzipien)
-* [2. Architektur und Schlüsselkomponenten](#2-architektur-und-schlüsselkomponenten)
-  * [2.1. Architekturdiagramm](#21-architekturdiagramm)
-  * [2.2. Die Rolle der Aufgabenplanung](#22-die-rolle-der-aufgabenplanung)
-  * [2.3. Die Datei `config.ini`: Quelle der Konfiguration](#23-die-datei-configini-quelle-der-konfiguration)
-  * [2.4. Das Internationalisierungssystem (i18n)](#24-das-internationalisierungssystem-i18n)
-* [3. Lebenszyklus und Ausführungssequenzen](#3-lebenszyklus-und-ausführungssequenzen)
-  * [3.1. Vollständige Installationssequenz](#31-vollständige-installationssequenz)
-  * [3.2. Ausführungssequenz beim Start (Laufzeit - Systemebene)](#32-ausführungssequenz-beim-start-laufzeit-systemebene)
-  * [3.3. Ausführungssequenz bei der Anmeldung (Laufzeit - Benutzerebene)](#33-ausführungssequenz-bei-der-anmeldung-laufzeit-benutzerebene)
-  * [3.4. Deinstallationssequenz](#34-deinstallationssequenz)
-* [4. Installations- und Deinstallationsverfahren](#4-installations-und-deinstallationsverfahren)
-  * [4.1. Installationsverfahren](#41-installationsverfahren)
-    * [4.1.1. Phase 1: Konfiguration (Benutzerkontext)](#411-phase-1-konfiguration-benutzerkontext)
-    * [4.1.2. Phase 2: Installation der Aufgaben (Administratorkontext)](#412-phase-2-installation-der-aufgaben-administratorkontext)
-    * [4.1.3. Systemzustand nach der Installation](#413-systemzustand-nach-der-installation)
-  * [4.2. Deinstallationsverfahren](#42-deinstallationsverfahren)
-    * [4.2.1. Erhöhung der Berechtigungen](#421-erhöhung-der-berechtigungen)
-    * [4.2.2. Vom Skript ausgeführte Aktionen](#422-vom-skript-ausgeführte-aktionen)
-    * [4.2.3. Systemzustand nach der Deinstallation](#423-systemzustand-nach-der-deinstallation)
-* [5. Detaillierte Konfigurationsanleitung (`config.ini`)](#5-detaillierte-konfigurationsanleitung-configini)
-  * [5.1. Abschnitt `[SystemConfig]`](#51-abschnitt-systemconfig)
-  * [5.2. Abschnitt `[Process]`](#52-abschnitt-process)
-  * [5.3. Abschnitt `[Logging]`](#53-abschnitt-logging)
-  * [5.4. Abschnitt `[Gotify]`](#54-abschnitt-gotify)
-* [6. Detaillierte Skriptbeschreibung (Code-Referenz)](#6-detaillierte-skriptbeschreibung-code-referenz)
-  * [6.1. Orchestrierungsskripte (`management/`)](#61-orchestrierungsskripte-management)
-    * [**`firstconfig.ps1`**](#firstconfigps1)
-    * [**`install.ps1`**](#installps1)
-    * [**`uninstall.ps1`**](#uninstallps1)
-  * [6.2. Laufzeitskripte (Stammverzeichnis)](#62-laufzeitskripte-stammverzeichnis)
-    * [**`config_systeme.ps1`**](#config_systemeps1)
-    * [**`config_utilisateur.ps1`**](#config_utilisateurps1)
-  * [6.3. Hilfsskripte und Starter](#63-hilfsskripte-und-starter)
-    * [**`Close-AppByTitle.ps1`**](#close-appbytitleps1)
-    * [**`PreReboot.bat` und `LaunchApp.bat`**](#prerebootbat-und-launchappbat)
-    * [**`management/tools/Find-WindowInfo.ps1`**](#managementtoolsfind-windowinfops1)
-* [7. Wartungs- und Debugging-Verfahren](#7-wartungs-und-debugging-verfahren)
-  * [7.1. Verstehen und Verwenden von Protokollen (`Logs/`)](#71-verstehen-und-verwenden-von-protokollen-logs)
-  * [7.2. Manuelles Debuggen von Skripten](#72-manuelles-debuggen-von-skripten)
-    * [**Ausführen von `config_systeme.ps1` mit `SYSTEM`-Rechten**](#ausführen-von-config_systemeps1-mit-system-rechten)
-    * [**Testen von `config_utilisateur.ps1` in einer Benutzersitzung**](#testen-von-config_utilisateurps1-in-einer-benutzersitzung)
-    * [**Überprüfen des Status von geplanten Aufgaben**](#überprüfen-des-status-von-geplanten-aufgaben)
-  * [**7.3. Sicherheitsaspekte**](#73-sicherheitsaspekte)
-  * [**7.4. Bekannte Einschränkungen**](#74-bekannte-einschränkungen)
-* [8. Anhang](#8-anhang)
-  * [8.1. Lizenz](#81-lizenz)
-  * [8.2. Glossar der Begriffe](#82-glossar-der-begriffe)
+---
 
-## 1. Projektübersicht
+## Inhaltsverzeichnis
 
-### 1.1. Zweck des Projekts
+1. [Technische Präambel und Projektumfang](#1-technische-präambel-und-projektumfang)
+    1.1. [Nicht-Installierbare Natur und Portabilitätsphilosophie](#11-nicht-installierbare-natur-und-portabilitätsphilosophie)
+    1.2. [Technische Haftungsausschluss](#12-technische-haftungsausschluss)
+    1.3. [Benennungskonventionen und Terminologie](#13-benennungskonventionen-und-terminologie)
+2. [Systemarchitektur und Sicherheitsmodell](#2-systemarchitektur-und-sicherheitsmodell)
+    2.1. [Das Modell der Privilegentrennung](#21-das-modell-der-privilegentrennung)
+        2.1.1. [Der SYSTEM-Kontext (config_systeme.ps1)](#211-der-system-kontext-config_systemeps1)
+        2.1.2. [Der USER-Kontext (config_utilisateur.ps1)](#212-der-user-kontext-config_utilisateurps1)
+        2.1.3. [Ausführungsflussdiagramm](#213-ausführungsflussdiagramm)
+    2.2. [Geplante Aufgaben-Architektur](#22-geplante-aufgaben-architektur)
+        2.2.1. [Hauptaufgaben (Statisch)](#221-hauptaufgaben-statisch)
+        2.2.2. [Dynamische Aufgaben (Laufzeitgesteuert)](#222-dynamische-aufgaben-laufzeitgesteuert)
+        2.2.3. [Kritische Analyse des LogonType: Interaktiv vs. Passwort vs. S4U](#223-kritische-analyse-des-logontype-interaktiv-vs-passwort-vs-s4u)
+    2.3. [Zeitliche Orchestrierung und Parallelität](#23-zeitliche-orchestrierung-und-parallelität)
+        2.3.1. [Backup/Close-Entkopplung](#231-backupclose-entkopplung)
+        2.3.2. [Typische tägliche Chronologie (Workflow)](#232-typische-tägliche-chronologie-workflow)
+3. [Tiefgehende Analyse des Konfigurationsvertrags (config.ini)](#3-tiefgehende-analyse-des-konfigurationsvertrags-configini)
+    3.1. [Abschnitt [SystemConfig]: Globale Parameter](#31-abschnitt-systemconfig-globale-parameter)
+        3.1.1. [SessionStartupMode: Entscheidungsbaum](#311-sessionstartupmode-entscheidungsbaum)
+        3.1.2. [DisableWindowsUpdate: Mechanismus und Verantwortungsübergang](#312-disablewindowsupdate-mechanismus-und-verantwortungsübergang)
+        3.1.3. [OneDriveManagementMode: Die 3 Verwaltungsebenen](#313-onedrivemanagementmode-die-3-verwaltungsebenen)
+    3.2. [Abschnitt [Process]: Anwendungslebenszyklusverwaltung](#32-abschnitt-process-anwendungslebenszyklusverwaltung)
+        3.2.1. [Unterscheidung ProcessToLaunch vs. ProcessToMonitor](#321-unterscheidung-processtolaunch-vs-processtomonitor)
+        3.2.2. [LaunchConsoleMode: Standard vs. Legacy](#322-launchconsolemode-standard-vs-legacy)
+        3.2.3. [StartProcessMinimized: Splatting-Technik](#323-startprocessminimized-splatting-technik)
+    3.3. [Abschnitt [DatabaseBackup]: Backup-Modul](#33-abschnitt-databasebackup-backup-modul)
+        3.3.1. [EnableBackup: Der Kill-Schalter](#331-enablebackup-der-kill-schalter)
+        3.3.2. [DatabaseKeepDays: Datumsbasierter Löschalgorithmus](#332-databasekeepdays-datumsbasierter-löschalgorithmus)
+        3.3.3. [Zeitliche differentielle Logik](#333-zeitliche-differentielle-logik)
+    3.4. [Abschnitt [Installation]: Bereitstellung und Resilienz](#34-abschnitt-installation-bereitstellung-und-resilienz)
+        3.4.1. [SilentMode: Auswirkungskette](#341-silentmode-auswirkungskette)
+        3.4.2. [AutologonDownloadUrl: Link-Rot-Resilienz](#342-autologondownloadurl-link-rot-resilienz)
+        3.4.3. [UseAutologonAssistant: Bedingte Logik](#343-useautologonassistant-bedingte-logik)
+4. [Code-Struktur und Komponentenanalyse](#4-code-struktur-und-komponentenanalyse)
+    4.1. [Detaillierte Projektstruktur](#41-detaillierte-projektstruktur)
+    4.2. [Das zentrale Modul: WindowsOrchestratorUtils.psm1](#42-das-zentrale-modul-windowsorchestratorutilspsm1)
+        4.2.1. [I/O-Abstraktionsfunktionen (Ein-/Ausgabe)](#421-io-abstraktionsfunktionen-ein-ausgabe)
+            [Get-IniContent: Manueller INI-Parser](#get-inicontent-manueller-ini-parser)
+            [Set-IniValue: Sichere INI-Schreibung](#set-inivalue-sichere-ini-schreibung)
+            [Get-ConfigValue: Typisierte Lesung mit Standardwerten](#get-configvalue-typisierte-lesung-mit-standardwerten)
+        4.2.2. [Internationalisierungssystem (i18n)](#422-internationalisierungssystem-i18n)
+            [Lokalisierungsstrategie (v1.72+)](#lokalisierungsstrategie-v172)
+        4.2.3. [Protokollierungssystem](#423-protokollierungssystem)
+            [Write-Log: Strukturierte und resiliente Schreibung](#write-log-strukturierte-und-resiliente-schreibung)
+            [Add-Action / Add-Error: Aggregatoren](#add-action-add-error-aggregatoren)
+            [Invoke-LogFileRotation: Archivverwaltung](#invoke-logfilerotation-archivverwaltung)
+        4.2.4. [Start-OrchestratorProcess: Vereinheitlichte Start-Engine](#424-start-orchestratorprocess-vereinheitlichte-start-engine)
+            [Entscheidungsalgorithmus](#entscheidungsalgorithmus)
+            [Legacy-Modus- und Konsolenverwaltung](#legacy-modus-und-konsolenverwaltung)
+            [Parameterkonstruktion (Splatting)](#parameterkonstruktion-splatting)
+        4.2.5. [Warte-UI-Verwaltung (Splash-Screen)](#425-warte-ui-verwaltung-splash-screen)
+        4.2.6. [Invoke-ExitLogic: Vereinheitlichte Ausgangsverwaltung](#426-invoke-exitlogic-vereinheitlichte-ausgangsverwaltung)
+    4.3. [Eingangspunkte (Wrapper)](#43-eingangspunkte-wrapper)
+        4.3.1. [Installationsausführungskette](#431-installationsausführungskette)
+        4.3.2. [Launcher-Logik Launch-Install.ps1](#432-launcher-logik-launch-installps1)
+    4.4. [Installationsskripte](#44-installationsskripte)
+        4.4.1. [firstconfig.ps1: Dynamische grafische Oberfläche](#441-firstconfigps1-dynamische-grafische-oberfläche)
+        4.4.2. [install.ps1: Installations-Engine](#442-installps1-installations-engine)
+    4.5. [Laufzeit-Skripte](#45-laufzeit-skripte)
+        4.5.1. [config_systeme.ps1 (SYSTEM-Kontext)](#451-config_systemeps1-system-kontext)
+            [Zielbenutzerbestimmung (Vollständiger Algorithmus)](#zielbenutzerbestimmung-vollständiger-algorithmus)
+            [Andere kritische Funktionen](#andere-kritische-funktionen)
+        4.5.2. [config_utilisateur.ps1 (USER-Kontext)](#452-config_utilisateurps1-user-kontext)
+    4.6. [Spezialisierte Module](#46-spezialisierte-module)
+        4.6.1. [Invoke-DatabaseBackup.ps1: Autonomes Backup](#461-invoke-databasebackupps1-autonomes-backup)
+            [A. Verriegelungsmechanismus (Lock-Datei)](#a-verriegelungsmechanismus-lock-datei)
+            [B. Zeitliche differentielle Logik](#b-zeitliche-differentielle-logik)
+            [C. Verwaltung gepaarter Dateien (SQLite)](#c-verwaltung-gepaarter-dateien-sqlite)
+            [D. Vorabprüfungen](#d-vorabprüfungen)
+        4.6.2. [Close-AppByTitle.ps1: Saubere Schließung via API](#462-close-appbytitleps1-saubere-schließung-via-api)
+            [C#-P/Invoke-Injektion: Vollständiger Code](#c-pinvoke-injektion-vollständiger-code)
+            [Retry-Logik mit Timeout](#retry-logik-mit-timeout)
+5. [Verwaltung externer Abhängigkeiten und Sicherheit](#5-verwaltung-externer-abhängigkeiten-und-sicherheit)
+    5.1. [Microsoft Sysinternals Autologon-Tool](#51-microsoft-sysinternals-autologon-tool)
+        5.1.1. [Download- und Architekturauswahlmechanismus](#511-download-und-architekturauswahlmechanismus)
+        5.1.2. [Anmeldedatensicherheit: LSA-Geheimnisse](#512-anmeldedatensicherheit-lsa-geheimnisse)
+            [LSA-Geheimnisse-Bereinigungsprozess (Deinstallation)](#lsa-geheimnisse-bereinigungsprozess-deinstallation)
+    5.2. [Gotify-Benachrichtigungen (Optional)](#52-gotify-benachrichtigungen-optional)
+        5.2.1. [REST-Implementierung](#521-rest-implementierung)
+        5.2.2. [Netzwerkresilienz](#522-netzwerkresilienz)
+6. [Lebenszyklus und Nutzungsszenarien](#6-lebenszyklus-und-nutzungsszenarien)
+    6.1. [Vollständige Installationssequenz](#61-vollständige-installationssequenz)
+        [Logisches Sequenzdiagramm (Mermaid)](#logisches-sequenzdiagramm-mermaid)
+        [Detaillierte Flussschritte](#detaillierte-flussschritte)
+    6.2. [Detaillierte tägliche Zeitleiste (Timeline)](#62-detaillierte-tägliche-zeitleiste-timeline)
+    6.3. [Sitzungsmodi: Vergleichende Analyse](#63-sitzungsmodi-vergleichende-analyse)
+        [Technische Vergleichstabelle](#technische-vergleichstabelle)
+        [Szenarioanalyse](#szenarioanalyse)
+7. [Wartung, Debugging und Ausgangsverfahren](#7-wartung-debugging-und-ausgangsverfahren)
+    7.1. [Protokollierungssystem](#71-protokollierungssystem)
+        7.1.1. [Speicherort und Format](#711-speicherort-und-format)
+        7.1.2. [Rotationsrichtlinie](#712-rotationsrichtlinie)
+        7.1.3. [Automatischer Fallback (Sicherheit)](#713-automatischer-fallback-sicherheit)
+    7.2. [Manuelle Debugging-Verfahren](#72-manuelle-debugging-verfahren)
+        7.2.1. [USER-Kontext-Debugging](#721-user-kontext-debugging)
+        7.2.2. [SYSTEM-Kontext-Debugging (via PsExec)](#722-system-kontext-debugging-via-psexec)
+        7.2.3. [Geplante Aufgaben-Analyse](#723-geplante-aufgaben-analyse)
+    7.3. [Ausgangscodes und Fehlererkennung](#73-ausgangscodes-und-fehlererkennung)
+        7.3.1. [Standardcodes](#731-standardcodes)
+        7.3.2. [Interne Erkennung](#732-interne-erkennung)
+    7.4. [Häufige Probleme und Lösungen](#74-häufige-probleme-und-lösungen)
+        7.4.1. [Die Anwendung startet nicht](#741-die-anwendung-startet-nicht)
+        7.4.2. [Der Neustart funktioniert nicht](#742-der-neustart-funktioniert-nicht)
+        7.4.3. [Backup schlägt fehl ("Access Denied")](#743-backup-schlägt-fehl-access-denied)
+        7.4.4. [Splash-Screen bleibt hängen (Silent-Modus)](#744-splash-screen-bleibt-hängen-silent-modus)
+8. [Anhänge](#8-anhänge)
+    8.1. [Lizenz](#81-lizenz)
+    8.2. [Vollständiges technisches Glossar](#82-vollständiges-technisches-glossar)
+    8.3. [Entwicklungsstandards](#83-entwicklungsstandards)
+        8.3.1. [Konvention relativer Pfade](#831-konvention-relativer-pfade)
+        8.3.2. [Formatierungskonvention (i18n)](#832-formatierungskonvention-i18n)
+        8.3.3. [Fehlerbehandlung](#833-fehlerbehandlung)
+    8.4. [Credits](#84-credits)
+    8.5. [Schnelle diagnostische PowerShell-Befehle](#85-schnelle-diagnostische-powershell-befehle)
 
-Das WindowsOrchestrator-Projekt automatisiert die Konfiguration eines Windows-Betriebssystems. Es führt Skripte aus, die Systemeinstellungen ändern und Anwendungen verwalten. Die von den Skripten durchgeführten Aktionen verwandeln eine Standard-Windows-Installation in eine Umgebung, deren Verhalten durch eine zentrale Konfigurationsdatei definiert wird.
+## 1. Technische Präambel und Projektumfang
 
-Die Skripte lesen die Datei config.ini, um Befehle auszuführen, die Registrierungsschlüssel ändern, Windows-Dienste verwalten, Energieeinstellungen konfigurieren, geplante Aufgaben erstellen und den Lebenszyklus eines Benutzerprozesses verwalten.
+### 1.1. Nicht-Installierbare Natur und Portabilitätsphilosophie
 
-Das Projekt stellt eine Reihe von Skripten zur Verfügung, die Konfigurationen für die Energieverwaltung, System-Updates, die Benutzersitzung und den Lebenszyklus einer Anwendung anwenden.
+Die Architektur von WindowsOrchestrator wurde entwickelt, um die Einschränkungen traditioneller Softwareinstallationen (MSI, EXE, AppX) zu umgehen. Sie verfolgt das Paradigma der **Portablen Anwendung**.
 
-### 1.2. Funktionsprinzipien
+*   **Abwesenheit von Fußabdruck in Systemverzeichnissen**:
+    *   Das Projekt stellt keine Dateien in `%PROGRAMFILES%` (`C:\Programme`), `%PROGRAMDATA%` oder `%APPDATA%` bereit.
+    *   Es erstellt keine Registrierungsschlüssel, um sich in "Programme hinzufügen/entfernen" zu referenzieren.
+    *   Die Gesamtheit des Codes, der Konfiguration und der Protokolle befindet sich im ursprünglichen Extraktionsordner.
 
-Die Funktionsweise von WindowsOrchestrator basiert auf vier Hauptmechanismen.
+*   **Dynamische Pfadauflösung (Relative Pfade)**:
+    *   Um diese Portabilität zu gewährleisten, ist die Verwendung absoluter Pfade (z. B.: `C:\WindowsOrchestrator\...`) im Quellcode strengstens verboten.
+    *   **PowerShell**: Alle Skripte verwenden die automatische Variable `$PSScriptRoot` in Kombination mit dem Cmdlet `Join-Path`, um Module, Sprachdateien und Tools zu lokalisieren.
+        *   *Beispiel*: `$ConfigFile = Join-Path (Split-Path $PSScriptRoot -Parent) "config.ini"`
+    *   **Batch**: Launcher-Skripte (`.bat`) verwenden die Erweiterungsvariable `%~dp0`, um ihr aktuelles Ausführungsverzeichnis zu identifizieren.
 
-1.  **Ausführung durch native Windows-Tools**
-    Das Projekt verwendet in Windows integrierte Funktionen und Befehle: PowerShell 5.1, Aufgabenplanung, Registrierungs-Editor und Befehlszeilen-Dienstprogramme (`powercfg`, `shutdown`). Das Projekt erfordert keine Installation externer Abhängigkeiten.
+*   **Operative Konsequenzen**:
+    *   **Verschiebung**: Der Stammordner kann von einem `C:\`-Laufwerk zu einem `D:\`-Volume, einem USB-Stick oder einem zugeordneten Netzwerkfreigabe verschoben werden, ohne die interne Funktionalität zu brechen. Nur geplante Aufgaben (die absolute Pfade bei ihrer Erstellung enthalten) müssen über das `install.ps1`-Skript neu erstellt werden.
+    *   **Update**: Wartung erfolgt "In-Place". Um den Orchestrator zu aktualisieren, ersetzen Sie einfach die `.ps1`- und `.psm1`-Dateien. Benutzerdaten (`config.ini`) und Audit-Trails (`Logs\`) werden beibehalten, da sie sich außerhalb der Geschäftslogikordner befinden.
 
-2.  **Konfiguration über eine zentralisierte Datei**
-    Die Ausführungslogik der Skripte ist von der Konfiguration getrennt. Die Skripte lesen die Datei `config.ini`, um die auszuführenden Aktionen zu bestimmen. Um das Verhalten der Skripte zu ändern, ändert ein Benutzer die Werte in der `config.ini`.
+### 1.2. Technische Haftungsausschluss
 
-3.  **Trennung der Ausführungskontexte (System vs. Benutzer)**
-    Das Projekt verwendet zwei unterschiedliche Ausführungskontexte:
-    *   Das Skript **`config_systeme.ps1`** wird mit den Berechtigungen des Kontos `NT AUTHORITY\SYSTEM` ausgeführt und ändert die globalen Einstellungen des Computers (HKLM-Registrierung, Dienste, geplante Aufgaben).
-    *   Das Skript **`config_utilisateur.ps1`** wird mit den Berechtigungen des angemeldeten Benutzers ausgeführt und verwaltet die Prozesse seiner Sitzung.
+Diese Software wird unter **GPLv3**-Lizenz bereitgestellt, nach dem "AS IS"-Prinzip. Als Entwickler oder Integrator müssen Sie die folgenden Implikationen beherrschen:
 
-4.  **Idempotenz der Aktionen**
-    Die Skripte sind so geschrieben, dass ihre wiederholte Ausführung denselben Endzustand erzeugt wie ihre einmalige Ausführung. Bevor eine Einstellung geändert wird, prüft ein Skript den aktuellen Zustand des Systems. Wenn der gewünschte Zustand bereits angewendet wurde, wiederholt das Skript die Änderungsaktion nicht.
+*   **Kritische Systemabhängigkeiten**:
+    *   Der Orchestrator ist kein selbstständiges Binary, das seine eigenen Bibliotheken enthält. Es handelt sich um eine Orchestrierungs-Engine, die direkt native Windows-Komponenten manipuliert.
+    *   Es hängt von der Stabilität von **WMI/CIM** (für Prozessüberwachung), dem **Service Control Manager** (für Windows Update) und der **Win32**-API (für Fensterverwaltung) ab.
+    *   Ein Windows-System, dessen WMI-Subsysteme beschädigt sind oder dessen Sicherheitsrichtlinien (Domänen-GPO) den Zugriff auf die HKLM-Registrierung blockieren, wird das Tool am Funktionieren hindern.
 
-## 2. Architektur und Schlüsselkomponenten
+*   **Grenzen der Idempotenz und Wiederherstellung**:
+    *   Die Deinstallationsprozedur funktioniert nicht wie ein "Snapshot" oder ein Systemwiederherstellungspunkt.
+    *   Sie wendet eine "Reset to Defaults"-Logik an: Sie setzt Parameter (Windows Update, Fast Startup, OneDrive) auf ihre standardmäßigen Microsoft-Werte zurück.
+    *   *Auswirkung*: Wenn die Zielmaschine vor der Installation des Orchestrators spezifische Konfiguration hatte (z. B.: Windows Update manuell deaktiviert), wird die Deinstallation des Orchestrators den Dienst reaktivieren, wodurch der ursprüngliche Zustand der Maschine geändert wird.
 
-Die Architektur von WindowsOrchestrator verwendet native Windows-Komponenten. Jede Komponente hat eine definierte Rolle.
+### 1.3. Benennungskonventionen und Terminologie
 
-### 2.1. Architekturdiagramm
+Um Konsistenz zwischen Quellcode, Konfigurationsdateien und dieser technischen Dokumentation zu gewährleisten, wird eine strenge Konvention angewendet:
 
-Der Ausführungsfluss und die Interaktionen zwischen den Komponenten werden durch das folgende Diagramm dargestellt:
+*   **`MyApp`**: Dieser generische Begriff bezeichnet die Ziel-Geschäftsanwendung, die der Orchestrator verwalten muss.
+    *   Er ersetzt alle Referenzen zu spezifischen internen Projekten (ehemals `Allv023-05`, `AllSys`, etc.).
+    *   In der `config.ini`-Datei entspricht dies dem Wert des `ProcessToMonitor`-Schlüssels.
+*   **Orchestrator**: Bezeichnet die Gesamtheit der PowerShell-Skripte, Module und geplanten Aufgaben, die die Lösung bilden.
+
+---
+
+## 2. Systemarchitektur und Sicherheitsmodell
+
+Das Design von WindowsOrchestrator beruht auf der sicheren Umgehung der Einschränkungen, die das Sicherheitsmodell von Windows auferlegt, insbesondere die Isolation des SYSTEM-Kontexts.
+
+### 2.1. Das Modell der Privilegentrennung
+
+Um seine Funktionen zu erfüllen (Systemkonfiguration UND Anwendungsstart), kann sich das Tool nicht auf ein einzelnes Skript stützen. Es verwendet zwei separate und hermetische Ausführungskontexte.
+
+#### 2.1.1. Der SYSTEM-Kontext (`config_systeme.ps1`)
+
+Dieses Skript fungiert als "Low-Level-Engine" der Lösung.
+
+*   **Ausführungsidentität**: `NT AUTHORITY\SYSTEM` (auch bekannt als *LocalSystem*).
+*   **Startmechanismus**: Geplante Aufgabe `WindowsOrchestrator-SystemStartup`.
+*   **Technische Notwendigkeit**:
+    *   Es ist das einzige Konto, das die erforderlichen Berechtigungen hat, um kritische Registrierungshives (`HKEY_LOCAL_MACHINE\SYSTEM`, `HKEY_LOCAL_MACHINE\SOFTWARE\Policies`) zu modifizieren.
+    *   Es hat das Recht, den Zustand von Windows-Diensten (Start, Stopp, Deaktivierung) zu kontrollieren, ohne UAC-Eingabeaufforderungen auszulösen.
+    *   Es kann globale Stromversorgungspläne über `powercfg.exe` modifizieren.
+*   **Kritische Einschränkungen (Erhöhte Berechtigungen ohne grafische Session)**:
+    *   Aufgaben, die im SYSTEM-Kontext ausgeführt werden, haben alle administrativen Berechtigungen, aber sie werden **ohne Benutzer-Desktop-Umgebung** ausgeführt.
+    *   **Konsequenz**: Dieses Skript ist für den Benutzer unsichtbar. Jeder Versuch, eine grafische Benutzeroberfläche anzuzeigen (`MessageBox`, Formulare), schlägt fehl oder bleibt unsichtbar. Das Skript kann grafische Anwendungen nur über dedizierte geplante Aufgaben im USER-Kontext starten.
+
+#### 2.1.2. Der USER-Kontext (`config_utilisateur.ps1`)
+
+Dieses Skript fungiert als "Interaktive Engine" und verwaltet die Benutzererfahrung.
+
+*   **Ausführungsidentität**: Der angemeldete Benutzer (Interaktiv). Dies kann der für Autologon definierte Benutzer oder jeder Benutzer sein, der eine Session öffnet.
+*   **Startmechanismus**: Geplante Aufgabe `WindowsOrchestrator-UserLogon` mit Trigger `At Logon` und LogonType `Interactive`.
+*   **Technische Notwendigkeit**:
+    *   Es wird **in der interaktiven Session des angemeldeten Benutzers** ausgeführt (aktive Desktop-Umgebung).
+    *   Im Gegensatz zum SYSTEM-Kontext hat es Zugriff auf den Desktop, sichtbare Fenster und Benutzerressourcen.
+    *   Es ist der einzige Kontext, der in der Lage ist, die Geschäftsanwendung (`MyApp`) so zu starten, dass sie auf dem Desktop sichtbar ist.
+    *   Es hat Zugriff auf die Hive `HKEY_CURRENT_USER` (HKCU), um Benutzereinstellungen zu konfigurieren.
+    *   Es hat Zugriff auf zugeordnete Netzwerkressourcen (Z:, Y:) und Drucker des Benutzers, die das SYSTEM-Konto nicht sieht.
+*   **Einschränkungen**:
+    *   Es kann globale Systemparameter nicht modifizieren (Dienste, HKLM) ohne Berechtigungserhöhung (UAC), was die Automatisierung brechen würde.
+
+#### 2.1.3. Ausführungsflussdiagramm
+
+Das Diagramm unten veranschaulicht die Dichotomie zwischen den beiden Kontexten vom Moment des Windows-Starts an.
 
 ```mermaid
 graph TD
-    %% Phase 1: Installation
-    subgraph "Phase 1: Installation"
-        A[Benutzer] --> B{1_install.bat}
-        B --> C{firstconfig.ps1}
-        C --> D[config.ini]
-        B --> E{install.ps1}
-        E --> D
-        E --> F((Geplante Aufgaben))
+    Start[Windows-Start] --> TaskSys[Aufgabe SystemStartup]
+    Logon[Session-Öffnung] --> TaskUser[Aufgabe UserLogon]
+    
+    subgraph "SYSTEM-Kontext"
+        TaskSys --> ScriptSys[config_systeme.ps1]
+        ScriptSys --> RegHKLM[HKLM-Registrierung]
+        ScriptSys --> Services[Windows-Dienste]
     end
-
-    %% Phase 2: Laufzeit
-    subgraph "Phase 2: Laufzeit"
-        G[Windows-Start] --> H[Aufgabe: SystemStartup]
-        I[Benutzeranmeldung] --> J[Aufgabe: UserLogon]
-        H --> K{config_systeme.ps1}
-        J --> L{config_utilisateur.ps1}
-        K --> M[config.ini]
-        L --> M
-        K --> N[Windows-System]
-        L --> N
+    
+    subgraph "USER-Kontext"
+        TaskUser --> ScriptUser[config_utilisateur.ps1]
+        ScriptUser --> AppLaunch[MyApp-Start]
     end
-
-    %% Visueller Übergang zwischen den Phasen
-    F --> G
-
-    %% Angewandte Änderungen
-    subgraph "Angewandte Änderungen"
-        N --> N1[Registrierung]
-        N --> N2[Dienste]
-        N --> N3[Befehle]
-        N --> N4[Prozesse]
-    end
-
-    %% Stile Phase 1
-    style A fill:#e3f2fd,stroke:#2196f3,stroke-width:1px
-    style B fill:#e3f2fd,stroke:#2196f3,stroke-width:1px
-    style C fill:#e3f2fd,stroke:#2196f3,stroke-width:1px
-    style D fill:#e3f2fd,stroke:#2196f3,stroke-width:1px
-    style E fill:#e3f2fd,stroke:#2196f3,stroke-width:1px
-    style F fill:#e3f2fd,stroke:#2196f3,stroke-width:1px
-
-    %% Stile Phase 2
-    style G fill:#fff3e0,stroke:#fb8c00,stroke-width:1px
-    style H fill:#fff3e0,stroke:#fb8c00,stroke-width:1px
-    style I fill:#fff3e0,stroke:#fb8c00,stroke-width:1px
-    style J fill:#fff3e0,stroke:#fb8c00,stroke-width:1px
-    style K fill:#fff3e0,stroke:#fb8c00,stroke-width:1px
-    style L fill:#fff3e0,stroke:#fb8c00,stroke-width:1px
-    style M fill:#fff3e0,stroke:#fb8c00,stroke-width:1px
-    style N fill:#fff3e0,stroke:#fb8c00,stroke-width:1px
-
-    %% Stile Änderungen
-    style N1 fill:#f3e5f5,stroke:#8e24aa,stroke-width:1px
-    style N2 fill:#f3e5f5,stroke:#8e24aa,stroke-width:1px
-    style N3 fill:#f3e5f5,stroke:#8e24aa,stroke-width:1px
-    style N4 fill:#f3e5f5,stroke:#8e24aa,stroke-width:1px
 ```
 
-Dieses Diagramm zeigt die Trennung zwischen der **Installationsphase**, die vom Benutzer initiiert wird, und der **Laufzeitphase**, einem automatisierten Zyklus, der von der Aufgabenplanung verwaltet wird.
+---
 
-### 2.2. Die Rolle der Aufgabenplanung
+## 2.2. Geplante Aufgaben-Architektur
 
-Die Windows-Aufgabenplanung ist die zentrale Komponente der Automatisierung. Sie führt die Konfigurationsskripte zu definierten Zeiten und mit den erforderlichen Berechtigungsstufen aus.
+Der Orchestrator stützt sich nicht auf veraltete Startmethoden, die unzuverlässig sind, wie den "Startup"-Ordner oder Run-Registrierungsschlüssel. Er verwendet ausschließlich den **Windows-Aufgabenplaner**, der die notwendige Granularität in Bezug auf Sicherheit, Kontext und Trigger bietet.
 
-Die beiden Hauptaufgaben, die von `install.ps1` erstellt werden, sind:
+### 2.2.1. Hauptaufgaben (Statisch)
 
-*   **`WindowsOrchestrator-SystemStartup`**
-    *   **Auslöser:** "Beim Systemstart".
-    *   **Ausführungskontext:** `NT AUTHORITY\SYSTEM`. Dieses Konto verfügt über die erforderlichen Berechtigungen, um Registrierungsschlüssel in `HKEY_LOCAL_MACHINE` (HKLM) zu ändern, Dienste zu verwalten und Systembefehle auszuführen.
-    *   **Rolle:** Alle Konfigurationen auf Maschinenebene ausführen.
+Diese Aufgaben bilden die unveränderliche Infrastruktur des Orchestrators. Sie werden einmal während der Ausführung des `install.ps1`-Skripts erstellt und danach nicht mehr modifiziert, außer bei Neuinstallation.
 
-*   **`WindowsOrchestrator-UserLogon`**
-    *   **Auslöser:** "Bei Anmeldung" des angegebenen Benutzers.
-    *   **Ausführungskontext:** Das Konto des angemeldeten Benutzers. Das Skript wird mit den Berechtigungen dieses Benutzers ausgeführt, was es ihm ermöglicht, grafische Anwendungen in der Sitzung des Benutzers zu starten.
-    *   **Rolle:** Alle benutzersitzungsspezifischen Konfigurationen ausführen.
+| Aufgabenname | Trigger (Trigger) | Sicherheitskontext | Technische Rolle |
+| :-------------------------------------- | :------------------------------------- | :----------------------------------------------- | :----------------------------------------------------------- |
+| **`WindowsOrchestrator-SystemStartup`** | `At Startup` (Beim Systemstart) | `NT AUTHORITY\SYSTEM` (RunLevel Highest) | Einstiegspunkt für die Maschinenkonfiguration. Es stellt sicher, dass die Umgebung vor jeder Benutzersession sicher ist (GPO, Power). Es fungiert als Selbstreparaturmechanismus beim Boot. |
+| **`WindowsOrchestrator-UserLogon`** | `At Logon` (Bei Session-Öffnung) | Interaktiver Benutzer (`LogonType Interactive`) | Einstiegspunkt für die Session. Es ist verantwortlich für die Initialisierung der Benutzerumgebung und den Start der Geschäftsanwendung (`MyApp`). |
 
-### 2.3. Die Datei `config.ini`: Quelle der Konfiguration
+### 2.2.2. Dynamische Aufgaben (Laufzeitgesteuert)
 
-Die Datei `config.ini` enthält die Beschreibung des gewünschten Endzustands des Systems. Die PowerShell-Skripte (`config_systeme.ps1`, `config_utilisateur.ps1`) lesen diese Datei und führen die notwendigen Befehle aus, damit das System den definierten Einstellungen entspricht.
+Im Gegensatz zu Hauptaufgaben werden diese Aufgaben dynamisch vom `config_systeme.ps1`-Skript bei jedem Systemstart verwaltet.
 
-Dieser Mechanismus hat mehrere faktische Merkmale:
-*   Das Verhalten der Skripte wird durch die in der Datei config.ini enthaltenen Schlüssel-Wert-Paare bestimmt.
-*   Die Ausführungslogik ist in PowerShell-Skriptdateien (.ps1) enthalten, während die Parameter, die diese Logik steuern, aus einer .ini-Datei gelesen werden.
-*   Die Skripte lesen die im Stammverzeichnis vorhandene Datei config.ini, was es separaten Instanzen des Projekts ermöglicht, je nach Inhalt ihrer eigenen config.ini-Datei unterschiedliche Verhaltensweisen aufzuweisen.
+*   **Mechanismus**: Das Skript liest die `config.ini`-Datei, prüft, ob sich Zeiten geändert haben, und verwendet `Register-ScheduledTask` (mit der Option `-Force`) oder `Unregister-ScheduledTask`, um den Planer zu aktualisieren.
+*   **Vorteil**: Dies ermöglicht es einem Administrator, die Neustart- oder Backup-Zeit einfach durch Bearbeitung der INI-Datei zu ändern, ohne den vollständigen Installer erneut auszuführen.
 
-### 2.4. Das Internationalisierungssystem (i18n)
+Liste der dynamischen Aufgaben:
+1.  **`WindowsOrchestrator-SystemBackup`**: Wird täglich zur durch `ScheduledBackupTime` definierten Zeit ausgelöst. Führt `Invoke-DatabaseBackup.ps1` im SYSTEM-Kontext aus.
+2.  **`WindowsOrchestrator-SystemScheduledReboot`**: Wird täglich zur durch `ScheduledRebootTime` definierten Zeit ausgelöst. Führt `shutdown.exe` aus.
+3.  **`WindowsOrchestrator-User-CloseApp`**: Wird täglich zur durch `ScheduledCloseTime` definierten Zeit ausgelöst. Führt `Close-AppByTitle.ps1` im interaktiven Benutzerkontext aus (notwendig, um Tasten an das Anwendungsfenster zu senden).
 
-Das Projekt lädt übersetzte Texte, ohne den Quellcode zu ändern.
+### 2.2.3. Kritische Analyse des LogonType: Interaktiv vs. Passwort vs. S4U
 
-*   **Dateistruktur:** Die Texte werden in `.psd1`-Dateien gespeichert, die sich in Unterordnern des `i18n/`-Verzeichnisses befinden. Jeder Unterordner ist nach einem Kulturcode benannt (z. B. `fr-FR`, `en-US`).
+Die Wahl des `LogonType` für die `UserLogon`-Aufgabe ist eine zentrale architektonische Entscheidung der Version 1.72, die die Passwortverwaltungsprobleme früherer Versionen löst.
 
-*   **Erkennungs- und Lademechanismus:**
-    1.  Zu Beginn seiner Ausführung führt ein Skript den Befehl `(Get-Culture).Name` aus, um den Kulturcode des Systems zu erhalten (z. B. `"fr-FR"`).
-    2.  Das Skript erstellt den Pfad zur entsprechenden Sprachdatei (z. B. `i18n\fr-FR\strings.psd1`).
-    3.  **Fallback-Logik:** Wenn diese Datei nicht existiert, verwendet das Skript den Pfad `i18n\en-US\strings.psd1`.
-    4.  Der Inhalt der `.psd1`-Datei wird von `Invoke-Expression` gelesen und interpretiert, wodurch eine Hashtabelle mit Texten in eine `$lang`-Variable geladen wird.
+| LogonType | Passwort erforderlich? | Grafische Session? | Technische Analyse |
+| :---------------- | :-------------------: | :-----------------: | :----------------------------------------------------------- |
+| **`Interactive`** | ❌ Nein | ✅ Ja | **Für v1.72 gewählt**. Die Aufgabe erstellt keine eigene Session; sie injiziert sich **in** die Benutzersession zum präzisen Moment ihrer Öffnung. Sie erbt das Zugriffstoken (Token), das vom Winlogon-Prozess generiert wird (oder Autologon). Dies ist der Grund, warum der Orchestrator **nicht** das Passwort des Benutzers kennen muss, um die grafische Anwendung zu starten. |
+| **`Password`** | ✅ Ja | ✅ Ja | Klassischer Modus "Run whether user is logged on or not". Erfordert die Speicherung des Passworts im Windows Credential Store (weniger sicher) und erfordert zwingend, dass das Konto die lokale Berechtigung `SeBatchLogonRight` hat ("Log on as a batch job"), die oft durch Sicherheits-GPOs in Unternehmen blockiert ist. |
+| **`S4U`** | ❌ Nein | ❌ Nein | "Service for User". Ermöglicht die Ausführung einer Aufgabe unter der Identität des Benutzers ohne Passwort, aber ohne Laden seines vollständigen Profils und **ohne authentifizierten Netzwerkzugriff** (Kerberos/NTLM). Außerdem kann dieser Modus keine grafische Benutzeroberfläche anzeigen. Unbrauchbar für `MyApp`. |
+**Kritische architektonische Klarstellung**:
 
-*   **Verwendung im Code:**
-    Um eine Nachricht anzuzeigen, greift der Code über einen Schlüssel auf die `$lang`-Hashtabelle zu (z. B. `$lang.Uninstall_StartMessage`). Die Protokollierungsfunktionen verwenden einen `-DefaultMessage`-Parameter, der einen englischen Text enthält, wenn ein Schlüssel nicht gefunden wird.
+Die Wahl des LogonType `Interactive` ist der Eckpfeiler der Architektur. Hier ist, warum es **obligatorisch** für WindowsOrchestrator ist:
 
-Um eine neue Sprache hinzuzufügen, muss ein Benutzer den Ordner `en-US` kopieren, ihn mit dem neuen Kulturcode umbenennen und die Werte in der Datei `strings.psd1` übersetzen.
+1. **Session-Token-Vererbung**: Wenn die Aufgabe "At Logon" ausgelöst wird, **erbt sie automatisch** das Zugriffstoken (Security Token) der Benutzersession, die geöffnet wird. Dies umfasst:
+   - Zugriff auf das Benutzerprofil (`HKCU`, `%APPDATA%`)
+   - Desktop-Sichtbarkeit (Desktop Window Manager)
+   - Zugeordnete Netzlaufwerke (Z:, Y:, etc.)
 
-## 3. Lebenszyklus und Ausführungssequenzen
+2. **Keine neue Session**: Im Gegensatz zu `Password` oder `S4U` versucht dieser Modus nicht, eine neue Session zu erstellen. Er injiziert sich in die bestehende Session, daher die Abwesenheit von Passwortbedarf.
 
-Dieser Abschnitt unterteilt die Prozesse des Projekts in chronologische Ausführungssequenzen.
+3. **Legacy-Anwendungskompatibilität**: Viele Drittanbieter-Anwendungen (insbesondere Geschäftsanwendungen) prüfen, ob sie in einer realen "interaktiven" Session laufen. Der LogonType `Interactive` erfüllt diese Prüfungen.
 
-### 3.1. Vollständige Installationssequenz
+**Was dieser Modus NICHT tut**:
+- Er umgeht UAC nicht (die Anwendung bleibt in Standardbenutzerberechtigungen)
+- Er funktioniert NICHT, wenn kein Benutzer angemeldet ist (die Aufgabe wartet auf Session-Öffnung)
+- Er erstellt keine virtuelle oder unsichtbare Terminal
 
-1.  **Phase 1 - Start und Konfiguration (Benutzerkontext)**
-    *   Der Benutzer führt `1_install.bat` aus.
-    *   Das Batch-Skript führt `management\firstconfig.ps1` aus.
-    *   **`firstconfig.ps1` wird ausgeführt:**
-        *   Es prüft die Existenz der Datei `config.ini`. Wenn sie nicht vorhanden ist, wird sie aus der Vorlage `management/defaults/default_config.ini` erstellt. Wenn sie vorhanden ist, fragt es den Benutzer, ob er sie ersetzen möchte.
-        *   Es zeigt eine Windows Forms-GUI an, die mit den aus `config.ini` gelesenen Werten vorausgefüllt ist.
-        *   Wenn auf "Speichern und Schließen" geklickt wird, schreibt das Skript die Werte aus den Feldern der Benutzeroberfläche in `config.ini`.
-        *   Das Skript `firstconfig.ps1` wird beendet.
+## 2.3. Zeitliche Orchestrierung und Parallelität
 
-2.  **Phase 2 - Erhöhung und Installation (Administratorkontext)**
-    *   Das Skript `1_install.bat` wird fortgesetzt.
-    *   Es führt einen PowerShell-Befehl aus, der `Start-Process PowerShell -Verb RunAs` verwendet, um `install.ps1` zu starten.
-    *   Windows löst eine **Benutzerkontensteuerung (UAC)**-Aufforderung aus. Der Benutzer muss die Berechtigungen erteilen.
-    *   **`install.ps1` wird mit Administratorrechten ausgeführt:**
-        *   Es prüft das Vorhandensein der Dateien `config_systeme.ps1` und `config_utilisateur.ps1`.
-        *   Es führt den Befehl `Register-ScheduledTask` aus, um zwei Aufgaben zu erstellen:
-            *   **`WindowsOrchestrator-SystemStartup`**, das `config_systeme.ps1` beim Start (`-AtStartup`) mit dem Konto `NT AUTHORITY\SYSTEM` ausführt.
-            *   **`WindowsOrchestrator-UserLogon`**, das `config_utilisateur.ps1` bei der Anmeldung (`-AtLogOn`) des Benutzers ausführt.
-        *   Um die Konfiguration anzuwenden, führt das Skript `config_systeme.ps1` und dann `config_utilisateur.ps1` über `Start-Process -Wait` aus.
-    *   Das Skript `install.ps1` wird beendet.
+Der Orchestrator stützt sich nicht auf ein einzelnes Skript, das "schläft" (Schleife `Start-Sleep`), während es auf eine Aktion wartet. Er stützt sich auf den Planer, um punktuelle und unabhängige Aktionen auszulösen.
 
-### 3.2. Ausführungssequenz beim Start (Laufzeit - Systemebene)
+### 2.3.1. Backup/Close-Entkopplung
 
-1.  **Auslöser:** Das Windows-Betriebssystem startet.
-2.  **Aufgabenausführung:** Die Aufgabenplanung führt die Aufgabe `WindowsOrchestrator-SystemStartup` aus.
-3.  **Skriptstart:** Die Aufgabe führt `powershell.exe` mit den Berechtigungen des Kontos `NT AUTHORITY\SYSTEM` aus, um `config_systeme.ps1` zu starten.
-4.  **Aktionen von `config_systeme.ps1`:**
-    *   Das Skript analysiert `config.ini` und lädt dessen Inhalt.
-    *   Es prüft die Netzwerkverbindung (`Test-NetConnection 8.8.8.8 -Port 53`).
-    *   Es führt die in `[SystemConfig]` definierten Konfigurationsblöcke aus. Für jede Aktion:
-        *   Es liest den Wert des Schlüssels.
-        *   Es prüft den aktuellen Zustand des Systems (Registrierungswert, Dienststatus).
-        *   Wenn der aktuelle Zustand vom gewünschten Zustand abweicht, führt es den Änderungsbefehl aus (`Set-ItemProperty`, `powercfg`, etc.).
-        *   Es zeichnet die Aktion oder den Fehler in Listen auf.
-    *   Es sendet eine Gotify-Benachrichtigung (falls aktiviert).
-5.  **Ende der Sequenz:** Das Skript wird beendet.
+Es ist zwingend notwendig zu beachten, dass die **Schließ**-Aufgabe (`User-CloseApp`) und die **Backup**-Aufgabe (`SystemBackup`) architektonisch vollständig entkoppelt sind.
 
-### 3.3. Ausführungssequenz bei der Anmeldung (Laufzeit - Benutzerebene)
+*   **Technische Unabhängigkeit**: Dies sind zwei separate "Scheduled Task"-Objekte mit ihren eigenen Zeit-Triggern und ihren eigenen Ausführungskontexten (USER für die eine, SYSTEM für die andere).
+*   **Entkopplung Technisch aber Nicht Logisch**:
+   - **Technisch**: Die beiden Aufgaben sind separate Objekte im Scheduler. Wenn `Close-AppByTitle.ps1` abstürzt, wird die Backup-Aufgabe trotzdem ausgeführt.
+   - **Reales Risiko**: Wenn die Anwendung nicht zur Backup-Zeit (02:57) geschlossen ist, können Dateien gesperrt sein (offene Datei-Handles). In diesem Fall:
+       - SQLite-Dateien (`.db`) werden kopiert, aber **potenziell in einem inkonsistenten Zustand**
+       - WAL-Dateien (`.db-wal`) können nicht committete Transaktionen enthalten
+       - Die Wiederherstellung eines solchen Backups kann fehlschlagen oder eine beschädigte Datenbank produzieren
+   - **Aktuelle Abschwächung**: Keine automatische Garde im Code. Der Administrator muss:
+       1. Einen ausreichenden Abstand zwischen Close und Backup lassen (empfohlen: 2 Minuten Minimum)
+       2. Manuell Backup-Protokolle auf Fehler prüfen
+       3. Regelmäßig Backup-Wiederherstellungen testen
+*   **Datenkonsistenz**: Obwohl entkoppelt, sind diese Aufgaben zeitlich sequenziert (Schließung vor Backup), um sicherzustellen, dass Dateien nicht gesperrt sind (Open File Handles) während der Kopie. Das Backup funktioniert jedoch auch bei offenen Dateien (obwohl die Anwendungskonsistenz weniger garantiert ist in diesem spezifischen Fall).
 
-1.  **Auslöser:** Der Benutzer meldet sich an.
-2.  **Aufgabenausführung:** Die Aufgabenplanung führt die Aufgabe `WindowsOrchestrator-UserLogon` aus.
-3.  **Skriptstart:** Die Aufgabe führt `powershell.exe` mit den Berechtigungen des Benutzers aus, um `config_utilisateur.ps1` zu starten (`-WindowStyle Hidden`).
-4.  **Aktionen von `config_utilisateur.ps1`:**
-    *   Das Skript analysiert `config.ini`.
-    *   Es liest die Parameter aus dem Abschnitt `[Process]`.
-    *   Es führt die Prozessverwaltungslogik aus:
-        1.  Es löst Umgebungsvariablen im Prozesspfad auf.
-        2.  Es sucht nach vorhandenen Prozessen, die dem Namen entsprechen und dem aktuellen Benutzer gehören (überprüft durch SID).
-        3.  Wenn welche gefunden werden, beendet es sie (`Stop-Process -Force`).
-        4.  Es startet eine neue Instanz des Prozesses.
-    *   Es sendet eine Gotify-Benachrichtigung (falls aktiviert).
-5.  **Ende der Sequenz:** Das Skript wird beendet.
+### 2.3.2. Typische tägliche Chronologie (Workflow)
 
-### 3.4. Deinstallationssequenz
+Hier ist der genaue Lebenszyklus einer vom Orchestrator verwalteten Maschine, basierend auf der empfohlenen Konfiguration im Benutzerhandbuch.
 
-1.  **Auslöser:** Der Benutzer führt `2_uninstall.bat` aus.
-2.  **Erhöhung:** Das Skript `2_uninstall.bat` startet `management\uninstall.ps1`, das sich selbst mit `Start-Process -Verb RunAs` neu startet. Der Benutzer muss die UAC-Aufforderung akzeptieren.
-3.  **Aktionen von `uninstall.ps1`:**
-    *   Das Skript stellt dem Benutzer eine Frage, um AutoLogon zu deaktivieren.
-    *   Es stellt die Systemregistrierungsschlüssel wieder her:
-        *   Windows Update (`NoAutoUpdate` -> `0`).
-        *   Schnellstart (`HiberbootEnabled` -> `1`).
-        *   OneDrive (Löschen von `DisableFileSyncNGSC`).
-        *   AutoLogon (`AutoAdminLogon` -> `0`) falls angefordert.
-    *   Es führt `Unregister-ScheduledTask` aus, um die vier geplanten Aufgaben zu entfernen.
-    *   Es zeigt eine Zusammenfassung an und informiert, dass die Dateien nicht gelöscht werden.
-4.  **Ende der Sequenz:** Das Skript wird beendet.
-
-## 4. Installations- und Deinstallationsverfahren
-
-Dieser Abschnitt beschreibt die Abfolgen von Operationen, die von den Batch-Skripten ausgeführt werden, um das System zu installieren, zu aktivieren, zu deinstallieren und wiederherzustellen.
-
-### 4.1. Installationsverfahren
-
-Das Verfahren wird durch Ausführen der Datei `1_install.bat` eingeleitet. Es ist in zwei verschiedene Phasen unterteilt.
-
-#### 4.1.1. Phase 1: Konfiguration (Benutzerkontext)
-
-1.  Die Datei `1_install.bat` führt das Skript `management\firstconfig.ps1` über den Befehl `powershell.exe` aus.
-2.  Das Skript `firstconfig.ps1` prüft die Existenz der Datei `config.ini` im Projektstammverzeichnis.
-    *   Wenn die Datei `config.ini` nicht existiert, wird sie durch Kopieren der Datei `management/defaults/default_config.ini` erstellt.
-    *   Wenn die Datei `config.ini` existiert, wird ein `System.Windows.Forms.MessageBox`-Dialogfeld angezeigt, in dem der Benutzer gefragt wird, ob er die vorhandene Datei durch die Vorlage ersetzen möchte.
-3.  Das Skript zeigt dann eine grafische Benutzeroberfläche (Windows Forms) an, deren Felder mit den aus der Datei `config.ini` gelesenen Werten vorausgefüllt sind.
-4.  Wenn der Benutzer auf die Schaltfläche "Speichern und Schließen" klickt, werden die Werte aus den Feldern der Benutzeroberfläche über die Funktion `Set-IniValue` in die Datei `config.ini` geschrieben. Das Skript wird beendet.
-
-#### 4.1.2. Phase 2: Installation der Aufgaben (Administratorkontext)
-
-1.  Die Kontrolle kehrt zum Skript `1_install.bat` zurück. Es führt einen `powershell.exe`-Befehl aus, dessen einzige Aufgabe darin besteht, eine zweite Instanz von PowerShell über den Befehl `Start-Process PowerShell -Verb RunAs` zu starten.
-2.  Diese Aktion löst eine UAC-Aufforderung (User Account Control) aus. Der Benutzer muss die Berechtigungen erteilen, um fortzufahren.
-3.  Das Skript `management\install.ps1` wird mit Administratorrechten ausgeführt und führt die folgenden Aktionen aus:
-    *   Es erstellt die geplante Aufgabe **`WindowsOrchestrator-SystemStartup`** über `Register-ScheduledTask`. Der Auslöser ist auf `-AtStartup` und der Ausführungsprinzipal ist `NT AUTHORITY\SYSTEM` (`-UserId "NT AUTHORITY\SYSTEM"`) gesetzt. Die Aktion ist die Ausführung des Skripts `config_systeme.ps1`.
-    *   Es erstellt die geplante Aufgabe **`WindowsOrchestrator-UserLogon`** über `Register-ScheduledTask`. Der Auslöser ist auf `-AtLogOn` für den aktuellen Benutzer und der Ausführungsprinzipal ist derselbe Benutzer (`-UserId "$($env:USERDOMAIN)\$($env:USERNAME)"`) gesetzt. Die Aktion ist die Ausführung des Skripts `config_utilisateur.ps1`.
-
-4.  Um die Konfiguration sofort anzuwenden, führt `install.ps1` nacheinander und unter Warten auf das Ende jedes Prozesses (`-Wait`) die Skripte `config_systeme.ps1` und dann `config_utilisateur.ps1` aus.
-
-#### 4.1.3. Systemzustand nach der Installation
-
-*   Zwei geplante Aufgaben, `WindowsOrchestrator-SystemStartup` und `WindowsOrchestrator-UserLogon`, werden in der Windows-Aufgabenplanung erstellt und sind aktiv.
-*   Eine `config.ini`-Datei existiert im Stammverzeichnis des Projekts und enthält die vom Benutzer definierte Konfiguration.
-*   Ein `Logs`-Verzeichnis ist im Stammverzeichnis des Projekts vorhanden und enthält die Protokolldateien der ursprünglichen Ausführung.
-*   Die in `config.ini` definierten Systemeinstellungen wurden zum ersten Mal angewendet.
-
-### 4.2. Deinstallationsverfahren
-
-Das Verfahren wird durch Ausführen der Datei `2_uninstall.bat` eingeleitet.
-
-#### 4.2.1. Erhöhung der Berechtigungen
-
-1.  Die Datei `2_uninstall.bat` führt das Skript `management\uninstall.ps1` aus.
-2.  Das Skript `uninstall.ps1` prüft seine eigene Berechtigungsstufe. Wenn es kein Administrator ist, startet es sich selbst über `Start-Process powershell.exe -Verb RunAs` neu, was eine UAC-Aufforderung auslöst, die der Benutzer bestätigen muss.
-
-#### 4.2.2. Vom Skript ausgeführte Aktionen
-
-Das Skript `management\uninstall.ps1`, das mit Administratorrechten ausgeführt wird, führt die folgenden Operationen aus:
-
-1.  **Benutzerinteraktion:** Das Skript zeigt eine Aufforderung in der Konsole über `Read-Host` an und fragt den Benutzer, ob er die automatische Anmeldung deaktivieren möchte. Die Antwort des Benutzers wird in einer Variablen gespeichert.
-2.  **Wiederherstellung der Systemeinstellungen:**
-    *   Wenn der Benutzer mit `j` oder `y` geantwortet hat, schreibt das Skript den Zeichenfolgenwert `"0"` in den Registrierungsschlüssel `HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\AutoAdminLogon`.
-    *   Es schreibt den DWORD-Wert `0` in den Schlüssel `HKLM:\...\WindowsUpdate\AU\NoAutoUpdate`.
-    *   Es schreibt den DWORD-Wert `0` in den Schlüssel `HKLM:\...\WindowsUpdate\AU\NoAutoRebootWithLoggedOnUsers`.
-    *   Es schreibt den DWORD-Wert `1` in den Schlüssel `HKLM:\...\Power\HiberbootEnabled`.
-    *   Es entfernt den Wert `DisableFileSyncNGSC` aus dem Schlüssel `HKLM:\...\OneDrive` über `Remove-ItemProperty`.
-    *   Es ändert den Starttyp des `wuauserv`-Dienstes über `Set-Service` auf `Automatic`.
-3.  **Löschen von geplanten Aufgaben:**
-    *   Das Skript durchläuft eine vordefinierte Liste von Aufgabennamen und führt für jede `Unregister-ScheduledTask -Confirm:$false` aus. Die gelöschten Aufgaben sind:
-        *   `WindowsOrchestrator-SystemStartup`
-        *   `WindowsOrchestrator-UserLogon`
-        *   `WindowsOrchestrator-SystemScheduledReboot`
-        *   `WindowsOrchestrator-SystemPreRebootAction`
-
-#### 4.2.3. Systemzustand nach der Deinstallation
-
-*   Die vier projektbezogenen geplanten Aufgaben werden aus der Aufgabenplanung entfernt. Jede Automatisierung wird gestoppt.
-*   Die oben aufgeführten Registrierungs- und Diensteinstellungen werden auf ihre Standardwerte zurückgesetzt.
-*   Die durch den Befehl `powercfg` geänderten Energieeinstellungen werden vom Deinstallationsskript nicht geändert.
-*   Das Projektverzeichnis, einschließlich aller Skripte, der Datei `config.ini` und der Protokolle, wird nicht gelöscht und verbleibt auf der Festplatte.
-
-## 5. Detaillierte Konfigurationsanleitung (`config.ini`)
-
-Die Datei `config.ini` ist das deklarative Kontrollzentrum des Projekts. Diese Anleitung beschreibt jeden Schlüssel, seine Auswirkung auf die Skriptausführung, seine möglichen Werte und seine Interaktionen mit anderen Einstellungen. Die Standardwerte sind die in der Datei `management/defaults/default_config.ini` angegebenen.
-
-### 5.1. Abschnitt `[SystemConfig]`
-
-Dieser Abschnitt regelt die Einstellungen, die das gesamte System betreffen, und wird ausschließlich von `config_systeme.ps1` gelesen.
+1.  **02:55** → Auslösung von **`WindowsOrchestrator-User-CloseApp`**
+    *   **Skript**: `Close-AppByTitle.ps1`
+    *   **Aktion**: Sucht nach dem Fenster mit "MyApp" (Standardwert) und sendet die Sequenz `{ESC}{ESC}x{ENTER}` (Escape x 2, 'x', Enter). Dies ist ein anpassbares Beispiel je nach Anwendung.
+2.  **02:57** → Auslösung von **`WindowsOrchestrator-SystemBackup`**
+    *   **Skript**: `Invoke-DatabaseBackup.ps1`
+    *   **Aktion**: Analysiert den Datenordner, identifiziert Dateien, die in den letzten 24 Stunden modifiziert wurden, und führt differentielle Kopie zum sicheren Ziel durch.
+3.  **03:00** → Auslösung von **`WindowsOrchestrator-SystemScheduledReboot`**
+    *   **Binary**: `shutdown.exe`
+    *   **Argumente**: `/r /t 0` (Sofortiger Neustart).
+    *   **Aktion**: Windows initiiert die Shutdown-Prozedur.
+4.  **03:01** → **Cold Boot (Kaltstart)**
+    *   **Spezifikation**: Dank der vom Orchestrator erzwungenen Deaktivierung von *Fast Startup*, erzwingt dieser Start eine vollständige Neuladung des Kernels, der Treiber und der Hardware, wodurch jeglicher residualer Speicherzustand eliminiert wird (im Gegensatz zu Hibernation-Ausgang).
+5.  **03:02** → Auslösung von **`WindowsOrchestrator-SystemStartup`**
+    *   **Skript**: `config_systeme.ps1`
+    *   **Aktion**: Integritätsprüfung der Konfiguration (Windows Update GPO, Power-Einstellungen, Existenz dynamischer Aufgaben).
+6.  **03:02:30** → **Autologon** (falls aktiviert)
+    *   **Aktion**: Das Winlogon-Subsystem verwendet LSA-Geheimnisse, um die Benutzersession automatisch zu öffnen.
+7.  **03:03** → Auslösung von **`WindowsOrchestrator-UserLogon`**
+    *   **Skript**: `config_utilisateur.ps1`
+    *   **Aktion**: Erkennung, dass `MyApp` nicht läuft, dann Start der Anwendung über die konfigurierte Methode (Direkt, PowerShell oder Legacy).
 
 ---
 
-**`AutoLoginUsername`**
+## 3. Tiefgehende Analyse des Konfigurationsvertrags (`config.ini`)
 
-*   **Rolle:** Gibt den Benutzernamen an, der in den Registrierungsschlüssel `DefaultUserName` geschrieben wird. Dieser Wert wird auch von der Logik der Vor-Neustart-Aktion verwendet, um den Pfad `%USERPROFILE%` aufzulösen.
-*   **Mögliche Werte:** Eine Zeichenfolge, die einen lokalen oder Domänenbenutzernamen darstellt (z. B. `Admin`, `DOMÄNE\Benutzer`). Wenn der Wert leer gelassen wird, versucht das Skript, den bereits im Registrierungsschlüssel `DefaultUserName` vorhandenen Wert zu lesen.
-*   **Standardwert:** "" (leere Zeichenfolge)
-*   **Abhängigkeiten:** Dieser Parameter ist erforderlich, wenn `EnableAutoLogin` auf `true` gesetzt ist. Er ist auch notwendig, damit die Variable `%USERPROFILE%` im Schlüssel `PreRebootActionCommand` verwendet werden kann.
+Die `config.ini`-Datei ist das Herz des Orchestrators. Es handelt sich nicht um eine einfache Einstellungsdatei, sondern um einen **Zustandsvertrag** (State Contract), den die Skripte sich verpflichten, bei jeder Ausführung anzuwenden. Der verwendete Parser (`Get-IniContent` im Utils-Modul) ist case-insensitive, aber sensitiv für die Abschnittsstruktur.
+
+### 3.1. Abschnitt [SystemConfig]: Globale Parameter
+
+Dieser Abschnitt steuert ausschließlich das Verhalten des Skripts `config_systeme.ps1`, das mit SYSTEM-Berechtigungen ausgeführt wird.
+
+#### 3.1.1. `SessionStartupMode`: Entscheidungsbaum
+
+Dieser Parameter bestimmt die Zugriffsstrategie zum System. Der Code implementiert eine strenge Umschaltlogik:
+
+*   **`Standard`**:
+    *   **Technische Aktion**: Erzwingt den Registrierungswert `AutoAdminLogon` auf `"0"` in `HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon`.
+    *   **Ergebnis**: Der PC stoppt am Windows-Anmeldebildschirm (LogonUI). Der Benutzer muss sein Passwort eingeben oder Windows Hello verwenden.
+    *   **Anwendungsfall**: Verwaltungsarbeitsstationen, Server, die bei jedem physischen Zugriff eine starke Authentifizierung erfordern.
+
+*   **`Autologon`**:
+    *   **Technische Aktion**:
+       *   Erzwingt `AutoAdminLogon` auf `"1"`.
+       *   Setzt `DefaultUserName` mit dem Wert von `AutoLoginUsername` (oder aktueller Benutzer, falls bei Installation leer).
+       *   Setzt `DefaultDomainName` mit dem Computernamen (oder AD-Domäne).
+    *   **Sicherheit**: Beachten Sie, dass das Passwort **nicht** hier verwaltet wird. Es wird vom externen Tool `Autologon.exe` verwaltet, das Anmeldedaten in LSA-Geheimnisse injiziert. Das `config_systeme.ps1`-Skript kümmert sich nur um die Aktivierung des Mechanismus.
+    *   **Anwendungsfall**: Interaktive Kioske, Displayscreens, autonome Terminals.
+
+#### 3.1.2. `DisableWindowsUpdate`: Mechanismus und Verantwortungsübergang
+
+Der Orchestrator wendet eine "Defense in Depth"-Strategie an, um sicherzustellen, dass Windows Update die Produktion nicht stört.
+
+*   **Sperrung durch lokale GPO (Registrierung)**:
+    *   Das Skript schreibt `NoAutoUpdate = 1` in `HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU`.
+    *   Es schreibt `NoAutoRebootWithLoggedOnUsers = 1` in denselben Schlüssel.
+    *   **Warum?** Die `Policies`-Schlüssel werden vom OS als Unternehmensrichtlinien respektiert und sind schwieriger zu umgehen als einfache Konfigurationsschlüssel durch die Selbstreparaturmechanismen von Windows.
+
+*   **Dienst-Deaktivierung**:
+    *   Der `wuauserv`-Dienst wird auf `StartupType = Disabled` gesetzt.
+    *   Der Dienst wird sofort über `Stop-Service -Force` gestoppt.
+
+*   **Permanenz**: Bei jedem Start prüft und reaktiviert `config_systeme.ps1` diese Schlüssel. Wenn eine manuelle Aktualisierung oder ein Drittanbieter-Tool den Dienst reaktiviert hat, wird der Orchestrator ihn beim nächsten Boot wieder abschalten.
+
+#### 3.1.3. `OneDriveManagementMode`: Die 3 Verwaltungsebenen
+
+Dieser Parameter verwaltet das Verhalten gegenüber dem Microsoft OneDrive-Synchronisationsclient, der oft unerwünscht auf autonomen Kiosken ist.
+
+*   **`Block` (Empfohlen)**:
+    *   **GPO-Aktion**: Erstellt den Schlüssel `DisableFileSyncNGSC = 1` in `HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive`. Dies verhindert, dass die OneDrive-Executable startet, auch wenn der Benutzer manuell versucht.
+    *   **Aufräumen**: Versucht auch, den automatischen Starteintrag im Run-Schlüssel des Benutzers zu entfernen.
+    *   **Kill**: Tötet jeden aktiven `OneDrive.exe`-Prozess.
+
+*   **`Close`**:
+    *   **Aktion**: Tötet nur den `OneDrive.exe`-Prozess, falls erkannt.
+    *   **Einschränkung**: OneDrive kann sich automatisch über seine Wartungsaufgaben neu starten. Dies ist eine korrektive temporäre Maßnahme, keine definitive Lösung.
+
+*   **`Ignore`**:
+    *   **Aktion**: Entfernt den `DisableFileSyncNGSC`-Richtlinienschlüssel, falls vorhanden, und gibt die Kontrolle an den Benutzer oder das OS zurück.
+
+### 3.2. Abschnitt [Process]: Anwendungslebenszyklusverwaltung
+
+Dieser Abschnitt steuert das Verhalten des Skripts `config_utilisateur.ps1` (USER-Kontext) und der zentralen Funktion `Start-OrchestratorProcess`.
+
+#### 3.2.1. Unterscheidung `ProcessToLaunch` vs. `ProcessToMonitor`
+
+Dies ist ein fundamentales Konzept für die Idempotenz des Launchers.
+
+*   **`ProcessToLaunch`**: Dies ist der **Trigger**.
+    *   Beispiel: `LaunchApp.bat`, `Start.ps1`, oder `C:\Program Files\App\Loader.exe`.
+    *   Dies ist die Datei, die der Orchestrator ausführt.
+
+*   **`ProcessToMonitor`**: Dies ist das **Ziel**.
+    *   Beispiel: `MyApp` (für `MyApp.exe`) oder `java` (für eine Java-App).
+    *   Dies ist der Prozessname, der im RAM geladen ist.
+
+**Ausführungslogik**:
+1.  Das Skript prüft: "Existiert `ProcessToMonitor` in der Prozessliste?"
+2.  **Wenn JA**: Die Anwendung läuft bereits. Der Orchestrator tut nichts. Dies vermeidet das Starten von 50 Instanzen der Anwendung, wenn der Benutzer seine Session schließt und wieder öffnet, oder wenn das Skript manuell neu ausgeführt wird.
+3.  **Wenn NEIN**: Der Orchestrator führt `ProcessToLaunch` aus.
+
+> **Entwicklerhinweis**: Wenn `ProcessToMonitor` leer gelassen wird, verliert der Orchestrator seine Erkennungsfähigkeit und wird `ProcessToLaunch` bei jeder Ausführung starten, was Duplikate verursachen kann.
+
+#### 3.2.2. `LaunchConsoleMode`: Standard vs. Legacy
+
+Dieser Parameter löst Kompatibilitätsprobleme mit verschiedenen Windows-Konsolenhosts (conhost, Windows Terminal).
+
+*   **`Standard`** (Standard):
+    *   Verwendet `Start-Process -FilePath ...`.
+    *   Lässt Windows den Host entscheiden. Auf Windows 11 kann dies einen neuen Tab in Windows Terminal öffnen. Dies ist die moderne und empfohlene Methode.
+
+*   **`Legacy`**:
+    *   Konstruiert einen expliziten Befehl: `cmd.exe /c start "Titel" "Pfad" Argumente`.
+    *   **Notwendigkeit**: Einige alte Batch-Skripte (Legacy) oder bestimmte Anwendungen stürzen ab, wenn sie nicht in ihrem eigenen dedizierten `conhost.exe`-Fenster ausgeführt werden (klassisches schwarzes Bildschirm). Dieser Modus erzwingt dieses Verhalten.
+
+**Konkretes Beispiel: Wann Legacy verwenden?**
+
+Einige historische Batch-Skripte sind mit modernen Terminals inkompatibel. Hier ist ein typischer Fall:
+
+**Problematisches Skript (`LaunchApp.bat`)**:
+```batch
+@echo off
+REM Dieses Skript stürzt im Standardmodus auf Windows 11 ab
+cd /d %~dp0
+echo Anwendung starten...
+
+REM Startet die App in einem neuen detached Prozess
+start "" "MyApp.exe" -config production.ini
+
+REM Wartet 5 Sekunden, um den Start zu überprüfen
+timeout /t 5 /nobreak > nul
+
+REM Prüft, ob der Prozess läuft
+tasklist | find /i "MyApp.exe" > nul
+if errorlevel 1 (
+    echo FEHLER: Anwendung ist nicht gestartet!
+    pause
+    exit /b 1
+)
+
+echo Anwendung erfolgreich gestartet.
+exit /b 0
+```
+
+**Symptome im Standardmodus**:
+
+- Auf Windows 11 mit Windows Terminal führt das Skript in einem geteilten Tab aus
+- Der `start ""`-Befehl versucht, ein Fenster zu erstellen, aber schlägt stillschweigend fehl
+- `MyApp.exe` startet niemals
+- Das Skript wartet 5 Sekunden dann zeigt "FEHLER"
+
+**Lösung**: Aktivieren Sie den Legacy-Modus in `config.ini`
+
+```ini
+[Process]
+LaunchConsoleMode=Legacy
+```
+
+**Was dann passiert**:
+
+```powershell
+# Anstatt:
+Start-Process -FilePath "LaunchApp.bat"
+
+# Führt der Orchestrator aus:
+cmd.exe /c start "WindowsOrchestrator Launch" "C:\Pfad\Zu\LaunchApp.bat"
+```
+
+Dies erzwingt die Öffnung eines **neuen dedizierten `conhost.exe`-Fensters**, isoliert vom PowerShell-Prozess, in dem das Batch korrekt ausgeführt wird.
+
+**Wann NICHT Legacy verwenden**:
+
+- PowerShell-Skripte (`.ps1`) → Immer Standard
+- Direkte Executables (`.exe`) → Immer Standard
+- Moderne Batch-Skripte ohne `start` → Standard funktioniert
+
+#### 3.2.3. `StartProcessMinimized`: Splatting-Technik
+
+Die Option ermöglicht das Starten der Anwendung minimiert in der Taskleiste (nützlich für Hintergrundanwendungen, die eine GUI haben, aber nicht stören sollen).
+
+Der Code verwendet die **Splatting**-PowerShell-Technik, um diesen Parameter bedingt anzuwenden:
+
+```powershell
+# Dynamische Parameterkonstruktion
+$startParams = @{
+    FilePath = $exePath
+    ArgumentList = $args
+}
+
+if ($StartProcessMinimized) {
+    # Fügt den WindowStyle-Schlüssel nur hinzu, wenn angefordert
+    $startParams.Add("WindowStyle", "Minimized")
+}
+
+# Saubere Ausführung
+Start-Process @startParams
+```
 
 ---
 
-**`EnableAutoLogin`**
+## 3. Tiefgehende Analyse des Konfigurationsvertrags (`config.ini`) (Fortsetzung)
 
-*   **Rolle:** Steuert den Zustand der automatischen Windows-Anmeldung.
-*   **Skriptaktion:** Wenn der Wert `true` ist, schreibt das Skript `"1"` in den Registrierungsschlüssel `HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\AutoAdminLogon`. Wenn der Wert `false` ist, schreibt es `"0"`.
-*   **Mögliche Werte:** `true`, `false`
-*   **Standardwert:** `false`
-*   **Abhängigkeiten:** Erfordert, dass `AutoLoginUsername` korrekt konfiguriert ist, um voll funktionsfähig zu sein. **Hinweis für Entwickler:** Das Skript verwaltet nicht das Passwort (`DefaultPassword`), das außerhalb des Bandes konfiguriert werden muss (z. B. mit dem Sysinternals AutoLogon-Tool).
+### 3.3. Abschnitt [DatabaseBackup]: Backup-Modul
 
----
+Dieser Abschnitt steuert das Verhalten des Skripts `Invoke-DatabaseBackup.ps1`. Die Backup-Logik wurde so konzipiert, dass sie **atomisch** und **resilient** ist.
 
-**`DisableFastStartup`**
+#### 3.3.1. `EnableBackup`: Der Kill-Schalter
 
-*   **Rolle:** Steuert die Windows-Schnellstartfunktion (Hiberboot).
-*   **Skriptaktion:** Wenn `true`, schreibt den Wert `0` (DWORD) in den Registrierungsschlüssel `HKLM:\...\Power\HiberbootEnabled`. Wenn `false`, schreibt `1`.
-*   **Mögliche Werte:** `true`, `false`
-*   **Standardwert:** `true`
-*   **Abhängigkeiten:** Keine.
+Diese boolesche Variable fungiert als Hauptschalter.
+*   **Mechanismus**: Sie wird an der allerersten logischen Zeile der Hauptfunktion des Backup-Skripts überprüft.
+*   **Verhalten**:
+    *   Wenn `false`: Das Skript protokolliert "Backup disabled" und kehrt sofort zurück, ohne jegliche Festplatten- oder Netzwerkoperationen durchzuführen.
+    *   Wenn `true`: Das Skript fährt mit der Initialisierung der Pfadvariablen (`Source`, `Destination`) und dem Start der Vorabprüfungen fort.
 
----
+#### 3.3.2. `DatabaseKeepDays`: Datumsbasierter Löschalgorithmus
 
-**`DisableSleep`** und **`DisableScreenSleep`**
+Die Aufbewahrungsverwaltung stützt sich nicht auf Dateimetadaten (Erstellungs-/Änderungsdatum der Backup-Datei), die bei Kopien geändert werden können, sondern auf eine strenge Benennungskonvention.
 
-*   **Rolle:** Verwalten den Ruhezustand des Computers und des Bildschirms.
-*   **Skriptaktion:**
-    *   Für `DisableSleep=true` werden die Befehle `powercfg /change standby-timeout-ac 0` und `powercfg /change hibernate-timeout-ac 0` ausgeführt.
-    *   Für `DisableScreenSleep=true` wird der Befehl `powercfg /change monitor-timeout-ac 0` ausgeführt.
-*   **Mögliche Werte:** `true`, `false`
-*   **Standardwerte:** `DisableSleep=true`, `DisableScreenSleep=false`
-*   **Abhängigkeiten:** Keine.
+*   **Benennungsformat**: Dateien, die vom Orchestrator generiert werden, folgen dem Muster: `YYYYMMDD_HHMMSS_OriginalName.ext`.
+*   **Algorithmus**:
+    1.  Das Skript listet Dateien in `DatabaseDestinationPath` auf.
+    2.  Es wendet eine Regex `^(\d{8})_` an, um die ersten 8 Ziffern (das Datum) zu extrahieren.
+    3.  Es konvertiert diese Zeichenkette in ein `DateTime`-Objekt.
+    4.  Wenn `DateiDatum < (HeuteDatum - DatabaseKeepDays)`, wird die Datei über `Remove-Item -Force` gelöscht.
 
----
+#### 3.3.3. Zeitliche differentielle Logik
 
-**`DisableWindowsUpdate`**
+Um zu vermeiden, dass der Datenträger und das Netzwerk mit unnötigen Kopien gesättigt werden (insbesondere bei großen Datenbanken von mehreren GB), führt das Skript keine systematische vollständige Backups durch.
 
-*   **Rolle:** Deaktiviert den Windows Update-Dienst vollständig.
-*   **Skriptaktion:** Wenn `true`, führt das Skript drei Aktionen aus:
-    1.  Schreibt den Wert `1` (DWORD) in den Schlüssel `HKLM:\...\WindowsUpdate\AU\NoAutoUpdate`.
-    2.  Ändert den Starttyp des `wuauserv`-Dienstes auf `Disabled`.
-    3.  Stoppt den `wuauserv`-Dienst (`Stop-Service`).
-*   **Mögliche Werte:** `true`, `false`
-*   **Standardwert:** `true`
-*   **Abhängigkeiten:** Keine.
+*   **Der Filter**: `LastWriteTime > (Get-Date).AddHours(-24)`
+*   **Funktionsweise**:
+    *   Das Skript scannt rekursiv den Quellordner.
+    *   Es behält nur Dateien, deren letzte Änderungszeitstempel weniger als 24 Stunden beträgt.
+    *   **Konsequenz**: Der Orchestrator führt ein **tägliches differentielles Backup** basierend auf Zeit durch. Es vergleicht keine Hashes (MD5/SHA) aus Performancegründen.
+*   **SQLite-Paare-Integrität**: Eine Ausnahme zu dieser Regel existiert für `.db`-Dateien. Wenn eine `.db`-Datei für das Backup qualifiziert ist, erzwingt das Skript die Einbeziehung ihrer Begleitdateien `.db-wal` und `.db-shm` (auch wenn älter), um die transaktionale Kopieintegrität zu garantieren.
 
----
+### 3.4. Abschnitt [Installation]: Bereitstellung und Resilienz
 
-**`DisableAutoReboot`**
+Diese Parameter beeinflussen ausschließlich das Verhalten der Skripte `install.ps1`, `uninstall.ps1` und ihrer Launcher.
 
-*   **Rolle:** Verhindert, dass Windows nach einem Update automatisch neu startet, wenn eine Benutzersitzung aktiv ist.
-*   **Skriptaktion:** Wenn `true`, schreibt den Wert `1` (DWORD) in den Registrierungsschlüssel `HKLM:\...\WindowsUpdate\AU\NoAutoRebootWithLoggedOnUsers`.
-*   **Mögliche Werte:** `true`, `false`
-*   **Standardwert:** `true`
-*   **Abhängigkeiten:** Diese Einstellung ist hauptsächlich relevant, wenn `DisableWindowsUpdate` auf `false` gesetzt ist.
+#### 3.4.1. `SilentMode`: Auswirkungskette
 
----
+Der Silent-Modus ist nicht eine einfache Option von `install.ps1`. Es ist eine Auswirkungskette, die bis zum Launcher zurückgeht.
 
-**`ScheduledRebootTime`**
+1.  **Erkennung**: Der Wrapper `Launch-Install.ps1` (oder `Launch-Uninstall.ps1`) liest diesen Wert in der INI-Datei über eine leichte Regex, bevor PowerShell überhaupt vollständig geladen wird.
+2.  **Maskierung**: Wenn `true`, startet der Wrapper das Haupt-Skript mit dem Argument `-WindowStyle Hidden`.
+3.  **Kompensation (Feedback)**: Das Haupt-Skript (`install.ps1`) erkennt, dass es im versteckten Modus läuft. Um den Benutzer nicht im Ungewissen zu lassen ("Läuft es?"), startet es sofort die Funktion `Start-WaitingUI`, die den WinForms Splash Screen anzeigt (unbestimmte Fortschrittsleiste).
+4.  **Abschluss**: Am Ende der Ausführung verwendet das Skript den **P/Invoke GhostParent**-Fix (Klasse `MessageBoxFixer`), um die Anzeige der Endbenachrichtigung im Vordergrund zu erzwingen, trotz Abwesenheit eines sichtbaren Konsolenfensters.
 
-*   **Rolle:** Plant einen täglichen Neustart des Computers.
-*   **Skriptaktion:** Wenn ein Wert angegeben wird, erstellt/aktualisiert das Skript eine geplante Aufgabe (`WindowsOrchestrator-SystemScheduledReboot`), die `shutdown.exe /r /f /t 60` zur angegebenen Zeit ausführt. Wenn der Wert leer ist, wird die geplante Aufgabe gelöscht.
-*   **Mögliche Werte:** Eine Zeichenfolge im Format `HH:MM` (z. B. `03:00`) oder eine leere Zeichenfolge zum Deaktivieren.
-*   **Standardwert:** `03:00`
-*   **Abhängigkeiten:** Das Skript erstellt zwei separate geplante Aufgaben für die Vor-Neustart-Aktion und den Neustart. Die Windows-Aufgabenplanung führt jede Aufgabe zur angegebenen Zeit aus, ohne ihre chronologische Reihenfolge zu überprüfen.
+#### 3.4.2. `AutologonDownloadUrl`: Link-Rot-Resilienz
 
----
+Um zu vermeiden, dass der Orchestrator veraltet wird, wenn Microsoft seine URLs ändert, ist der Link zum Download des Sysinternals-Tools nicht hartcodiert ("Hardcoded") im `.ps1`-Skript.
 
-**`PreRebootAction...`** (Gruppe von 4 Schlüsseln)
+*   **Prinzip**: Die URL ist in `config.ini` gespeichert.
+*   **Vorteil**: Wenn der Link bricht (Link Rot), kann ein Administrator ihn einfach durch Bearbeitung der Textdatei reparieren, ohne den Quellcode zu modifizieren oder die digitalen Signaturen der Skripte zu brechen.
 
-*   **Rolle:** Führt einen benutzerdefinierten Befehl vor dem geplanten Neustart aus. Dieser Block ist nur aktiv, wenn `PreRebootActionTime` und `PreRebootActionCommand` beide nicht leer sind.
-*   **Skriptaktion:** Erstellt/aktualisiert eine geplante Aufgabe (`WindowsOrchestrator-SystemPreRebootAction`), die den angegebenen Befehl ausführt. Das Skript löst Umgebungsvariablen (`%USERPROFILE%`) und relative Pfade in `PreRebootActionCommand` auf.
-*   **Schlüssel:**
-    *   `PreRebootActionTime`: Auslösezeit (`HH:MM`).
-    *   `PreRebootActionCommand`: Pfad zur ausführbaren Datei oder zum Skript.
-    *   `PreRebootActionArguments`: An den Befehl zu übergebende Argumente.
-    *   `PreRebootActionLaunchMethod`: Ausführungsmethode (`direct`, `powershell`, `cmd`).
-*   **Standardwerte:** `02:55`, `"PreReboot.bat"`, `""`, `cmd`
-*   **Abhängigkeiten:** Die Ausführung der Aufgabe 'WindowsOrchestrator-SystemPreRebootAction' ist unabhängig von der Existenz der Aufgabe 'WindowsOrchestrator-SystemScheduledReboot'.
+#### 3.4.3. `UseAutologonAssistant`: Bedingte Logik
+
+Der Autologon-Konfigurationsassistent (Download + GUI) wird nur gestartet, wenn **zwei** Bedingungen erfüllt sind (AND-Operator):
+1.  `SessionStartupMode` ist auf `Autologon` gesetzt.
+2.  `UseAutologonAssistant` ist auf `true` gesetzt.
+
+Dies ermöglicht es erfahrenen Administratoren, Autologon manuell zu konfigurieren (oder über ein Master-Image), während sie den Orchestrator für den Rest verwenden, ohne durch den Assistenten unterbrochen zu werden.
 
 ---
 
-**`DisableOneDrive`**
+## 4. Code-Struktur und Komponentenanalyse
 
-*   **Rolle:** Deaktiviert die OneDrive-Integration über eine Systemrichtlinie.
-*   **Skriptaktion:** Wenn `true`, schreibt den Wert `1` (DWORD) in den Registrierungsschlüssel `HKLM:\...\OneDrive\DisableFileSyncNGSC`. Wenn `false`, wird der Schlüssel gelöscht.
-*   **Mögliche Werte:** `true`, `false`
-*   **Standardwert:** `true`
-*   **Abhängigkeiten:** Keine.
+### 4.1. Detaillierte Projektstruktur
 
-### 5.2. Abschnitt `[Process]`
+Die Ordnerstruktur wurde so gedacht, um Verantwortlichkeiten klar zu trennen: was vom Benutzer ausführbar ist, was intern ist, und was dynamisch ist.
 
-Dieser Abschnitt, der von `config_utilisateur.ps1` gelesen wird, beschreibt, wie die Hauptgeschäftsanwendung verwaltet wird. Die Funktionsweise basiert auf dem folgenden voneinander abhängigen Trio von Schlüsseln:
+```text
+/ (Projekt-Root)
+│
+├── config.ini                     # [GENERIERT] Master-Konfigurationsdatei (erstellt post-Installation).
+├── Install.bat                    # [BENUTZER] Installationseinstiegspunkt (Launcher).
+├── Uninstall.bat                  # [BENUTZER] Deinstallationseinstiegspunkt (Launcher).
+│
+├── management/                    # [CORE] Technischer Kern (Geschäftslogik). Nicht modifizieren.
+│   ├── modules/
+│   │   └── WindowsOrchestratorUtils/
+│   │       └── WindowsOrchestratorUtils.psm1  # Zentrale Funktionsbibliothek (DRY).
+│   │
+│   │   ├── defaults/
+│   │   │   └── default_config.ini     # [REF] Konfigurationsvorlage (Fallback wenn config.ini fehlt).
+│   │   │
+│   │   ├── tools/                     # [BIN] Ordner für Drittanbieter-Binaries.
+│   │   │   └── Autologon/             # (Dynamisch generiert während Download).
+│   │   │
+│   │   ├── firstconfig.ps1            # GUI-Assistent (WinForms) für erste Konfiguration.
+│   │   ├── install.ps1                # Installations-Engine (Hauptlogik).
+│   │   ├── uninstall.ps1               # Deinstallations-Engine (Hauptlogik).
+│   │   ├── Launch-Install.ps1         # UAC-Elevations-Wrapper für Installation.
+│   │   ├── Launch-Uninstall.ps1       # UAC-Elevations-Wrapper für Deinstallation.
+│   │   │
+│   │   ├── config_systeme.ps1         # Runtime SYSTEM (Ausgeführt von SystemStartup-Aufgabe).
+│   │   ├── config_utilisateur.ps1     # Runtime USER (Ausgeführt von UserLogon-Aufgabe).
+│   │   ├── Invoke-DatabaseBackup.ps1  # Runtime Backup (Ausgeführt von SystemBackup-Aufgabe).
+│   │   └── Close-AppByTitle.ps1       # Utility für saubere Schließung (SendKeys).
+│   │
+├── i18n/                          # [LOC] Lokalisierungsdateien.
+│   ├── en-US/strings.psd1
+│   ├── fr-FR/strings.psd1
+│   └── [CultureCode]/strings.psd1 # Erweiterbare Architektur.
+│
+└── Logs/                          # [DATA] Ausführungsprotokolle (Runtime generiert).
+    ├── config_systeme_ps_log.txt
+    ├── config_systeme_ps.1.txt    # Rotationsarchive.
+    ├── config_utilisateur_ps_log.txt
+    └── ...
+```
 
-*   **`ProcessName` (Das "Was")**
-    *   **Rolle:** Definiert den vollständigen Pfad zur ausführbaren Datei oder zum zu startenden Skript. Dies ist das Hauptziel der Aktion.
-    *   **Skriptaktion:** Das Skript verwendet diesen Wert, um den zu beendenden Prozess zu identifizieren und als Ziel des Startbefehls. Es unterstützt System- und Benutzerumgebungsvariablen (z. B. `%USERPROFILE%`, `%PROGRAMFILES%`), die zur Laufzeit dynamisch aufgelöst werden.
+### 4.2. Das zentrale Modul: `WindowsOrchestratorUtils.psm1`
 
-*   **`ProcessArguments` (Das "Womit")**
-    *   **Rolle:** Gibt die Befehlszeilenargumente an, die an die in `ProcessName` definierte ausführbare Datei/das Skript übergeben werden sollen.
-    *   **Skriptaktion:** Diese Zeichenfolge wird an den Ausführungsbefehl angehängt. Wenn sie leer ist, werden keine Argumente übergeben.
+Diese `.psm1`-Datei wird von **allen** Projekt-Skripten geladen (`Import-Module`). Sie zentralisiert Code, um das DRY-Prinzip (*Don't Repeat Yourself*) zu respektieren und einheitliches Verhalten zu garantieren.
 
-*   **`LaunchMethod` (Das "Wie")**
-    *   **Rolle:** Gibt den Befehlsinterpreter an, der zum Starten von `ProcessName` verwendet werden soll. Diese Wahl ist entscheidend für die Kompatibilität.
-    *   **Skriptaktion:** Das Skript erstellt den endgültigen Befehl je nach Wert unterschiedlich:
-        *   `direct`: Startet die ausführbare Datei direkt. Der Befehl lautet `ProcessName "ProcessArguments"`. Dies ist die Standardmethode für `.exe`-Dateien.
-        *   `cmd`: Startet über den `cmd.exe`-Befehlsinterpreter. Der generierte Befehl lautet `cmd.exe /c ""ProcessName" ProcessArguments"`. Dies ist die empfohlene Methode für Batch-Skripte (`.bat`, `.cmd`).
-        *   `powershell`: Startet über PowerShell. Der generierte Befehl lautet `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& 'ProcessName' ProcessArguments'"`. Dies ist die ideale Methode zum Ausführen anderer PowerShell-Skripte (`.ps1`).
+#### 4.2.1. I/O-Abstraktionsfunktionen (Ein-/Ausgabe)
 
-### 5.3. Abschnitt `[Logging]`
+##### `Get-IniContent`: Manueller INI-Parser
+PowerShell hat keine native Cmdlet, um INI-Dateien strukturiert zu lesen. Diese Funktion implementiert einen leichten Parser.
+*   **Methode**: Zeilenweise Lesung (`Get-Content`).
+*   **Logik**:
+    *   Erkennt Abschnitte über Regex `^\[(.+)\]$`.
+    *   Erkennt Schlüssel=Wert-Paare über Regex `^([^=]+)=(.*)$`.
+*   **Rückgabe**: Eine verschachtelte Hashtable `@{ Abschnitt = @{ Schlüssel = Wert } }`, die direkten Zugriff ermöglicht wie `$config['SystemConfig']['DisableFastStartup']`.
 
-Dieser Abschnitt konfiguriert das Verhalten von Protokolldateien.
+##### `Set-IniValue`: Sichere INI-Schreibung
+Das Schreiben in eine INI-Datei ohne Strukturbruch oder Kommentarlöschung ist komplex.
+*   **Logik**:
+    1.  Lädt die Datei in den Speicher.
+    2.  Durchläuft Zeilen, um den Zielabschnitt zu finden.
+    3.  Wenn der Abschnitt existiert: sucht den Schlüssel. Wenn der Schlüssel existiert, aktualisiert den Wert. Andernfalls fügt den Schlüssel am Ende des Abschnitts ein.
+    4.  Wenn der Abschnitt nicht existiert: erstellt den Abschnitt und den Schlüssel am Ende der Datei.
+*   **Kodierung**: Erzwingt UTF-8, um akzentuierte Zeichen in Pfaden oder Kommentaren zu unterstützen.
 
-*   **`EnableLogRotation`**
-    *   **Rolle:** Aktiviert oder deaktiviert den Mechanismus zur Archivierung von Protokollen.
-    *   **Skriptaktion:** Wenn `true`, wird vor dem Schreiben in eine Protokolldatei (`log.txt`) die Funktion `Rotate-LogFile` aufgerufen. Sie benennt `log.txt` in `log.1.txt`, `log.1.txt` in `log.2.txt` usw. um, bis zum Limit, und löscht die älteste. Wenn `false`, wird diese Funktion nicht aufgerufen und die Protokolldatei wächst unbegrenzt.
-*   **`MaxSystemLogsToKeep` und `MaxUserLogsToKeep`**
-    *   **Rolle (beabsichtigt):** Diese Schlüssel sind in `default_config.ini` vorgesehen, um die Anzahl der zu behaltenden archivierten Protokolldateien zu definieren.
-    *   **Skriptaktion (aktuell):** Die Schlüssel MaxSystemLogsToKeep und MaxUserLogsToKeep werden vom Skript config_systeme.ps1 nicht gelesen. Die Funktion Rotate-LogFile wird mit einem festen Wert von 7 aufgerufen, der durch die Variable $DefaultMaxLogs definiert ist.
+##### `Get-ConfigValue`: Typisierte Lesung mit Standardwerten
+Dies ist die am meisten verwendete Funktion im Code. Sie sichert die Konfigurationslesung.
+*   **Signatur**: `Get-ConfigValue -Section "S" -Key "K" -Type ([type]) -DefaultValue $val`
+*   **Robustheit**:
+    *   Wenn der Schlüssel nicht existiert: Gibt `DefaultValue` zurück.
+    *   Wenn der Schlüssel existiert, aber leer ist: Gibt `DefaultValue` zurück (oder `$false` für einen Boolean).
+    *   Wenn die Typkonvertierung fehlschlägt (z. B.: Text "abc" für `[int]`-Typ): Protokolliert einen nicht-blockierenden Fehler und gibt `DefaultValue` zurück.
 
-### 5.4. Abschnitt `[Gotify]`
+#### 4.2.2. Internationalisierungssystem (i18n)
 
-Dieser Abschnitt steuert das Senden von Statusbenachrichtigungen an einen Gotify-Server.
+Der Orchestrator ist von seiner Konzeption an mehrsprachig. Es gibt keine hartkodierte Benutzertext-Zeichenkette in den logischen Skripten.
 
-*   **`EnableGotify`**: Wenn `true`, versuchen die Skripte am Ende ihrer Ausführung eine Benachrichtigung zu senden.
-*   **`Url`**: Die Basis-URL der Gotify-Instanz (z. B. `http://gotify.example.com`).
-*   **`Token`**: Das in Gotify generierte Anwendungs-Token zur Autorisierung des Nachrichtenversands.
-*   **`Priority`**: Eine Ganzzahl, die die Nachrichtenpriorität in Gotify definiert.
-*   **`GotifyTitle...`** (Gruppe von 4 Schlüsseln):
-    *   **Rolle:** Vorlagen für Benachrichtigungstitel.
-    *   **Skriptaktion:** Vor dem Senden der Benachrichtigung nimmt das Skript die Zeichenfolge aus dem entsprechenden Schlüssel (z. B. `GotifyTitleErrorSystem`) und ersetzt die literalen Zeichenfolgen `%COMPUTERNAME%` und `%USERNAME%` durch die Werte der entsprechenden Umgebungsvariablen.
+*   **`Set-OrchestratorLanguage`**: Dies ist die Initialisierungsfunktion, die zu Beginn jedes Skripts aufgerufen wird.
+    1.  **Erkennung**: Sie fragt die Kultur des Host-Systems ab über `(Get-Culture).Name` (z. B.: `fr-FR`).
+    2.  **Ladung**: Sie versucht, die entsprechende Wörterbuchdatei zu laden: `i18n\fr-FR\strings.psd1`.
+    3.  **Fallback (Sicherheit)**: Wenn die spezifische Datei nicht existiert (z. B.: System in `es-ES` aber keine spanische Übersetzung), lädt sie automatisch `i18n\en-US\strings.psd1`.
+    4.  **Validierung**: Wenn das Laden vollständig fehlschlägt (beschädigte Datei), wirft sie eine blockierende Ausnahme, um leere Oberflächen zu vermeiden.
 
-## 6. Detaillierte Skriptbeschreibung (Code-Referenz)
+*   **Struktur der `.psd1`-Dateien**:
+    Dies sind standardmäßige PowerShell-HashTables.
+    ```powershell
+    @{
+        Install_Welcome = "Willkommen bei der Installation"
+        Log_Error = "Kritischer Fehler: {0}"
+    }
+    ```
 
-Dieser Abschnitt dient als Referenz für den Quellcode. Er zerlegt die Logik und die internen Mechanismen jedes Hauptskripts des Projekts.
+*   **Verwendung im Code**:
+    Skripte verwenden die .NET-Zeichenketten-Substitution:
+    ```powershell
+    # Injizieren von Argumenten in die Vorlage
+    $msg = $lang.Log_Error -f $ErrorDetails
+    ```
 
-### 6.1. Orchestrierungsskripte (`management/`)
+#### 4.2.3. Protokollierungssystem
 
-Diese Skripte verwalten den Lebenszyklus des Projekts (Installation, Erstkonfiguration, Deinstallation). Sie sind für die manuelle Ausführung durch den Benutzer konzipiert.
+Das Protokollierungssystem ist kritisch für die postmortale Diagnose, da Skripte oft unsichtbar ausgeführt werden.
 
-#### **`firstconfig.ps1`**
+##### `Write-Log`: Strukturierte und resiliente Schreibung
+Diese Funktion tut nicht nur eine Textdatei schreiben. Sie implementiert eine Überlebenslogik.
 
-*   **Rolle:** Bereitstellung einer grafischen Benutzeroberfläche (GUI) für eine unterstützte Konfiguration der Datei `config.ini`.
-*   **GUI-Logik:**
-    *   Das Skript verwendet die .NET-Assemblys `System.Windows.Forms` und `System.Drawing`, die über `Add-Type` geladen werden, um die Objekte der Benutzeroberfläche (Form, Label, TextBox, CheckBox, Button) dynamisch zu erstellen.
-    *   Die Positionierung der Steuerelemente wird durch Variablen (`$xPadding`, `$yCurrent`) verwaltet, die nach dem Hinzufügen jedes Elements inkrementiert werden.
-    *   Die Sprache der Benutzeroberfläche wird dynamisch aus den `strings.psd1`-Dateien geladen.
-*   **`config.ini`-Verwaltung:**
-    *   **Lesen:** Beim Start liest das Skript die aktuellen Werte aus `config.ini` mit einer lokalen `Get-IniValue`-Funktion. Diese Funktion liest die Datei Zeile für Zeile, um die Werte zu extrahieren. `true`/`false`-Werte werden für die `CheckBoxes` in `[bool]`-PowerShell-Typen konvertiert.
-    *   **Schreiben:** Beim Klick auf die Schaltfläche "Speichern" ruft das `Add_Click`-Ereignis die lokale `Set-IniValue`-Funktion für jeden Parameter auf. Diese Funktion baut den Inhalt der Datei im Speicher neu auf, bevor sie ihn mit UTF-8-Kodierung auf die Festplatte schreibt.
+1.  **Formatierung**: Jede Zeile wird mit einem ISO-ähnlichen Zeitstempel und einem Schweregrad vorangestellt.
+    `YYYY-MM-DD HH:MM:SS [LEVEL] - Nachricht`
+2.  **Primäres Ziel**: Schreibung in die durch `$Global:LogFile` definierte Datei (im `Logs/`-Ordner).
+3.  **Fail-Safe-Fallback**:
+    *   Wenn die Schreibung in den `Logs/`-Ordner fehlschlägt (voller Datenträger, Korruption, versehentliche Löschung), versucht die Funktion, in `C:\ProgramData\StartupScriptLogs\*_FATAL_LOG_ERROR.txt` zu schreiben.
+    *   Dieser Systemordner ist normalerweise schreibbar für Dienste und Administratoren, garantiert also, dass eine Spur des fatalen Fehlers erhalten bleibt, selbst wenn die Anwendungsumgebung beschädigt ist.
 
-#### **`install.ps1`**
+##### `Add-Action` / `Add-Error`: Aggregatoren
+Diese Funktionen kapseln `Write-Log`, aber fügen eine Speicherfunktionalität hinzu.
+*   Sie speichern Nachrichten in globalen Listen im Speicher (`$Global:ActionsPerformed`, `$Global:ErrorsEncountered`).
+*   **Verwendung**: Diese Listen werden am Skriptende verwendet, um:
+    1.  Den Exit-Code zu bestimmen (Exit Code 1 bei Fehlern).
+    2.  Den Körper der **Gotify**-Benachrichtigung zusammenzustellen (Aktionszusammenfassung).
 
-*   **Rolle:** Erstellen der Systempersistenz durch Installation geplanter Aufgaben und erstmalige Ausführung der Laufzeitskripte.
-*   **Selbsterhöhungsmechanismus:** Das Skript prüft seine Berechtigungsstufe über `New-Object Security.Principal.WindowsPrincipal`. Wenn es nicht "Administrator" ist, startet es sich selbst mit `Start-Process powershell.exe -Verb RunAs` neu.
-*   **Logik zur Aufgabenerstellung:**
-    *   Das Skript verwendet die nativen Cmdlets `New-ScheduledTaskAction`, `New-ScheduledTaskTrigger`, `New-ScheduledTaskPrincipal`, `New-ScheduledTaskSettingsSet` und `Register-ScheduledTask`.
-    *   **Prinzipalverwaltung:**
-        *   Für `...-SystemStartup` verwendet es `-UserId "NT AUTHORITY\SYSTEM" -RunLevel Highest`.
-        *   Für `...-UserLogon` verwendet es `-UserId "$($env:USERDOMAIN)\$($env:USERNAME)" -LogonType Interactive`.
-*   **Ausführung nach der Installation:**
-    *   Nach der Registrierung der Aufgaben führt das Skript `config_systeme.ps1` und dann `config_utilisateur.ps1` über `Start-Process -Wait` aus.
+##### `Invoke-LogFileRotation`: Archivverwaltung
+Um zu verhindern, dass Protokolldateien den Datenträger über die Zeit sättigen (insbesondere bei Kiosken, die jahrelang laufen).
+*   **Algorithmus**: Index-Verschiebung.
+    `log.txt` → `log.1.txt` → `log.2.txt` ... → `log.N.txt`.
+*   **Aufräumen**: Wenn die Anzahl der Dateien den Index `MaxSystemLogsToKeep` oder `MaxUserLogsToKeep` überschreitet (definiert in `config.ini`, Standard 7), werden die ältesten dauerhaft gelöscht.
 
-#### **`uninstall.ps1`**
+#### 4.2.4. `Start-OrchestratorProcess`: Vereinheitlichte Start-Engine
 
-*   **Rolle:** Entfernen von Automatisierungskomponenten und Wiederherstellen kritischer Systemeinstellungen.
-*   **Wiederherstellungslogik:**
-    *   Das Skript enthält hartcodierte Windows-"Standard"-Werte in seinem Code, um den Systemzustand wiederherzustellen.
-    *   Es verwendet dieselben Cmdlets wie `config_systeme.ps1` (`Set-ItemProperty`, `Set-Service`), aber mit den umgekehrten Werten.
-    *   Die Operationen sind in `try...catch`-Blöcken gekapselt.
-*   **Bereinigungslogik:**
-    *   Es verwendet eine vordefinierte Liste (`$TasksToRemove`), die die Namen der vier geplanten Aufgaben enthält.
-    *   Es durchläuft diese Liste und führt `Get-ScheduledTask` aus, um zu prüfen, ob die Aufgabe existiert, und dann `Unregister-ScheduledTask -Confirm:$false`, um sie zu löschen.
+Diese Funktion ist das "Schweizer Taschenmesser" des Anwendungsstarts. Sie abstrahiert die Komplexität im Zusammenhang mit verschiedenen Windows-Executable-Typen.
 
-### 6.2. Laufzeitskripte (Stammverzeichnis)
+##### Entscheidungsalgorithmus
+Die Funktion analysiert die Zieldatei (`ProcessToLaunch`) und bestimmt die optimale Aufrufmethode:
 
-Diese Skripte enthalten die Hauptgeschäftslogik und werden automatisch von den geplanten Aufgaben ausgeführt.
+1.  **Pfadauflösung**: Wenn der Pfad relativ ist (z. B.: `..\App\bin\start.bat`), wird er in einen absoluten Pfad relativ zur Skript-Root konvertiert.
+2.  **Variablenerweiterung**: Windows-Umgebungsvariablen (z. B.: `%APPDATA%`, `%ProgramFiles%`) werden aufgelöst.
+3.  **Typ-Erkennung**:
+    *   **`.ps1`**: Ausgeführt über `powershell.exe -ExecutionPolicy Bypass -File ...`.
+    *   **`.bat` / `.cmd`**: Ausgeführt über `cmd.exe /c "..."`.
+    *   **`.exe` (und andere)**: Direkt ausgeführt.
 
-#### **`config_systeme.ps1`**
+##### Legacy-Modus- und Konsolenverwaltung
+*   Wenn `LaunchConsoleMode` auf `Legacy` gesetzt ist **UND** die Datei ein Batch ist, ändert die Funktion die Strategie:
+    *   Sie verwendet `cmd.exe /c start "Titel" ...`.
+    *   Dies erzwingt die Öffnung eines neuen Konsolenfensters (conhost), unerlässlich für Legacy-Skripte, die nicht an einen übergeordneten PowerShell-Prozess angehängt werden können.
 
-*   **Skriptarchitektur:** Das Skript ist in mehrere Bereiche gegliedert: Grundfunktionen, Hilfsfunktionen, Initialisierung und der Hauptausführungsblock (`try...catch...finally`).
-*   **Schlüsselfunktionen:**
-    *   `Get-IniContent`: Analysiert `config.ini` und wandelt es in eine verschachtelte PowerShell-Hashtabelle um (`$ini['Section']['Key']`).
-    *   `Get-ConfigValue`: Dies ist ein Wrapper für den Zugriff auf die Konfiguration. Er behandelt fehlende Schlüssel/Abschnitte, stellt Standardwerte bereit und führt eine Typkonvertierung durch.
-    *   `Add-Action` / `Add-Error`: Diese Funktionen zentralisieren die Protokollierung. Sie fügen Nachrichten zu globalen Listen hinzu (`$Global:ActionsEffectuees`, `$Global:ErreursRencontrees`), die zum Erstellen des Gotify-Berichts verwendet werden.
-*   **Ausführungslogik:** Der Hauptteil des Skripts ist eine Sequenz von Konfigurationsblöcken. Jeder Block ist idempotent: Er liest zuerst den aktuellen Zustand des Systems (Registrierungswert, Dienststatus), bevor er schreibt.
+##### Parameterkonstruktion (Splatting)
+Die Funktion konstruiert dynamisch eine Hashtable für `Start-Process`.
+```powershell
+$startProcessSplat = @{
+    FilePath = ...
+    ArgumentList = ...
+    WorkingDirectory = ... # Abgeleitet vom Dateipfad oder Projekt-Root
+}
 
-#### **`config_utilisateur.ps1`**
+# Minimiert-Modus-Verwaltung
+if ($launchMinimized) {
+    $startProcessSplat.Add("WindowStyle", "Minimized")
+}
+```
 
-*   **Rolle:** Sicherstellen, dass die in `[Process]` definierte Geschäftsanwendung im gewünschten Zustand ist (eine einzige, frisch gestartete Instanz).
-*   **Prozessverwaltungslogik:**
-    1.  **Pfadauflösung:** Der `ProcessName` wird von `[System.Environment]::ExpandEnvironmentVariables()` verarbeitet, um Variablen wie `%USERPROFILE%` aufzulösen.
-    2.  **Besitzeridentifikation:** Die Suche nach dem vorhandenen Prozess verwendet `Get-Process`, um Prozesse nach Namen zu finden, und dann `Get-CimInstance Win32_Process`, um den Besitzer jedes Prozesses abzurufen. Es vergleicht die SID des Prozessbesitzers mit der SID des aktuellen Benutzers (`[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value`).
-    3.  **Stoppen und Neustarten:** Wenn ein passender Prozess gefunden wird, wird er über `Stop-Process -Force` beendet. Anschließend wird eine neue Instanz mit `Start-Process` gestartet. Für den Aufruf von `Start-Process` wird "Splatting" (`@startProcessSplat`) verwendet.
+#### 4.2.5. Warte-UI-Verwaltung (Splash-Screen)
 
-### 6.3. Hilfsskripte und Starter
+Im Silent-Modus (`SilentMode=true`) wird die PowerShell-Konsole maskiert. Um zu vermeiden, dass der Benutzer denkt, die Installation sei abgestürzt, zeigt der Orchestrator eine minimale grafische Oberfläche (Splash Screen) über WinForms an.
 
-Diese Skripte sind entweder Support-Tools oder Integrationsbeispiele.
+**A. Der Splash Screen (`Start-WaitingUI`)**
 
-#### **`Close-AppByTitle.ps1`**
+Das Starten eines GUI-Skripts von einem anderen PowerShell-Skript ohne externe Dateiabhängigkeit ist komplex.
+*   **Problem**: Das Übergeben eines komplexen Codeblocks über `-Command` ist anfällig für Interpretationsfehler.
+*   **Lösung**: Der Splash Screen-Code wird in eine Zeichenkette eingekapselt, in **Base64** kodiert, dann an einen neuen `powershell.exe`-Prozess über `-EncodedCommand` übergeben.
 
-*   **Interaktion mit `user32.dll`:**
-    *   Es injiziert eine C#-Klasse über `Add-Type -TypeDefinition` in den Speicher. Dieser C#-Code verwendet `[DllImport("user32.dll")]`-Attribute, um Windows-API-Funktionen für PowerShell verfügbar zu machen.
-    *   Die `EnumWindows`-Funktion wird mit einem PowerShell-Skriptblock als "Callback" verwendet. Für jedes von der API gefundene Fenster wird dieser PowerShell-Block ausgeführt. In diesem Block wird der Fenstertitel überprüft.
-    *   Sobald das Zielfenster durch sein `Handle` identifiziert ist, wird `SetForegroundWindow` aufgerufen, um ihm den Fokus zu geben, und dann simuliert `[System.Windows.Forms.SendKeys]::SendWait()` Tastatureingaben.
+**B. Der "Ghost Parent"-Korrektur (P/Invoke MessageBox)**
 
-#### **`PreReboot.bat` und `LaunchApp.bat`**
+Im Silent-Modus oder SYSTEM-Kontext kann eine standardmäßige `MessageBox` im Hintergrund geöffnet werden. Um die Anzeige im Vordergrund zu erzwingen, verwendet der Orchestrator eine C#-Code-Injektion (P/Invoke), um die Windows-API zu manipulieren.
 
-*   **Portabilität:** Die Funktionsweise dieser Starter beruht auf der speziellen Batch-Skript-Variable `%~dp0`, die sich zum vollständigen Pfad des Verzeichnisses auflöst, in dem sich das Skript befindet.
+**Technische Implementierung:**
 
-#### **`management/tools/Find-WindowInfo.ps1`**
+```powershell
+# Injizieren von Code zur Manipulation von Fenstern
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
 
-*   **Nützlichkeit:** Dieses Skript ist ein Debugging- und Konfigurationstool.
-*   **Funktionsweise:** Es verwendet dieselbe C#-Code-Injektions- und `EnumWindows`-API-Aufruftechnik wie `Close-AppByTitle.ps1`. Es zeigt eine formatierte Liste der sichtbaren Fenster mit dem Prozessnamen und seiner PID an.
+public class MessageBoxFixer {
+    [DllImport("user32.dll")]
+    public static extern bool SetForegroundWindow(IntPtr hWnd);
+    
+    [DllImport("user32.dll")]
+    public static extern IntPtr GetForegroundWindow();
+    
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+    
+    [DllImport("user32.dll")]
+    public static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+    
+    [DllImport("user32.dll")]
+    public static extern uint GetCurrentThreadId();
+    
+    [DllImport("user32.dll")]
+    public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+    
+    public const int SW_RESTORE = 9;
+    
+    public static void ForceForeground() {
+        uint currentThread = GetCurrentThreadId();
+        uint lpdwProcessId = 0;
+        uint foregroundThread = GetWindowThreadProcessId(GetForegroundWindow(), out lpdwProcessId);
+        IntPtr targetHwnd = GetForegroundWindow();
+        
+        if (targetHwnd != IntPtr.Zero && currentThread != foregroundThread) {
+            AttachThreadInput(currentThread, foregroundThread, true);
+            ShowWindow(targetHwnd, SW_RESTORE);
+            SetForegroundWindow(targetHwnd);
+            AttachThreadInput(currentThread, foregroundThread, false);
+        }
+    }
+}
+"@
 
-## 7. Wartungs- und Debugging-Verfahren
+# Erstellen der ghost parent Form
+$ghostParent = New-Object System.Windows.Forms.Form
+$ghostParent.TopMost = $true
+$ghostParent.TopLevel = $true
+$ghostParent.ShowInTaskbar = $false
+$ghostParent.Opacity = 0
+$ghostParent.StartPosition = "CenterScreen"
+$ghostParent.Size = New-Object System.Drawing.Size(1, 1)
 
-Dieser Abschnitt enthält praktische Anleitungen zur Diagnose von Problemen und zum Testen von Änderungen.
+# Forcieren des Fokus vor Anzeige
+$ghostParent.Show()
+$ghostParent.Activate()
+[MessageBoxFixer]::ForceForeground()
 
-### 7.1. Verstehen und Verwenden von Protokollen (`Logs/`)
+# Anzeigen der MessageBox angehängt an die ghost Form
+$result = [System.Windows.Forms.MessageBox]::Show(
+    $ghostParent,
+    $message,
+    "WindowsOrchestrator - Installation",
+    [System.Windows.Forms.MessageBoxButtons]::OK,
+    $icon
+)
 
-*   **Speicherort:** Protokolle werden im Unterordner `Logs/` erstellt.
-    *   `config_systeme_ps_log.txt`: Enthält Protokolle des Systemskripts.
-    *   `config_utilisateur_log.txt`: Enthält Protokolle des Benutzerskripts.
-*   **Struktur der Protokollnachrichten:** `JJJJ-MM-TT HH:mm:ss [EBENE] [Kontext] - Nachricht`
-*   **So identifizieren Sie Aktionen und Fehler:**
-    *   **Erfolgreiche Aktionen:** `ACTION: ...`
-    *   **Erfasste Fehler:** `CAPTURED ERROR: ...`
-    *   **Fatale Fehler:** `FATAL SCRIPT ERROR ...`
+# Aufräumen
+$ghostParent.Close()
+$ghostParent.Dispose()
+```
 
-### 7.2. Manuelles Debuggen von Skripten
+**Warum diese Technik funktioniert**:
 
-#### **Ausführen von `config_systeme.ps1` mit `SYSTEM`-Rechten**
+- `AttachThreadInput` verbindet temporär den PowerShell-Thread mit dem aktiven Fenster-Thread
+- Dies gibt dem Skript das "Recht", den Fokus über `SetForegroundWindow` zu stehlen
+- Die `TopMost`-Form erzwingt dann die MessageBox im Vordergrund
+- Die Anbindung wird sofort danach getrennt, um das System nicht zu stören
 
-1.  **Voraussetzung:** Laden Sie `PsExec.exe` aus der Microsoft Sysinternals-Suite herunter.
-2.  **Ausführungsverfahren:**
-    *   Öffnen Sie eine Eingabeaufforderung als Administrator.
-    *   Führen Sie den Befehl aus: `PsExec.exe -s -i powershell.exe`
-    *   Ein neues PowerShell-Fenster wird geöffnet. Der Befehl `whoami` gibt `nt authority\system` zurück.
-    *   Navigieren Sie in diesem Fenster zum Projektverzeichnis und führen Sie `.\config_systeme.ps1` aus.
+#### 4.2.6. `Invoke-ExitLogic`: Vereinheitlichte Ausgangsverwaltung
 
-#### **Testen von `config_utilisateur.ps1` in einer Benutzersitzung**
+Anstatt die Ausgangslogik in `install.ps1` und `uninstall.ps1` zu duplizieren, zentralisiert diese Funktion die "Post-Ausführung"-Entscheidung.
 
-1.  **Ausführungsverfahren:**
-    *   Melden Sie sich mit dem Zielbenutzerkonto bei einer Windows-Sitzung an.
-    *   Öffnen Sie eine Standard-PowerShell-Konsole.
-    *   Navigieren Sie zum Projektverzeichnis und führen Sie `.\config_utilisateur.ps1` aus.
+**Entscheidungsbaum:**
 
-#### **Überprüfen des Status von geplanten Aufgaben**
+1.  **Neustart-Prüfung**:
+    *   Sie liest den `RebootOnCompletion`-Schlüssel im Konfigurationsobjekt.
+    *   **Wenn True**: Sie zeigt eine Warnung an und startet `shutdown.exe -r -t $RebootGracePeriod` (konfigurierbarer Verzug, Standard 15s).
 
-1.  **Öffnen Sie das Tool:** Führen Sie `taskschd.msc` aus.
-2.  **Finden Sie die Aufgaben:** Wählen Sie "Aufgabenplanungsbibliothek".
-3.  **Analysieren Sie die Informationen:**
-    *   Überprüfen Sie die Spalten "Status", "Auslöser" und "Ergebnis des letzten Laufs" (ein Code von `0x0` bedeutet Erfolg).
-    *   Konsultieren Sie die Registerkarte "Verlauf" für Details zu jeder Ausführung.
+2.  **Schließungsverwaltung (Wenn kein Neustart)**:
+    *   Sie liest den `PowerShellExitMode`-Schlüssel.
+    *   **Automatischer Modus**: Zeigt einen Countdown an ("Dieses Fenster schließt sich in X Sekunden...") dann beendet den Prozess. Nützlich für automatisierte Bereitstellungen, bei denen offene Fenster nicht gewünscht sind.
+    *   **Manueller Modus** (Standard): Führt `Read-Host` aus ("Drücken Sie Enter..."). Ermöglicht dem Benutzer, die Logs auf dem Bildschirm zu lesen, bevor er beendet.
 
-### **7.3. Sicherheitsaspekte**
+---
 
-Dieser Abschnitt beschreibt die Sicherheitsmechanismen und -auswirkungen im Zusammenhang mit dem Betrieb des Projekts.
+### 4.3. Eingangspunkte (Wrapper)
 
-*   **Ausführungskontext von Systemaufgaben**  
-    Das Skript `install.ps1` konfiguriert die geplante Aufgabe `WindowsOrchestrator-SystemStartup` so, dass sie mit den Berechtigungen des Kontos `NT AUTHORITY\SYSTEM` ausgeführt wird. Dieses Konto verfügt über weitreichende Berechtigungen auf dem lokalen System, was erforderlich ist, damit das Skript `config_systeme.ps1` Registrierungsschlüssel im Hive `HKEY_LOCAL_MACHINE` (HKLM) ändern und Systemdienste verwalten kann.
+Um eine reibungslose Benutzererfahrung zu garantieren (Doppelklick) und gleichzeitig die Sicherheitsbeschränkungen von Windows zu verwalten (UAC), verwendet der Orchestrator eine kaskadierende Ausführungskette.
 
-*   **Mechanismus zur Erhöhung der Berechtigungen (UAC)**  
-    Die Installations- (`1_install.bat`) und Deinstallationsskripte (`2_uninstall.bat`) müssen nicht aus einer Administratorsitzung gestartet werden. Sie führen einen `Start-Process -Verb RunAs`-Befehl aus, der eine UAC-Aufforderung (User Account Control) von Windows auslöst. Die Fortsetzung der Ausführung ist von der Bestätigung dieser Aufforderung durch den Benutzer abhängig.
+#### 4.3.1. Installationsausführungskette
 
-*   **Verwaltung von Sitzungskennwörtern**  
-    Die Skripte des Projekts **verarbeiten, fordern oder speichern keine** Benutzerkennwörter in irgendeiner Form. Die Aktivierung der AutoLogon-Funktion (`EnableAutoLogin=true`) schreibt lediglich den Wert `"1"` in den Registrierungsschlüssel `AutoAdminLogon`. Der Schlüssel `DefaultPassword` wird von den Skripten niemals geschrieben. Die Verantwortung für die sichere Speicherung des Kennworts in der Registrierung liegt beim Benutzer, über ein externes Tool wie `Sysinternals AutoLogon`.
+Der Aufrufablauf ist folgender:
 
-*   **Umgehung der Ausführungsrichtlinie**  
-    Die Startskripte (`.bat`) und die Befehle zur Erstellung geplanter Aufgaben verwenden systematisch das Argument `-ExecutionPolicy Bypass` beim Aufruf von `powershell.exe`. Dieses Argument ermöglicht die Ausführung der Skripte unabhängig von der auf dem System konfigurierten Ausführungsrichtlinie. Diese Einstellung gilt nur für die Instanz des gestarteten Prozesses und ändert die Sicherheitsrichtlinie des Systems nicht dauerhaft.
+1.  **`Install.bat`**: Einfacher Einstiegspunkt. Es startet `firstconfig.ps1` über PowerShell mit `-ExecutionPolicy Bypass`.
+2.  **`firstconfig.ps1`**: Grafische Konfigurationsoberfläche. Wenn der Benutzer validiert (ExitCode 0), fährt das Batch fort.
+3.  **`Install.bat`** (Fortsetzung): Startet den Wrapper `Launch-Install.ps1`.
+4.  **`Launch-Install.ps1`**: Elevations-Wrapper. Es analysiert `config.ini` für den Silent-Modus, dann startet es `install.ps1` mit Administratorrechten (UAC) und korrekten Fensterparametern.
+5.  **`install.ps1`**: Endskript, das Systemänderungen durchführt.
 
-### **7.4. Bekannte Einschränkungen**
+#### 4.3.2. Launcher-Logik `Launch-Install.ps1`
 
-Dieser Abschnitt dokumentiert Verhaltensweisen, die das Ergebnis von Designentscheidungen sind oder zu diesem Zeitpunkt nicht implementierte Funktionen darstellen.
+Dieses Zwischenskript hat zwei kritische Verantwortlichkeiten: UAC-Elevation und Fenstervisibilität.
 
-*   **Keine Wiederherstellung der Energieeinstellungen**  
-    Das Skript `uninstall.ps1` führt keine `powercfg`-Befehle aus. Daher werden die von `config_systeme.ps1` vorgenommenen Änderungen bezüglich des Ruhezustands des Computers (`standby-timeout-ac`) oder des Bildschirms (`monitor-timeout-ac`) bei der Deinstallation nicht rückgängig gemacht.
+*   **Ultra-leichte Konfigurationslesung**:
+    Es importiert nicht das `WindowsOrchestratorUtils`-Modul, um Verlangsamungen zu vermeiden. Es verwendet eine Regex, um den `SilentMode`-Parameter direkt aus dem INI-Dateitext zu lesen.
+    ```powershell
+    $content = Get-Content $configFile -Raw
+    if ($content -match "(?m)^SilentMode\s*=\s*true") { $silentMode = $true }
+    ```
 
-*   **Inaktive Konfiguration der Protokollrotation**  
-    Die Konfigurationsvorlagendatei (`default_config.ini`) enthält die Schlüssel `MaxSystemLogsToKeep` und `MaxUserLogsToKeep`. Die Funktion `Rotate-LogFile` in `config_systeme.ps1` liest diese Schlüssel jedoch nicht. Sie verwendet einen festen Wert von `7`, der im Skript durch die Variable `$DefaultMaxLogs` definiert ist.
+*   **Elevation und Maskierung**:
+    Es konstruiert die Parameter für `Start-Process` dynamisch.
+    *   `Verb = "RunAs"`: Löst das UAC-Fenster aus "Möchten Sie erlauben...".
+    *   `WindowStyle = "Hidden"`: Hinzugefügt nur, wenn `SilentMode` erkannt wird.
 
-*   **Fehlen einer chronologischen Validierung von Neustartaufgaben**  
-    Das Skript `config_systeme.ps1` erstellt die geplanten Aufgaben für die Vor-Neustart-Aktion und den geplanten Neustart als zwei unabhängige Entitäten. Das Skript enthält keine Logik, um zu überprüfen, ob der Wert von `PreRebootActionTime` chronologisch vor dem von `ScheduledRebootTime` liegt.
+---
 
-## 8. Anhang
+### 4.4. Installationsskripte
+
+#### 4.4.1. `firstconfig.ps1`: Dynamische grafische Oberfläche
+
+Dieses Skript verwendet **WinForms** (`System.Windows.Forms`), um die Oberfläche zu generieren.
+
+*   **Reaktive Logik**:
+    *   Kontrollkästchen ändern den Zustand anderer Steuerelemente in Echtzeit (z. B.: Abwählen von "Windows Update blockieren" aktiviert die Gruppe "Auto-Neustart deaktivieren").
+*   **Datenvalidierung**:
+    *   **Zeitformat**: Validiert über Regex `^\d{2}:\d{2}$`.
+    *   **Zeitliche Logik**: Berechnet mathematisch, dass die Schließzeit gut *vor* der Neustartzeit liegt.
+*   **Konfigurationsfusion**:
+    *   Das Skript liest `config.ini` (falls vorhanden), um Felder vorab auszufüllen, was die Änderung einer bestehenden Konfiguration ohne alles neu einzugeben ermöglicht.
+
+#### 4.4.2. `install.ps1`: Installations-Engine
+
+Dies ist das komplexeste Skript in der Bereitstellungsphase.
+
+**A. Intelligenter Autologon-Assistent**
+Wenn der Autologon-Modus erforderlich ist, folgt das Skript einem rigorosen Workflow:
+1.  **Prüfung**: Schaut, ob `AutoAdminLogon` bereits in der Registrierung aktiv ist.
+2.  **Download**: Ruft das Archiv von der konfigurierten URL ab.
+3.  **Architekturauswahl**: Bestimmt dynamisch, ob `Autologon.exe` (x86), `Autologon64.exe` (x64) oder `Autologon64a.exe` (ARM64) verwendet werden soll.
+4.  **EULA-Anzeige**: Zeigt den Lizenzvertrag an (Notepad) und fordert zur Bestätigung auf, es sei denn `SkipEulaPrompt=true`.
+5.  **Ausführung**: Startet das Sysinternals-Tool. Im Silent-Modus stoppt das Skript temporär den Splash Screen (`Stop-WaitingUI`), um dem Benutzer zu erlauben, mit dem Passworteingabefenster zu interagieren, dann startet es ihn sofort wieder.
+
+**B. Erstellung geplanter Aufgaben**
+Das Skript installiert zwei Master-Aufgaben:
+*   **SYSTEM-Aufgabe (`SystemStartup`)**: `NT AUTHORITY\SYSTEM`, Trigger `AtStartup`.
+*   **USER-Aufgabe (`UserLogon`)**: Principal `$TargetUserForUserTask`, Trigger `AtLogon`, LogonType **Interactive** (Kritisch: ermöglicht Ausführung ohne Passwort in grafischer Session).
+
+**C. Finale Benachrichtigung**
+Verwendet den "Ghost Parent"-Fix (P/Invoke), der in Abschnitt 4.2.5 beschrieben ist, um die Anzeige von Erfolg/Fehler im Vordergrund zu erzwingen.
+
+---
+
+### 4.5. Laufzeit-Skripte
+
+#### 4.5.1. `config_systeme.ps1` (SYSTEM-Kontext)
+
+Dieses Skript stellt sicher, dass die Maschine bei jedem Start im gewünschten Zustand ist ("State Enforcement").
+
+##### Zielbenutzerbestimmung (Vollständiger Algorithmus)
+
+Die Logik für die Auswahl des Zielkontos folgt einer strengen Prioritätskaskade, um Fälle manueller oder automatisierter Installation zu handhaben.
+
+**Technische Implementierung:**
+
+```powershell
+function Get-TargetUsername {
+    param([hashtable]$Config)
+
+    # 1. Explizite Lesung in config.ini
+    $configUsername = Get-ConfigValue -Section "SystemConfig" -Key "AutoLoginUsername"
+
+    if (-not [string]::IsNullOrWhiteSpace($configUsername)) {
+        Write-Log "Using AutoLoginUsername from config.ini: '$configUsername'."
+        return $configUsername
+    }
+
+    Write-Log "AutoLoginUsername empty. Checking Registry..."
+
+    # 2. Lesung in Winlogon Registry (Bestehende Konfiguration)
+    try {
+        $winlogonPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
+        $regUsername = (Get-ItemProperty -Path $winlogonPath -Name "DefaultUserName" -ErrorAction Stop).DefaultUserName
+
+        if (-not [string]::IsNullOrWhiteSpace($regUsername)) {
+            Write-Log "Using Registry DefaultUserName: '$regUsername'."
+            return $regUsername
+        }
+    } catch {
+        Write-Log "Registry DefaultUserName not found."
+    }
+
+    Write-Log "WARNING: No target user defined."
+    return $null
+}
+```
+
+##### Andere kritische Funktionen
+*   **Netzwerkprüfung (Gotify)**: 3-Versuchs-Schleife, um auf die Netzwerkstapel-Erhöhung zu warten, bevor eine Benachrichtigung gesendet wird.
+*   **Windows Update-Verwaltung (GPO)**: Erstellt den Registrierungsschlüssel `HKLM:\SOFTWARE\Policies\...\AU` neu, falls er gelöscht wurde.
+*   **Dynamische Aufgaben**: Erstellt/Löscht Backup- und Reboot-Aufgaben on-the-fly gemäß `config.ini`.
+
+#### 4.5.2. `config_utilisateur.ps1` (USER-Kontext)
+
+Dieses Skript verwaltet die Benutzererfahrung und den Anwendungsstart.
+
+*   **"Single-Shot"-Mechanismus (Kein Watchdog)**:
+    Das Skript prüft, ob `ProcessToMonitor` (z. B.: `MyApp`) läuft.
+    *   Wenn **Ja**: Es protokolliert "Already running" und beendet sich sofort (`Exit 0`).
+    *   Wenn **Nein**: Es startet die Anwendung.
+    *   *Grund*: Der Orchestrator ist kein Service-Überwacher. Er sollte die Anwendung nicht neu starten, wenn der Benutzer sie freiwillig für Wartung schließt.
+
+*   **Pfaderweiterung**:
+    Es unterstützt Umgebungsvariablen (`%APPDATA%`) und löst relative Pfade (`..\MyApp\run.exe`) zu absoluten Pfaden auf.
+
+*   **Erstellung der USER-Schließaufgabe**:
+    Dieses Skript (im Benutzerkontext laufend) erstellt die geplante Aufgabe `WindowsOrchestrator-User-CloseApp`.
+    *   *Warum?* Damit die Aufgabe dem Benutzer gehört und in seiner interaktiven Session ausgeführt wird, Bedingung sine qua non, um Tasten (`SendKeys`) an das Anwendungsfenster senden zu können.
+
+    > **⚠️ Warnung: Abhängigkeit von Standardwerten**
+    > In der aktuellen Version des Codes wird die geplante Aufgabe `WindowsOrchestrator-User-CloseApp` **ohne dynamische Argumente** erstellt.
+    > *   **Konsequenz**: Das Skript `Close-AppByTitle.ps1` wird mit seinen hartkodierten Standardwerten ausgeführt (`$WindowTitle = "MyApp"` und `$KeysToSend = "{ESC}{ESC}x{ENTER}"`).
+    > *   **Auswirkung**: Wenn Ihre Anwendung nicht "MyApp" heißt oder nicht mit dieser Tastensequenz schließt, wird die automatische Schließung fehlschlagen, auch wenn Sie `config.ini` ändern, solange das Skript `config_utilisateur.ps1` nicht modifiziert wird, um diese Argumente zu übergeben.
+
+---
+
+### 4.6. Spezialisierte Module
+
+Diese Skripte führen spezifische und kritische Aufgaben aus: Datenbackup und saubere Anwendungsschließung. Sie werden von dynamischen geplanten Aufgaben aufgerufen.
+
+#### 4.6.1. `Invoke-DatabaseBackup.ps1`: Autonomes Backup
+
+Dieses Skript ist so konzipiert, dass es robust gegenüber Abstürzen und effizient bei großen Datenmengen ist.
+
+##### A. Verriegelungsmechanismus (Lock-Datei)
+Um zu vermeiden, dass zwei Backups gleichzeitig starten (z. B.: wenn das vorherige sehr langsam ist oder stecken bleibt), implementiert das Skript einen Datei-Semaphor-Mechanismus.
+1.  Prüft die Existenz von `.backup_running.lock` im Zielordner.
+2.  **Anti-Blockierungs-Sicherheit**: Es prüft das Alter der Lock-Datei. Wenn sie mehr als 60 Minuten alt ist (willkürlicher Wert, der einen wahrscheinlichen Absturz des vorherigen Skripts annimmt), löscht es die Lock und erzwingt die Ausführung.
+3.  Erstellt die Lock-Datei.
+4.  Führt das Backup aus.
+5.  Löscht die Lock-Datei im `Finally`-Block.
+
+##### B. Zeitliche differentielle Logik
+Es verwendet nicht das Archiv-Bit (unzuverlässig) noch MD5-Hashing (zu langsam für GB Daten).
+*   **Filter**: `Where-Object { $_.LastWriteTime -gt (Get-Date).AddHours(-24) }`
+*   **Ergebnis**: Nur Dateien, die seit gestern modifiziert wurden, werden kopiert.
+
+##### C. Verwaltung gepaarter Dateien (SQLite)
+Das Skript gewährleistet die Integrität von Dateigruppen (z. B.: Shapefiles `.shp/.shx/.dbf` oder SQLite `.db/.wal`).
+*   **Algorithmus**:
+    1. Identifiziert modifizierte Dateien < 24h.
+    2. Extrahiert ihren "Basisnamen" (Dateiname ohne Erweiterung).
+    3. Erzwingt das Backup von **allen** Dateien im Quellordner, die diesen exakten Basisnamen teilen, unabhängig von Erweiterung oder Änderungsdatum.
+
+##### D. Vorabprüfungen
+*   **Schreibtest**: Versucht, eine temporäre Datei im Ziel zu erstellen/löschen, um NTFS-/Netzwerkberechtigungen vor dem Start zu validieren.
+*   **Datenträgerplatz**: Berechnet die gesamte erforderliche Größe und vergleicht sie mit dem freien Speicherplatz des Ziellaufwerks. Wirft eine explizite Ausnahme, wenn der Speicherplatz unzureichend ist.
+
+---
+
+#### 4.6.2. `Close-AppByTitle.ps1`: Saubere Schließung via API
+
+Im Gegensatz zu einem brutalen `Stop-Process` (Kill) versucht dieses Skript eine "saubere" Schließung, indem es menschliche Interaktion simuliert, indem es Tasten sendet. PowerShell hat keine nativen Befehle, um Fenster zu listen oder Fokus zuverlässig zu verwalten, daher verwendet das Skript eine C#-Code-Injektion (P/Invoke).
+
+##### C#-P/Invoke-Injektion: Vollständiger Code
+
+Das Skript kompiliert on-the-fly eine Klasse namens `WindowInteraction`, um Funktionen von `user32.dll` zuzugreifen. Im Gegensatz zu früheren Versionen enthält diese Klasse die Verwaltung des "minimierten" Zustands (`IsIconic`), um das Fenster vor der Interaktion wiederherzustellen.
+
+```powershell
+$code = @"
+using System;
+using System.Text;
+using System.Runtime.InteropServices;
+public class WindowInteraction {
+    public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+    [DllImport("user32.dll")] public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+    [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hWnd);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+    [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+    [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+    [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr hWnd);
+    public const int SW_RESTORE = 9;
+}
+"@
+```
+
+##### Such- und Normalisierungsalgorithmus
+
+Das Skript vergleicht nicht nur rohe Zeichenketten. Es wendet **Normalisierung** an, um unsichtbare Zeichen zu handhaben (wie nicht brechender Leerraum `U+00A0`), die oft in Fenstertiteln von Legacy-Anwendungen oder schlecht kodierten Anwendungen vorkommen.
+
+```powershell
+$enumWindowsCallback = {
+    param($hWnd, $lParam)
+
+    if ([WindowInteraction]::IsWindowVisible($hWnd)) {
+        $sb = New-Object System.Text.StringBuilder 256
+        [WindowInteraction]::GetWindowText($hWnd, $sb, $sb.Capacity) | Out-Null
+
+        # Bereinigung: Ersetzen von nicht brechenden Leerzeichen und Entfernen von doppelten Leerzeichen
+        $cleanedTitle = $sb.ToString().Replace([char]0x00A0, ' ').Replace('  ', ' ').Trim()
+
+        if ($cleanedTitle -like "*$($WindowTitle)*") {
+            $script:foundWindowHandle = $hWnd
+            return $false  # Fenster gefunden, Enumeration stoppen
+        }
+    }
+    return $true
+}
+```
+
+##### Aktivierungs- und Tastensendesequenz
+
+Sobald das Fenster gefunden ist, führt das Skript eine strenge Sequenz aus, um sicherzustellen, dass die Tasten von der korrekten Anwendung empfangen werden:
+
+1.  **Wiederherstellung**: Prüft, ob das Fenster in der Taskleiste minimiert ist (`IsIconic`). Wenn ja, sendet es den `SW_RESTORE`-Befehl und pausiert 250ms.
+2.  **Fokus**: Erzwingt das Fenster im Vordergrund (`SetForegroundWindow`) und pausiert 500ms.
+3.  **Ausgangssequenz**: Sendet eine spezifische Sequenz, die standardmäßig definiert ist als `{ESC}{ESC}x{ENTER}` (Escape zweimal, um Popups zu schließen, 'x' zum Beenden, Enter zur Bestätigung).
+
+```powershell
+if ($script:foundWindowHandle -ne [System.IntPtr]::Zero) {
+    # Wiederherstellung falls minimiert
+    if ([WindowInteraction]::IsIconic($handle)) {
+        [WindowInteraction]::ShowWindow($handle, [WindowInteraction]::SW_RESTORE)
+        Start-Sleep -Milliseconds 250
+    }
+
+    # Fokus
+    [WindowInteraction]::SetForegroundWindow($handle)
+    Start-Sleep -Milliseconds 500
+
+    # Senden der Standardsequenz (Hardcoded)
+    Write-StyledHost "Erste Taste senden {ESC}..." "INFO"
+    [System.Windows.Forms.SendKeys]::SendWait("{ESC}")
+    Start-Sleep -Seconds 1
+
+    Write-StyledHost "Zweite Taste senden {ESC}..." "INFO"
+    [System.Windows.Forms.SendKeys]::SendWait("{ESC}")
+    Start-Sleep -Seconds 1
+
+    Write-StyledHost "Endsequenz senden 'x' und {ENTER}..." "INFO"
+    [System.Windows.Forms.SendKeys]::SendWait("x{ENTER}")
+}
+```
+
+---
+
+## 5. Verwaltung externer Abhängigkeiten und Sicherheit
+
+Der Orchestrator ist so konzipiert, dass er autonom ist, aber er stützt sich auf zwei kritische externe Komponenten für erweiterte Funktionalitäten: das Autologon-Tool von Microsoft und den Gotify-Benachrichtigungsdienst.
+
+### 5.1. Microsoft Sysinternals Autologon-Tool
+
+Der Orchestrator delegiert die sensible Verwaltung von Anmeldedaten für automatische Session-Öffnung an das standardmäßige **Autologon**-Tool der Sysinternals-Suite, das Passwörter über LSA-Geheimnisse verschlüsselt.
+
+#### 5.1.1. Download- und Architekturauswahlmechanismus
+
+Das Tool wird on-demand heruntergeladen ("Lazy Loading") während der `install.ps1`-Ausführung.
+
+*   **Konfigurierbare Quelle**: Die URL ist in `config.ini` definiert.
+*   **Architekturerkennung**: Das Skript erkennt die Prozessorarchitektur (`$env:PROCESSOR_ARCHITECTURE`) und extrahiert das entsprechende Binary aus dem ZIP-Archiv:
+    *   `x86` → `Autologon.exe`
+    *   `AMD64` → `Autologon64.exe`
+    *   `ARM64` → `Autologon64a.exe` (Native ARM-Unterstützung)
+*   **"Splash Gap"-Verwaltung**: Im Silent-Modus (`SilentMode=true`) stoppt das Skript temporär die Warteoberfläche (`Stop-WaitingUI`) kurz vor dem Start von Autologon, damit das Passworteingabefenster sichtbar und interaktiv ist, dann startet es sie sofort wieder.
+
+#### 5.1.2. Anmeldedatensicherheit (Zero Knowledge)
+
+*   **Installation**: Der Orchestrator manipuliert das Passwort niemals. Er startet `Autologon.exe -accepteula` und lässt den Administrator die Anmeldedaten direkt im Microsoft-Tool eingeben.
+*   **Deinstallation**: Das Skript `uninstall.ps1` erkennt, ob Autologon aktiv ist. Wenn ja, startet es das Tool neu und fordert den Benutzer auf, manuell auf die Schaltfläche **Disable** zu klicken. Diese Aktion erzwingt den API-Aufruf `LsaStorePrivateData` mit einem Nullwert, wodurch das Geheimnis aus der Registrierung gelöscht wird.
+
+### 5.2. Gotify-Benachrichtigungen (Optional)
+
+Dieses Modul ermöglicht es dem Orchestrator, Statusberichte ("Erfolg", "Kritischer Fehler") an einen selbst gehosteten Benachrichtigungsserver über HTTP REST zu senden.
+
+#### 5.2.1. REST-Implementierung
+
+Die Integration erfolgt über `Invoke-RestMethod` in `config_systeme.ps1` und `config_utilisateur.ps1`.
+
+*   **Anfragekonstruktion**:
+    ```powershell
+    $payload = @{
+        message  = $messageBody
+        title    = $finalMessageTitle
+        priority = $gotifyPriority
+    } | ConvertTo-Json -Depth 3 -Compress
+    ```
+
+#### 5.2.2. Netzwerkresilienz
+
+Vor jedem Sendeversuch prüfen die Skripte die Konnektivität, um zu vermeiden, dass die Ausführung auf HTTP-Timeout blockiert wird.
+
+*   **DNS/Port-Test**: Das Skript verwendet `Test-NetConnection -ComputerName "8.8.8.8" -Port 53` (Google DNS), um zu validieren, dass der Netzwerkstapel aktiv ist.
+*   **Fail-Safe**: Wenn der Test fehlschlägt oder die Gotify-API einen Fehler zurückgibt, wird die Ausnahme gefangen und lokal protokolliert (`Add-Error`), aber das Skript setzt seine Hauptausführung fort.
+
+---
+
+## 6. Lebenszyklus und Nutzungsszenarien
+
+Dieser Abschnitt detailliert sequenzielle Ausführungsabläufe, von der anfänglichen Installation bis zum täglichen Betrieb. Er explicitiert die Orchestrierung zwischen verschiedenen Komponenten (BAT, PS1, EXE) und Sicherheitskontexten (Benutzer vs. SYSTEM).
+
+### 6.1. Vollständige Installationssequenz
+
+Der Installationsprozess verwendet eine kaskadierende Architektur ("Process Hopping"), um Berechtigungserhöhung (UAC) und Kontextanzeige-Persistenz zu verwalten.
+
+#### Logische Sequenzdiagramm
+
+1.  **Bootstrapping (Benutzerkontext)**:
+    *   `Install.bat` startet `firstconfig.ps1` (GUI).
+    *   Wenn der Benutzer validiert (Exit Code 0), startet das Batch den Wrapper `Launch-Install.ps1`.
+
+2.  **Elevation und Vorbereitung (Launcher)**:
+    *   `Launch-Install.ps1` führt eine leichte Lesung (Regex) von `config.ini` durch, um `SilentMode` zu erkennen.
+    *   Es konstruiert Startup-Parameter: `Verb="RunAs"` (löst UAC aus) und `WindowStyle="Hidden"` (falls silent).
+    *   Es startet `install.ps1` in einem neuen erhöhten Prozess.
+
+3.  **Installations-Engine (Admin-Kontext)**:
+    *   `install.ps1` initialisiert die Umgebung und lädt Sprachen.
+    *   **UI-Verwaltung**: Wenn `SilentMode=true`, startet es `Start-WaitingUI` (Splash Screen) über einen separaten PowerShell-Prozess (Base64).
+    *   **Autologon**: Wenn erforderlich, stoppt es den Splash Screen, startet `Autologon.exe` (interaktiv), dann startet es ihn wieder.
+    *   **Aufgabenerstellung**:
+       *   `WindowsOrchestrator-SystemStartup` (SYSTEM, AtStartup).
+       *   `WindowsOrchestrator-UserLogon` (Interactive, AtLogon).
+
+4.  **Sofortige Ausführung (Post-Installation)**:
+    *   Das Skript erzwingt die sofortige Ausführung von `config_systeme.ps1`, um GPO- und Stromversorgungseinstellungen anzuwenden, ohne auf Neustart zu warten.
+    *   Es löst dann die `UserLogon`-Aufgabe aus, um die Anwendung sofort zu starten.
+
+5.  **Abschluss**:
+    *   Im Silent-Modus verwendet das Skript den **P/Invoke GhostParent**-Fix (Klasse `MessageBoxFixer`), um die Anzeige der Endbenachrichtigung im Vordergrund zu erzwingen, trotz Abwesenheit eines sichtbaren Konsolenfensters.
+
+### 6.2. Detaillierte tägliche Zeitleiste (Timeline)
+
+Hier ist der genaue Lebenszyklus einer vom Orchestrator verwalteten Produktionsmaschine, basierend auf den Standardwerten, die in `default_config.ini` definiert sind, und der Skriptlogik.
+
+```text
+--[ ENDE DES TAGES (T) ]-------------------------------------------------------
+
+02:50:00 ─┬─ BEGINN AUFGABE: WindowsOrchestrator-User-CloseApp
+          │  Kontext: USER (Aktive interaktive Session)
+          │  Skript: Close-AppByTitle.ps1
+          │  Aktion: Sucht nach Fenster über Win32 API, sendet {ESC}{ESC}x{ENTER}.
+          │  Ergebnis: Saubere Anwendungsschließung.
+          │
+02:57:00 ─┼─ BEGINN AUFGABE: WindowsOrchestrator-SystemBackup
+          │  Kontext: SYSTEM (Hintergrund)
+          │  Skript: Invoke-DatabaseBackup.ps1
+          │  Aktion: Differentielle Scannung modifizierter Dateien (< 24h).
+          │  Sicherheit: Verwaltung der .backup_running.lock-Sperre.
+          │
+02:59:00 ─┼─ BEGINN AUFGABE: WindowsOrchestrator-SystemScheduledReboot
+          │  Kontext: SYSTEM
+          │  Aktion: shutdown.exe /r /f /t 60
+          │  Ergebnis: Vollständige Systemabschaltung.
+          
+--[ BEGINN DES TAGES (T+1) ]---------------------------------------------------
+
+03:00:xx ─┼─ KALTE BOOT-SEQUENZ
+          │  Hinweis: Fast Startup wird durch config_systeme.ps1 erzwungen auf OFF.
+          │
+03:01:00 ─┼─ BEGINN AUFGABE: WindowsOrchestrator-SystemStartup
+          │  Kontext: SYSTEM
+          │  Skript: config_systeme.ps1
+          │  1. Prüfen/Anwenden: Windows Update GPO, PowerCfg.
+          │  2. Log-Rotation (log.txt -> log.1.txt).
+          │  3. Regenerierung dynamischer Aufgaben (Backup/Reboot) gemäß config.ini.
+          │  4. Konfiguration von Autologon (Winlogon Registry) falls aktiviert.
+          │
+03:01:15 ─┼─ WINLOGON-SUBSYSTEM
+          │  Aktion: AutoAdminLogon=1 erkannt.
+          │  Aktion: LSA-Geheimnisse-Dekodierung.
+          │  Ergebnis: Automatische Benutzersession-Öffnung.
+          │
+03:01:20 ─┼─ BEGINN AUFGABE: WindowsOrchestrator-UserLogon
+          │  Kontext: USER (Interaktive Session)
+          │  Skript: config_utilisateur.ps1
+          │  1. Prüfen, ob "MyApp" läuft (über WMI).
+          │  2. Wenn nicht, starten "LaunchApp.bat" über Start-OrchestratorProcess.
+          │  3. Erstellen der "User-CloseApp"-Schließaufgabe für den nächsten Tag.
+          │
+03:01:25 ─┴─ BETRIEBSSYSTEM
+```
+
+### 6.3. Session-Modi: Vergleichende Analyse
+
+Der Parameter `SessionStartupMode` in `config.ini` modifiziert die Zugriffsstrategie zum System.
+
+#### Technische Vergleichstabelle
+
+| Modus | `Standard` | `Autologon` |
+| :--- | :--- | :--- |
+| **Registry-Schlüssel** | `HKLM\...\Winlogon` `AutoAdminLogon = "0"` | `HKLM\...\Winlogon` `AutoAdminLogon = "1"` |
+| **Boot-Verhalten** | Stoppt am Windows-Anmeldebildschirm (LogonUI). | Öffnet den Windows-Desktop automatisch. |
+| **Anmeldedaten-Verwaltung** | Manuell durch Benutzer bei jedem Boot. | Automatisch über LSA-Geheimnisse (konfiguriert durch externes Tool). |
+| **App-Start** | Zum Zeitpunkt, wenn der Benutzer sich anmeldet (Trigger `AtLogon`). | Sofort nach Boot (Automatischer `AtLogon`-Trigger). |
+| **Anwendungsfall** | Verwaltungsarbeitsstation, Server, Bürodesktop. | Interaktiver Kiosk, Displayscreen, Autonomer Terminal. |
+
+**Sicherheitshinweis:**
+Im `Autologon`-Modus, obwohl die Session-Öffnung automatisch ist, wird das Passwort **niemals** in Klartext gespeichert. Der Orchestrator stützt sich ausschließlich auf den nativen Windows-Mechanismus (verschlüsselte LSA-Geheimnisse), der über das Sysinternals-Tool während der Installation konfiguriert wird.
+
+---
+
+## 7. Wartung, Debugging und Ausgangsverfahren
+
+Dieser Abschnitt bietet die notwendigen Methodologien, um Vorfälle in Produktion zu diagnostizieren und den Lebenszyklus des Orchestrators zu warten. Er stützt sich auf die Analyse der Logs, die von `WindowsOrchestratorUtils.psm1` generiert werden, und die Standardmechanismen von Windows.
+
+### 7.1. Protokollierungssystem
+
+Der Orchestrator implementiert zentralisierte und rotierende Protokollierung, um Nachverfolgbarkeit ohne Datenträger-Sättigung zu garantieren.
+
+#### 7.1.1. Speicherort und Format
+
+Alle Logs werden im `Logs/`-Ordner gespeichert, der sich auf der Projekt-Root befindet (gleiche Ebene wie `config.ini`).
+
+*   **`config_systeme_ps_log.txt`**: Verfolgt die SYSTEM-Kontext-Ausführung (Startup, GPO, Power, Dynamische Aufgaben).
+*   **`config_utilisateur_log.txt`**: Verfolgt die USER-Kontext-Ausführung (App-Start, Prozesserkennung).
+*   **`Invoke-DatabaseBackup_log.txt`**: Spezifische Backup-Operationstraces (kopierte Dateien, Löschung).
+
+**Standardisiertes Zeilenformat:**
+`YYYY-MM-DD HH:MM:SS [LEVEL] - Nachricht`
+
+*   `[INFO]`: Normale Operation (z. B.: "FastStartup disabled.").
+*   `[WARN]`: Nicht-blockierendes Problem (z. B.: "Target user not specified in config.ini").
+*   `[ERROR]`: Kritischer Funktionsfehler oder gefangene Ausnahme.
+
+#### 7.1.2. Rotationsrichtlinie
+
+Um die langfristige Systemnachhaltigkeit zu garantieren, wird die Funktion `Invoke-LogFileRotation` zu Beginn jedes Skripts aufgerufen:
+1.  **Archivierung**: Bestehende Dateien werden verschoben (`log.txt` → `log.1.txt` → `log.2.txt`).
+2.  **Aufräumen**: Dateien, die den Index `MaxSystemLogsToKeep` oder `MaxUserLogsToKeep` überschreiten (definiert in `config.ini`, Standard 7), werden dauerhaft gelöscht.
+3.  **Erneuerung**: Eine neue leere `.txt`-Datei wird für die aktuelle Ausführung erstellt.
+
+#### 7.1.3. Automatischer Fallback (Sicherheit)
+
+Wenn der `Logs/`-Ordner schreibgeschützt wird (voller Datenträger, Korruption, versehentliche Löschung), aktiviert das System einen Überlebensmechanismus (Fail-Safe):
+*   **Mechanismus**: Der `Catch`-Block der Funktion `Write-Log` leitet die Schreibung zu einem temporären Systemverzeichnis um.
+*   **Fallback-Speicherort**: `C:\ProgramData\StartupScriptLogs\*_FATAL_LOG_ERROR.txt`
+*   **Verwendung**: Bei Abwesenheit von Logs im Anwendungsordner muss der Administrator systematisch diesen Systemordner überprüfen.
+
+### 7.2. Manuelle Debugging-Verfahren
+
+#### 7.2.1. USER-Kontext-Debugging
+
+Um Probleme mit Anwendungsstart oder Prozesserkennung zu diagnostizieren:
+1.  Öffnen Sie eine Session mit dem Zielbenutzer.
+2.  Öffnen Sie PowerShell (ISE oder VS Code).
+3.  Führen Sie das Skript aus: `.\management\config_utilisateur.ps1`
+4.  **Schlüsselpunkte**:
+    *   Wenn das Skript angibt "Process is already running", überprüfen Sie über den Task-Manager, ob eine Phantom-Instanz der Anwendung im Hintergrund läuft.
+    *   Überprüfen Sie, ob zugeordnete Netzlaufwerke in dieser Konsolensession zugänglich sind.
+
+#### 7.2.2. SYSTEM-Kontext-Debugging (via PsExec)
+
+Das Simulieren der `NT AUTHORITY\SYSTEM`-Umgebung ist unerlässlich, um zu verstehen, warum ein Skript manuell funktioniert, aber beim Startup fehlschlägt (Umgebungsvariablenprobleme oder Netzwerkzugriff).
+
+**Erforderliches Tool**: [PsExec](https://learn.microsoft.com/en-us/sysinternals/downloads/psexec) (Sysinternals).
+
+**Verfahren:**
+1.  Öffnen Sie `cmd.exe` als Administrator.
+2.  Starten Sie eine interaktive PowerShell-Konsole im SYSTEM-Modus:
+    ```cmd
+    psexec -i -s powershell.exe
+    ```
+3.  Überprüfen Sie die Identität:
+    ```powershell
+    whoami
+    # Erwartetes Ergebnis: nt authority\system
+    ```
+4.  Navigieren Sie zum Ordner und führen Sie das Skript aus:
+    ```powershell
+    cd C:\WindowsOrchestrator\management
+    .\config_systeme.ps1
+    ```
+
+**Kritischer Unterschied**: Mit `psexec -i` haben Sie Desktop-Zugriff (GUI). Die reale SYSTEM-geplante Aufgabe hat **keinen** Desktop-Zugriff. Wenn ein modales Fenster oder ein blockierender Fehler über PsExec erscheint, blockiert es die reale Aufgabe in Produktion endlos.
+
+#### 7.2.3. Geplante Aufgaben-Analyse
+
+Wenn Logs leer oder nicht vorhanden sind, liegt das Problem auf Ebene des Aufgabenplaners.
+1.  Öffnen Sie `taskschd.msc`.
+2.  Inspizieren Sie die Aufgabe `WindowsOrchestrator-SystemStartup`.
+3.  Überprüfen Sie die Spalte **"Ergebnis der letzten Ausführung"**:
+    *   `0x0`: Erfolg.
+    *   `0x1`: Fehler im PowerShell-Skript (Exit Code 1).
+    *   `0xC0000...`: Windows-Fehler (Unzureichende Rechte, Datei nicht gefunden, abgelaufenes Konto-Passwort).
+
+### 7.3. Ausgangscodes und Fehlererkennung
+
+Der Orchestrator aggregiert Fehler über die globale Liste `$Global:ErreursRencontrees`.
+
+*   **Exit Code 0 (Erfolg)**: Das Skript wurde abgeschlossen, auch wenn Warnungen (`[WARN]`) ausgegeben wurden (z. B.: Netzwerk für Gotify nicht verfügbar).
+*   **Exit Code 1 (Fehler)**:
+    *   Eine unbehandelte Ausnahme hat das Skript gestoppt (`Throw`).
+    *   Ein kritischer Fehler wurde gefangen (z. B.: Fehler beim Laden von `config.ini`).
+    *   Die Schreibung in `Logs/` und in den Fallback-Ordner ist gleichzeitig fehlgeschlagen.
+
+### 7.4. Häufige Probleme und Lösungen
+
+#### 7.4.1. Die Anwendung startet nicht
+
+**Symptome**: Session geöffnet, aber keine Anwendung. Benutzer-Log: "Process not found. Starting..." aber nichts passiert.
+**Diagnose**:
+*   Überprüfen Sie den `ProcessToLaunch`-Pfad in `config.ini`.
+*   Überprüfen Sie den Konsolenmodus: Wenn Sie ein altes `.bat` starten, stellen Sie sicher, dass `LaunchConsoleMode=Legacy` gesetzt ist. Der `Standard`-Modus (Standard) verwendet `Start-Process`, der bei missgeformten Batch-Skripten fehlschlagen kann, die eine dedizierte Konsole erwarten.
+
+#### 7.4.2. Der Neustart funktioniert nicht
+
+**Symptome**: Der PC bleibt nach der geplanten Zeit eingeschaltet.
+**Diagnose**:
+*   Überprüfen Sie, ob die Aufgabe `WindowsOrchestrator-SystemScheduledReboot` in `taskschd.msc` existiert.
+*   Wenn abwesend: Überprüfen Sie, ob `ScheduledRebootTime` in `config.ini` nicht leer ist.
+*   Hinweis: Diese Aufgabe ist **dynamisch**. Sie wird von `config_systeme.ps1` bei jedem Startup neu erstellt. Wenn `config_systeme.ps1` vor diesem Schritt abstürzt, wird die Neustart-Aufgabe nicht aktualisiert.
+
+#### 7.4.3. Backup schlägt fehl ("Access Denied")
+
+**Symptome**: Backup-Log: "Insufficient permissions to write to backup destination".
+**Ursache**: Backup zu Netzwerkfreigabe (NAS) im SYSTEM-Kontext.
+**Erklärung**: Das SYSTEM-Konto (`NT AUTHORITY\SYSTEM`) authentifiziert sich am Netzwerk als `DOMAIN\MACHINE_NAME$`.
+*   **In Domäne**: Sie müssen dem Computer-Konto Schreibrechte auf dem NAS geben.
+*   **In Workgroup**: Es ist unmöglich (das NAS kennt die Maschinenidentität nicht).
+**Lösung**: Verwenden Sie lokalen Datenträger, USB-Stick oder konfigurieren Sie eine Backup-Aufgabe, die unter einem Benutzerkonto mit Netzwerkanmeldedaten läuft.
+
+#### 7.4.4. Splash-Screen bleibt hängen (Silent-Modus)
+
+**Symptome**: "Operation in progress"-Fenster friert endlos während der Installation ein.
+**Diagnose**: Ein modales Fenster (Bestätigung, Fehler) ist *hinter* dem Splash Screen geöffnet, der als `TopMost` konfiguriert ist.
+**Lösung**:
+1.  Töten Sie den `powershell.exe`-Prozess über den Task-Manager.
+2.  Modifizieren Sie `config.ini`: `SilentMode=false`.
+3.  Starten Sie die Installation neu, um die blockierende Nachricht zu visualisieren.
+
+---
+
+## 8. Anhänge
 
 ### 8.1. Lizenz
 
-Dieses Projekt wird unter den Bedingungen der **GNU General Public License v3 (GPLv3)** vertrieben. Der vollständige Text der Lizenz ist im Stammverzeichnis des Projekts in der Datei `LICENSE` verfügbar.
+Dieses Projekt wird unter den Bedingungen der **GNU General Public License v3 (GPLv3)** vertrieben.
 
-### 8.2. Glossar der Begriffe
+*   **Freiheiten**: Sie sind frei, diese Software zu verwenden, zu studieren, zu modifizieren und zu vertreiben.
+*   **Verpflichtungen**: Bei Weitervertrieb (auch modifiziert), müssen Sie den Quellcode unter derselben Lizenz (Copyleft) bereitstellen und die Urheberrechtsvermerke beibehalten.
 
----
-**UAC (User Account Control / Benutzerkontensteuerung)**
-*   **Definition:** Ein Sicherheitsmechanismus von Windows, der eine Bestätigung des Benutzers erfordert, bevor eine Aktion zugelassen wird, die Administratorrechte erfordert.
-*   **Kontext im Projekt:** Wird von `install.ps1` und `uninstall.ps1` über den Parameter `-Verb RunAs` des Befehls `Start-Process` ausgelöst.
----
-**Geplante Aufgabe (Scheduled Task)**
-*   **Definition:** Eine Komponente des Windows-Dienstes "Aufgabenplanung", die die automatische Ausführung eines Skripts oder Programms ermöglicht.
-*   **Kontext im Projekt:** Der zentrale Mechanismus der Automatisierung.
----
-**Windows-Registrierung (Windows Registry)**
-*   **Definition:** Eine hierarchische Datenbank, in der Windows Konfigurationseinstellungen speichert.
-*   **Kontext im Projekt:** Das Hauptziel der Änderungen von `config_systeme.ps1`.
----
-**HKLM (HKEY_LOCAL_MACHINE)**
-*   **Definition:** Der Registrierungs-Hive, der Einstellungen enthält, die für den gesamten Computer gelten.
-*   **Kontext im Projekt:** Alle Registrierungsänderungen von `config_systeme.ps1` befinden sich in HKLM.
----
-**SID (Security Identifier / Sicherheitskennung)**
+### 8.2. Vollständiges technisches Glossar
 
-*   **Definition:** Eine eindeutige Zeichenfolge, die einen Sicherheitsprinzipal (Benutzer, Gruppe) identifiziert.
-*   **Kontext im Projekt:** Wird von `config_utilisateur.ps1` verwendet, um den Besitzer eines Prozesses zu identifizieren.
----
-**`NT AUTHORITY\SYSTEM` (SYSTEM-Konto)**
-*   **Definition:** Ein internes Windows-Dienstkonto mit weitreichenden Berechtigungen auf dem lokalen System.
-*   **Kontext im Projekt:** Der Ausführungskontext von `config_systeme.ps1`.
----
-**Idempotenz**
-*   **Definition:** Eine Eigenschaft einer Operation, die bei mehrfacher Anwendung dasselbe Ergebnis liefert wie bei einmaliger Anwendung.
-*   **Kontext im Projekt:** Ein Designprinzip der Skripte, um einen stabilen Endzustand zu gewährleisten.
----
-**PowerShell-Ausführungsrichtlinie (Execution Policy)**
-*   **Definition:** Eine Sicherheitsfunktion von PowerShell, die bestimmt, ob Skripte ausgeführt werden können.
-*   **Kontext im Projekt:** Wird über den Parameter `-ExecutionPolicy Bypass` umgangen, um die Ausführung von Skripten sicherzustellen.
+| Begriff | Definition im WindowsOrchestrator-Kontext |
+| :--- | :--- |
+| **Add-Type** | PowerShell-Cmdlet, das C#-Code on-the-fly kompiliert. Es ist unerlässlich hier, um auf Win32-API-Funktionen zuzugreifen, die nicht nativ exponiert sind (z. B.: `user32.dll` für Fensterverwaltung über die `WindowInteraction`-Klasse). |
+| **Autologon** | Windows-Mechanismus, der automatische Session-Öffnung ohne Passworteingabe ermöglicht. Der Orchestrator konfiguriert dies sicher unter Verwendung des Sysinternals-Tools und LSA-Geheimnisse. |
+| **Base64 (Kodierung)** | Technik, die von `Start-WaitingUI` verwendet wird, um ein vollständiges PowerShell-Skript als Parameter `-EncodedCommand` zu übergeben, wodurch Interpretationsfehler von Anführungszeichen und Leerzeichen in komplexen Befehlen vermieden werden. |
+| **Cold Boot** | Vollständiger Systemstart, erzwungen durch Deaktivierung von *Fast Startup* (`HiberbootEnabled=0`). Im Gegensatz zu Hibernation-Exit garantiert es vollständige Neuladung des Kernels, der Treiber und der Hardware, wodurch jeglicher residualer Speicherzustand eliminiert wird. |
+| **DPAPI (Data Protection API)** | Windows-Verschlüsselungs-API, die vom LSA-Subsystem verwendet wird, um Autologon-Passwörter zu schützen. Verschlüsselte Daten sind an die Maschine gebunden und bei Kopie auf ein anderes System unbrauchbar. |
+| **Evil Maid Attack** | Bedrohungsszenario, bei dem ein Angreifer mit physischem Zugriff auf die Maschine auf einem alternativen OS bootet, um Daten zu stehlen. Der Orchestrator mildert dieses Risiko, indem er keine Passwörter in Klartext in seinen Konfigurationsdateien speichert. |
+| **Idempotenz** | Eigenschaft eines Skripts, das mehrmals ausgeführt werden kann, ohne das Ergebnis über die anfängliche Anwendung hinaus zu ändern, und ohne Fehler zu produzieren. (z. B.: `config_systeme.ps1` prüft den Zustand vor der Anwendung einer Änderung). |
+| **Interactive (LogonType)** | Spezifischer Typ geplanter Aufgabe, der **in** der Session des angemeldeten Benutzers ausgeführt wird. Es ist der Eckpfeiler der Architektur von Version 1.72, der den Start einer grafischen Anwendung ohne Kenntnis des Benutzerpassworts ermöglicht. |
+| **Kill-Schalter** | Sicherheitsmechanismus (`EnableBackup`, `EnableGotify`), der eine komplexe Funktionalität instantan deaktiviert via einem einfachen Boolean in `config.ini`, ohne Code oder zugehörige Konfiguration zu löschen. |
+| **LSA-Geheimnisse** | *Local Security Authority*. Geschützte Registry-Zone (`HKLM\SECURITY`), die sensible Anmeldedaten speichert. Nur über System-APIs zugänglich, nicht über standardmäßiges Registry-Editor. |
+| **P/Invoke** | *Platform Invoke*. Technologie, die es verwaltetem Code (PowerShell, .NET) ermöglicht, unmanaged Funktionen in nativen DLLs aufzurufen (Win32-API). Verwendet für Fensterverwaltung (`Close-AppByTitle`) und Vordergrund-Anzeige (`MessageBoxFixer`). |
+| **Splatting** | PowerShell-Technik, die darin besteht, die Parameter eines Befehls über eine Hash-Tabelle zu übergeben (`@params`). Sie macht den Code lesbarer und ermöglicht bedingte Parameteraddition (z. B.: `-WindowStyle Minimized`). |
+| **Watchdog** | Kontinuierlicher Überwachungsprozess, der eine Anwendung neu startet, wenn sie abstürzt. **Abwesend vom Orchestrator** by Design: `config_utilisateur.ps1` führt einen einmaligen Start aus ("Fire and Forget"), um die Hand an den Benutzer bei Wartung zu lassen. |
+| **WinForms** | .NET-grafisches Framework, das von `firstconfig.ps1` für den Konfigurationsassistenten und von `Start-WaitingUI` für den Wartebildschirm verwendet wird. |
+| **Wrapper** | "Envelope"-Skript (z. B.: `Launch-Install.ps1`), dessen einzige Rolle es ist, die technische Umgebung vorzubereiten (UAC-Elevation, Fenstermaskierung), bevor die Hand an das Haupt-Geschäftslogik-Skript übergeben wird. |
+
+### 8.3. Entwicklungsstandards
+
+Jede zukünftige Entwicklung an diesem Projekt muss imperativ die folgenden Regeln respektieren, um Stabilität und Portabilität zu garantieren.
+
+#### 8.3.1. Konvention relativer Pfade
+
+*   **Verbot**: Kein absoluter Pfad (z. B.: `C:\Programme\...`) darf hartkodiert werden.
+*   **Verpflichtung**: Verwenden Sie ausschließlich `$PSScriptRoot`, `%~dp0` und `Join-Path`, um Pfade zu konstruieren.
+*   **Grund**: Der Orchestrator muss von jedem Speicherort aus funktionieren (Laufwerk D:, USB-Stick, Netzwerk).
+
+#### 8.3.2. Formatierungskonvention (i18n)
+
+*   **Verbot**: Keine Benutzertext-Zeichenkette darf "hart" in Skripten geschrieben werden.
+*   **Verpflichtung**:
+    *   Definieren Sie Zeichenketten in `i18n\[Sprache]\strings.psd1`.
+    *   Laden Sie das Wörterbuch über `Set-OrchestratorLanguage`.
+    *   Verwenden Sie den `-f`-Formatierungsoperator, um Variablen zu injizieren.
+
+#### 8.3.3. Fehlerbehandlung
+
+*   **Verbot**: Niemals einen kritischen Fehler stillschweigend lassen (außer spezifischen dokumentierten Fällen von `SilentlyContinue`).
+*   **Verpflichtung**:
+    *   Verwenden Sie `Try...Catch`-Blöcke.
+    *   Verwenden Sie `-ErrorAction Stop`, um Fehler abzufangen.
+    *   Immer die Ausnahme über `Add-Error` mit `$_.Exception.Message` protokollieren.
+
+### 8.4. Credits
+
+Dieses Projekt (v1.72) ist das Ergebnis einer hybriden Mensch-KI-Kollaboration:
+
+*   **Ronan Davalan**: Projektmanager, Principal-Architekt, Qualitätssicherung (QA).
+*   **Google Gemini**: KI-Architekt, Planer, Technischer Schriftsteller.
+*   **Grok**: KI-Entwickler (Implementierung).
+*   **Claude**: KI-Technischer Berater (Code-Review & P/Invoke-Lösungen).
+
+### 8.5. Schnelle diagnostische PowerShell-Befehle
+
+Kopieren Sie diese Befehle in eine **Administrator**-PowerShell-Konsole, um den Zustand des Orchestrators zu auditieren.
+
+#### Geplante Aufgaben-Status
+```powershell
+# Zeigt Status, letzte Ausführung und nächsten Trigger an
+Get-ScheduledTask | Where-Object { $_.TaskName -like "WindowsOrchestrator-*" } |
+    Get-ScheduledTaskInfo |
+    Select-Object TaskName, LastRunTime, LastTaskResult, NextRunTime |
+    Format-Table -AutoSize
+```
+
+#### Prozessverifikation
+```powershell
+# Prüft, ob die Zielanwendung läuft und identifiziert ihren Besitzer
+Get-CimInstance Win32_Process |
+    Where-Object { $_.Name -eq "MyApp.exe" } |
+    Select-Object ProcessId, Name, @{N="Benutzer";E={$_.GetOwner().User}}
+```
+
+#### Log-Audit (Letzte Fehler)
+```powershell
+# Zeigt die letzten 10 SYSTEM-Kontext-Fehler an
+Get-Content "C:\WindowsOrchestrator\Logs\config_systeme_ps_log.txt" -ErrorAction SilentlyContinue |
+    Select-String "\[ERROR\]" | Select-Object -Last 10
+```
+
+#### Schneller Launcher-Test
+```powershell
+# Simuliert die Aktion der USER-Aufgabe (startet den Wrapper)
+Start-Process -FilePath "C:\WindowsOrchestrator\management\LaunchApp.bat"
+```</content>
+</xai:function_call<xai:function_call name="bash">
+<parameter name="command">git add docs/de-DE/ENTWICKLER_LEITFADEN.md

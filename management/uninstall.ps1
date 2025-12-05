@@ -1,4 +1,4 @@
-﻿param(
+param(
     # Accepte un argument de langue optionnel pour forcer l'affichage
     [string]$LanguageOverride = ""
 )
@@ -21,8 +21,17 @@
     DEPRECATED: Force le script à s'exécuter en anglais. La langue est maintenant détectée
     automatiquement. Ce paramètre sera supprimé dans une future version.
 .NOTES
-    Auteur: Ronan Davalan & Gemini
-    Version: i18n - Logique d'élévation Corrigée et Finalisée
+    Projet      : WindowsOrchestrator
+    Version     : 1.72
+    Licence     : GNU GPLv3
+
+    --- CRÉDITS & RÔLES ---
+    Ce projet est le fruit d'une collaboration hybride Humain-IA :
+
+    Architecte Principal & QA      : Ronan Davalan
+    Architecte IA & Planification  : Google Gemini
+    Développeur IA Principal       : Grok (xAI)
+    Consultant Technique IA        : Claude (Anthropic)
 #>
 
 # --- Bloc d'auto-élévation des privilèges (Robuste) ---
@@ -55,54 +64,38 @@ try {
     # d'où la nécessité de tester le type de commande pour trouver le chemin de manière fiable.
     if ($MyInvocation.MyCommand.CommandType -eq 'ExternalScript') { $PSScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition }
     else { try { $PSScriptRoot = Split-Path -Parent $script:MyInvocation.MyCommand.Path -ErrorAction Stop } catch { $PSScriptRoot = Get-Location } }
+    $ScriptDir = $PSScriptRoot
+
+    $modulePath = Join-Path $ScriptDir "modules\WindowsOrchestratorUtils\WindowsOrchestratorUtils.psm1"
+    Import-Module $modulePath -Force
     
-    $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\")).Path
-    
-    # Détection automatique et exclusive de la culture du système
-	$cultureName = (Get-Culture).Name	
+    $lang = Set-OrchestratorLanguage -ScriptRoot $ScriptDir
 
-    $langFilePath = Join-Path $projectRoot "i18n\$cultureName\strings.psd1"
-    if (-not (Test-Path $langFilePath)) { $langFilePath = Join-Path $projectRoot "i18n\en-US\strings.psd1" }
-
-    if (Test-Path $langFilePath) {
-        $langContent = Get-Content -Path $langFilePath -Raw -Encoding UTF8
-        $lang = Invoke-Expression $langContent
-    } else { throw "No valid language file found." }
-
-    if ($null -eq $lang -or $lang.Count -eq 0) { throw "Language file '$langFilePath' is empty or invalid." }
-
+    # --- Vérification du Mode Silencieux pour l'UI d'attente ---
+    $ProjectRootDir = (Resolve-Path (Join-Path $ScriptDir "..\")).Path
+    $ConfigFile = Join-Path $ProjectRootDir "config.ini"
+    $silentMode = $false
+    if (Test-Path $ConfigFile) {
+        $config = Get-IniContent -FilePath $ConfigFile
+        $silentMode = Get-ConfigValue -Section "Installation" -Key "SilentMode" -Type ([bool]) -DefaultValue $false
+    }
+    if ($silentMode) {
+        Start-WaitingUI -Message $lang.Install_SplashMessage
+    }
 } catch {
     Write-Error "FATAL ERROR: Could not load language files. Uninstallation cannot continue safely. Details: $($_.Exception.Message)"
     Read-Host "Press Enter to exit."
-    exit 1
+    exit
 }
+
+
 
 # --- Configuration et Fonctions ---
-<#
-.SYNOPSIS
-    Affiche un message stylisé dans la console avec un préfixe coloré (INFO, SUCCESS, etc.).
-.DESCRIPTION
-    Cette fonction utilitaire facilite l'affichage de messages formatés dans la console.
-    Elle prend un message en entrée et un type (INFO, SUCCESS, WARNING, ERROR) qui détermine la couleur
-    du préfixe pour améliorer la lisibilité des logs du script.
-.PARAMETER Message
-    La chaîne de caractères à afficher après le préfixe stylisé.
-.PARAMETER Type
-    Le type de message qui détermine la couleur du préfixe. Les valeurs valides sont "INFO", "SUCCESS", "WARNING", "ERROR".
-    Si une valeur non valide est fournie, la couleur par défaut sera le blanc. La valeur par défaut est "INFO".
-.EXAMPLE
-    PS C:\> Write-StyledHost -Message "La tâche a été supprimée avec succès." -Type "SUCCESS"
 
-    Affiche "[SUCCESS] La tâche a été supprimée avec succès." avec le mot "[SUCCESS]" en vert.
-#>
-function Write-StyledHost {
-    param([string]$Message, [string]$Type = "INFO")
-    $color = switch ($Type.ToUpper()) {
-        "INFO"{"Cyan"}; "SUCCESS"{"Green"}; "WARNING"{"Yellow"}; "ERROR"{"Red"}; default{"White"}
-    }
-    Write-Host "[$Type] " -ForegroundColor $color -NoNewline; Write-Host $Message
-}
 
+
+
+$ProjectRootDir = (Resolve-Path (Join-Path $ScriptDir "..\")).Path
 $OriginalErrorActionPreference = $ErrorActionPreference
 $ErrorActionPreference = "SilentlyContinue"
 
@@ -110,15 +103,7 @@ $ErrorActionPreference = "SilentlyContinue"
 Write-StyledHost $lang.Uninstall_StartMessage "INFO"
 Write-Host ""
 
-# --- Étape 1: Interaction avec l'utilisateur pour l'Auto-Logon ---
-$disableAutoLogonChoice = Read-Host -Prompt $lang.Uninstall_AutoLogonQuestion
-# La réponse de l'utilisateur est vérifiée pour 'o' (oui) et 'y' (yes) afin de fonctionner
-# de manière intuitive que l'interface soit en français ou en anglais.
-$shouldDisableAutoLogon = if ($disableAutoLogonChoice.Trim().ToLower() -eq 'o' -or $disableAutoLogonChoice.Trim().ToLower() -eq 'y') { $true } else { $false }
-Write-Host ""
-
-
-# --- Étape 2: Restauration des paramètres système ---
+# --- Étape 1: Restauration des paramètres système ---
 Write-StyledHost $lang.Uninstall_RestoringSettings "INFO"
 
 # Réactiver Windows Update
@@ -159,17 +144,51 @@ try {
     Write-StyledHost ($lang.Uninstall_OneDriveError -f $_.Exception.Message) "ERROR"
 }
 
-# Gérer l'Auto-Logon selon le choix de l'utilisateur
-if ($shouldDisableAutoLogon) {
-    try {
-        $winlogonKey = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
-        Set-ItemProperty -Path $winlogonKey -Name AutoAdminLogon -Value "0" -Type String -Force -ErrorAction SilentlyContinue
-        Write-StyledHost $lang.Uninstall_AutoLogonDisabled "SUCCESS"
-    } catch {
-        Write-StyledHost ($lang.Uninstall_AutoLogonDisableError -f $_.Exception.Message) "ERROR"
+# --- Gestion de l'Auto-Logon (Logique Interactive avec Vérification) ---
+$winlogonKey = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
+$autoLogonStatus = (Get-ItemProperty -Path $winlogonKey -Name 'AutoAdminLogon' -ErrorAction SilentlyContinue).AutoAdminLogon
+
+if ($autoLogonStatus -eq '1') {
+    $autologonExeName = switch($env:PROCESSOR_ARCHITECTURE) {
+        'x86'   { 'Autologon.exe' }
+        'AMD64' { 'Autologon64.exe' }
+        'ARM64' { 'Autologon64a.exe' }
+        default { 'Autologon64.exe' }
     }
-} else {
-    Write-StyledHost $lang.Uninstall_AutoLogonLeftAsIs "INFO"
+    $autologonCleanerPath = Join-Path $ScriptDir "tools\Autologon\$autologonExeName"
+
+    if (Test-Path $autologonCleanerPath) {
+        try {
+            Write-StyledHost $lang.Uninstall_AutologonDisablePrompt "INFO"
+
+            # --- CORRECTIF UI : Arrêt temporaire de l'UI pour voir la fenêtre Autologon ---
+            if ($silentMode) { Stop-WaitingUI }
+
+            Start-Process -FilePath $autologonCleanerPath -ArgumentList "-accepteula" -Wait -ErrorAction Stop
+
+            # --- CORRECTIF UI : Redémarrage de l'UI pour la fin du script ---
+            if ($silentMode) { Start-WaitingUI -Message $lang.Install_SplashMessage }
+
+            Write-StyledHost "Autologon tool executed. LSA secrets should be cleaned." "SUCCESS"
+
+            # --- VÉRIFICATION POST-ACTION ---
+            # On relit la valeur du Registre APRÈS que l'utilisateur a fermé l'outil.
+            $newAutoLogonStatus = (Get-ItemProperty -Path $winlogonKey -Name 'AutoAdminLogon' -ErrorAction SilentlyContinue).AutoAdminLogon
+            
+            # Si la clé est passée à "0", l'utilisateur a bien cliqué sur "Disable".
+            if ($newAutoLogonStatus -ne '1') {
+                Write-StyledHost $lang.Uninstall_AutoLogonDisabled "SUCCESS"
+            } else {
+            # Sinon, il a fermé la fenêtre, donc on le signale comme tel.
+                Write-StyledHost $lang.Uninstall_AutoLogonLeftAsIs "INFO"
+            }
+        } catch {
+            Write-StyledHost ($lang.Uninstall_AutoLogonDisableError -f $_.Exception.Message) "ERROR"
+        }
+    } else {
+        # L'outil est absent : on informe l'utilisateur et on ne fait RIEN.
+        Write-StyledHost $lang.Uninstall_AutologonToolNotFound_Interactive "WARNING"
+    }
 }
 Write-Host ""
 
@@ -181,7 +200,9 @@ $TasksToRemove = @(
     "WindowsOrchestrator-SystemStartup",
     "WindowsOrchestrator-UserLogon",
     "WindowsOrchestrator-SystemScheduledReboot",
-    "WindowsOrchestrator-SystemPreRebootAction"
+    "WindowsOrchestrator-SystemBackup",
+    "WindowsOrchestrator-System-CloseApp",
+    "WindowsOrchestrator-User-CloseApp"
 )
 $tasksFoundButNotRemoved = [System.Collections.Generic.List[string]]::new()
 
@@ -223,4 +244,89 @@ Write-StyledHost $lang.Uninstall_FilesNotDeletedNote "INFO"
 
 $ErrorActionPreference = $OriginalErrorActionPreference
 Write-Host ""
-Read-Host $lang.Uninstall_PressEnterToClose
+
+# --- Arrêt de l'UI d'attente ---
+Stop-WaitingUI
+
+    # --- P-Invoke pour forcer le MessageBox au premier plan ---
+    # Ce code est identique à celui inséré dans install.ps1
+    Add-Type @"
+        using System; 
+        using System.Runtime.InteropServices; 
+        public class MessageBoxFixer { 
+            [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd); 
+            [DllImport("user32.dll")] public static extern IntPtr GetLastActivePopup(IntPtr hWnd); 
+            [DllImport("user32.dll", SetLastError = true)] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId); 
+            [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow); 
+            [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow(); 
+            [DllImport("user32.dll")] public static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach); 
+            [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId(); 
+            public const int SW_RESTORE = 9; 
+            public const int SW_SHOW = 5;
+
+            public static void ForceForeground() { 
+                uint currentThread = GetCurrentThreadId(); 
+                uint lpdwProcessId = 0; // Nouvelle variable pour la compatibilité
+                uint foregroundThread = GetWindowThreadProcessId(GetForegroundWindow(), out lpdwProcessId); // Appel corrigé
+                IntPtr targetHwnd = GetForegroundWindow(); 
+
+                if (targetHwnd != IntPtr.Zero && currentThread != foregroundThread) { 
+                    AttachThreadInput(currentThread, foregroundThread, true); 
+                    ShowWindow(targetHwnd, SW_RESTORE); 
+                    SetForegroundWindow(targetHwnd); 
+                    AttachThreadInput(currentThread, foregroundThread, false); 
+                } else if (targetHwnd == IntPtr.Zero) { 
+                    // Dans le contexte Admin/SYSTEM, la fenêtre peut ne pas être active 
+                } 
+            } 
+        } 
+"@
+
+    # Appel au correctif juste avant le MessageBox (n'a un effet que sur la prochaine fenêtre)
+    [MessageBoxFixer]::ForceForeground()
+
+    # --- Notification Mode Silencieux ---
+    $silentMode = Get-ConfigValue -Section "Installation" -Key "SilentMode" -Type ([bool]) -DefaultValue $false
+
+    # =========================================================================
+    # NOTIFICATION FINALE EN MODE SILENCIEUX (Correction Freeze)
+    # =========================================================================
+    if ($silentMode) {
+        Add-Type -AssemblyName System.Windows.Forms
+        Add-Type -AssemblyName System.Drawing
+
+        # Technique du Parent Fantôme
+        $ghostParent = New-Object System.Windows.Forms.Form
+        $ghostParent.TopMost = $true
+        $ghostParent.TopLevel = $true
+        $ghostParent.ShowInTaskbar = $false
+        $ghostParent.Opacity = 0
+        $ghostParent.StartPosition = "CenterScreen"
+        $ghostParent.Size = New-Object System.Drawing.Size(1, 1)
+        
+        $ghostParent.Show()
+        $ghostParent.Activate()
+
+        $btn = [System.Windows.Forms.MessageBoxButtons]::OK
+        
+        $hasErrors = ($tasksFoundButNotRemoved.Count -gt 0) -or ($Global:ErreursRencontrees.Count -gt 0)
+
+        if ($hasErrors) {
+            $icon = [System.Windows.Forms.MessageBoxIcon]::Warning
+            $msg = ($lang.Uninstall_SilentMode_CompletedWithErrors).Replace('\n', "`n")
+            [System.Windows.Forms.MessageBox]::Show($ghostParent, $msg, "WindowsOrchestrator - Uninstallation", $btn, $icon) | Out-Null
+        } else {
+            $icon = [System.Windows.Forms.MessageBoxIcon]::Information
+            $msg = ($lang.Uninstall_SilentMode_CompletedSuccessfully).Replace('\n', "`n")
+            [System.Windows.Forms.MessageBox]::Show($ghostParent, $msg, "WindowsOrchestrator - Uninstallation", $btn, $icon) | Out-Null
+        }
+
+        $ghostParent.Close()
+        $ghostParent.Dispose()
+    }
+
+# --- Logique de Sortie Hiérarchique ---
+$ConfigFile = Join-Path $ProjectRootDir "config.ini"
+$config = Get-IniContent -FilePath $ConfigFile
+
+Invoke-ExitLogic -Config $config -Lang $lang -RebootMessageKey "Uninstall_RebootMessage" -PressEnterKey "Uninstall_PressEnterToClose"

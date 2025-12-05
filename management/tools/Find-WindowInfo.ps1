@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     Liste les fenêtres visibles et les processus qui leur sont associés.
 .DESCRIPTION
@@ -13,9 +13,17 @@
     Titre: 'MonProjet - Visual Studio Code' | Processus: Code (6789)
     Titre: 'PowerShell'                   | Processus: pwsh (10112)
 .NOTES
-    Auteur: Ronan Davalan & Gemini
-    Ce script repose sur l'utilisation de P/Invoke pour appeler des fonctions non managées de l'API Windows,
-    car il n'existe pas de cmdlets PowerShell natives pour cette tâche.
+    Projet      : WindowsOrchestrator
+    Version     : 1.72
+    Licence     : GNU GPLv3
+
+    --- CRÉDITS & RÔLES ---
+    Ce projet est le fruit d'une collaboration hybride Humain-IA :
+
+    Architecte Principal & QA      : Ronan Davalan
+    Architecte IA & Planification  : Google Gemini
+    Développeur IA Principal       : Grok (xAI)
+    Consultant Technique IA        : Claude (Anthropic)
 #>
 
 #=======================================================================================================================
@@ -84,7 +92,7 @@ public class FindWindowUser32_Unique {
                 $process = Get-Process -Id $windowPid -ErrorAction SilentlyContinue
 
                 if ($process) {
-                    Write-Host ("Titre: '{0}'`t| Processus: {1} ({2})" -f $title, $process.ProcessName, $process.Id)
+                    Write-Host ("Title: '{0}'`t| Process: {1} ({2})" -f $title, $process.ProcessName, $process.Id)
                 }
             }
         }
@@ -93,7 +101,7 @@ public class FindWindowUser32_Unique {
     }
 
     # --- Exécution de l'énumération ---
-    Write-Host "--- Liste des fenêtres visibles et de leurs processus propriétaires ---"
+    Write-Host "--- List of visible windows and their owner processes ---"
     [FindWindowUser32_Unique]::EnumWindows($callback, [System.IntPtr]::Zero)
 }
 

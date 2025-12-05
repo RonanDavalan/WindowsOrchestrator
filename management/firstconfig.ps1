@@ -1,4 +1,4 @@
-﻿param(
+param(
     # Accepte un argument de langue optionnel depuis la ligne de commande (ex: "en" ou "fr")
     [string]$LanguageOverride = ""
 )
@@ -19,102 +19,20 @@
 
     Lance l'assistant de configuration graphique.
 .NOTES
-    Auteur: Ronan Davalan & Gemini
-    Version: i18n - Logique de chargement modifiée
+    Projet      : WindowsOrchestrator
+    Version     : 1.72
+    Licence     : GNU GPLv3
+
+    --- CRÉDITS & RÔLES ---
+    Ce projet est le fruit d'une collaboration hybride Humain-IA :
+
+    Architecte Principal & QA      : Ronan Davalan
+    Architecte IA & Planification  : Google Gemini
+    Développeur IA Principal       : Grok (xAI)
+    Consultant Technique IA        : Claude (Anthropic)
 #>
 
-#=======================================================================================================================
-# --- Définition des Fonctions ---
-#=======================================================================================================================
 
-<#
-.SYNOPSIS
-    Lit une valeur spécifique dans un fichier de configuration au format INI.
-.DESCRIPTION
-    Parcourt un fichier .ini pour trouver une section et une clé spécifiques et retourne la valeur correspondante.
-    Si le fichier, la section ou la clé n'existent pas, la fonction retourne une valeur par défaut fournie.
-.PARAMETER FilePath
-    Chemin complet vers le fichier .ini.
-.PARAMETER Section
-    Le nom de la section (ex: "[SystemConfig]") dans laquelle chercher la clé.
-.PARAMETER Key
-    Le nom de la clé dont la valeur doit être récupérée.
-.PARAMETER DefaultValue
-    La valeur à retourner si la clé n'est pas trouvée ou si le fichier n'existe pas.
-.RETURNS
-    [string] La valeur trouvée, ou la valeur par défaut si elle n'est pas trouvée.
-.EXAMPLE
-    PS C:\> $rebootTime = Get-IniValue -FilePath "C:\temp\config.ini" -Section "SystemConfig" -Key "ScheduledRebootTime" -DefaultValue "03:00"
-#>
-function Get-IniValue {
-    param($FilePath, $Section, $Key, $DefaultValue = "")
-    if (-not (Test-Path $FilePath -PathType Leaf)) { return $DefaultValue }
-    $iniContent = Get-Content $FilePath -Encoding UTF8 -ErrorAction SilentlyContinue
-    $inSection = $false
-    foreach ($line in $iniContent) {
-        if ($line.Trim() -eq "[$Section]") { $inSection = $true; continue }
-        if ($line.Trim().StartsWith("[") -and $inSection) { $inSection = $false; break }
-        if ($inSection -and $line -match "^$([regex]::Escape($Key))\s*=(.*)") { return $matches[1].Trim() }
-    }
-    return $DefaultValue
-}
-
-<#
-.SYNOPSIS
-    Écrit ou met à jour une valeur dans un fichier de configuration au format INI.
-.DESCRIPTION
-    Cette fonction robuste modifie un fichier .ini. Elle peut créer le fichier s'il n'existe pas,
-    ajouter une nouvelle section, ajouter une nouvelle clé dans une section existante, ou simplement
-    mettre à jour la valeur d'une clé existante.
-.PARAMETER FilePath
-    Chemin complet vers le fichier .ini à modifier.
-.PARAMETER Section
-    Le nom de la section (ex: "[SystemConfig]") dans laquelle écrire.
-.PARAMETER Key
-    Le nom de la clé à écrire ou à mettre à jour.
-.PARAMETER Value
-    La valeur à assigner à la clé.
-.EXAMPLE
-    PS C:\> Set-IniValue -FilePath "C:\temp\config.ini" -Section "Process" -Key "ProcessName" -Value "chrome.exe"
-#>
-function Set-IniValue {
-    param($FilePath, $Section, $Key, $Value)
-    $fileExists = Test-Path $FilePath -PathType Leaf
-    $iniContent = if ($fileExists) { Get-Content $FilePath -Encoding UTF8 -ErrorAction SilentlyContinue } else { [string[]]@() }
-    $newContent = [System.Collections.Generic.List[string]]::new()
-    $sectionExists = $false; $keyExists = $false; $inTargetSection = $false
-    foreach ($line in $iniContent) {
-        if ($line.Trim() -eq "[$Section]") {
-            $sectionExists = $true; $inTargetSection = $true
-            $newContent.Add($line)
-        } elseif ($line.Trim().StartsWith("[")) {
-            if ($inTargetSection -and -not $keyExists) { $newContent.Add("$Key=$Value"); $keyExists = $true }
-            $inTargetSection = $false
-            $newContent.Add($line)
-        } elseif ($inTargetSection -and $line -match "^$([regex]::Escape($Key))\s*=") {
-            $newContent.Add("$Key=$Value"); $keyExists = $true
-        } else { $newContent.Add($line) }
-    }
-    if ($inTargetSection -and -not $keyExists) {
-         $newContent.Add("$Key=$Value"); $keyExists = $true
-    }
-    if (-not $sectionExists) {
-        if ($newContent.Count -gt 0 -and -not [string]::IsNullOrWhiteSpace($newContent[$newContent.Count -1])) { $newContent.Add("") }
-        $newContent.Add("[$Section]"); $newContent.Add("$Key=$Value")
-    } elseif (-not $keyExists) {
-        $sectionIndex = -1; for ($i = 0; $i -lt $newContent.Count; $i++) { if ($newContent[$i].Trim() -eq "[$Section]") { $sectionIndex = $i; break }}
-        if ($sectionIndex -ne -1) {
-            $insertAt = $sectionIndex + 1
-            while ($insertAt -lt $newContent.Count -and -not $newContent[$insertAt].Trim().StartsWith("[")) { $insertAt++ }
-            $newContent.Insert($insertAt, "$Key=$Value")
-        } else { $newContent.Add("$Key=$Value") }
-    }
-    $ParentDir = Split-Path -Path $FilePath -Parent
-    if (-not (Test-Path $ParentDir -PathType Container)) {
-        New-Item -Path $ParentDir -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
-    }
-    Out-File -FilePath $FilePath -InputObject $newContent -Encoding utf8 -Force
-}
 
 <#
 .SYNOPSIS
@@ -154,6 +72,8 @@ function Create-And-Add-Checkbox {
     $YPos_ref.Value += [int]($cb.Height + $LocalItemSpacing)
 }
 
+
+
 #=======================================================================================================================
 # --- DÉBUT DU SCRIPT PRINCIPAL ---
 #=======================================================================================================================
@@ -169,13 +89,13 @@ try {
     # d'où la nécessité de tester le type de commande pour trouver le chemin de manière fiable.
     if ($MyInvocation.MyCommand.CommandType -eq 'ExternalScript') { $PSScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition }
     else { try { $PSScriptRoot = Split-Path -Parent $script:MyInvocation.MyCommand.Path -ErrorAction Stop } catch { $PSScriptRoot = Get-Location } }
-
-    $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\")).Path
+    $ScriptDir = $PSScriptRoot
+    $ProjectRootDir = (Resolve-Path (Join-Path $ScriptDir "..\")).Path
 
     $cultureName = (Get-Culture).Name
-    $langFilePath = Join-Path $projectRoot "i18n\$cultureName\strings.psd1"
+    $langFilePath = Join-Path $ProjectRootDir "i18n\$cultureName\strings.psd1"
     if (-not (Test-Path $langFilePath)) {
-        $langFilePath = Join-Path $projectRoot "i18n\en-US\strings.psd1"
+        $langFilePath = Join-Path $ProjectRootDir "i18n\en-US\strings.psd1"
     }
 
     if (Test-Path $langFilePath) {
@@ -195,10 +115,21 @@ try {
     exit 1
 }
 
+# --- Importation du Module Utilitaire Central ---
 try {
-    $ProjectRootDir = $projectRoot
-    $ConfigIniPath = Join-Path $ProjectRootDir "config.ini"
-    $DefaultConfigPath = Join-Path $PSScriptRoot "defaults\default_config.ini"
+    $modulePath = Join-Path $PSScriptRoot "modules\WindowsOrchestratorUtils\WindowsOrchestratorUtils.psm1"
+    Import-Module $modulePath -Force
+} catch {
+    $errorMessage = "FATAL ERROR: Could not load the core module 'WindowsOrchestratorUtils.psm1'.`n`n"
+    $errorMessage += "Technical Details: $($_.Exception.Message)"
+    [System.Windows.Forms.MessageBox]::Show($errorMessage, "Module Error", "OK", "Error")
+    exit 1
+}
+
+try {
+    $ProjectRootDir = $ProjectRootDir
+    $ConfigFile = Join-Path $ProjectRootDir "config.ini"
+    $DefaultConfigPath = Join-Path $ScriptDir "defaults\default_config.ini"
 } catch {
     $errorMsg = ($lang.ConfigForm_PathError -f $_.Exception.Message)
     $errorCaption = $lang.ConfigForm_PathErrorCaption
@@ -208,29 +139,73 @@ try {
 #endregion Initialisation et Prérequis
 
 #region Gestion du Fichier de Configuration
+$configWasCreated = $false  # Variable pour tracer si on a créé le fichier
+
 if (-not (Test-Path $DefaultConfigPath -PathType Leaf)) {
-    if (-not (Test-Path $ConfigIniPath -PathType Leaf)) {
-        [System.Windows.Forms.MessageBox]::Show($lang.ConfigForm_ModelFileNotFoundError, $lang.ConfigForm_ModelFileNotFoundCaption, "OK", "Error")
+    # Le modèle n'existe pas
+    if (-not (Test-Path $ConfigFile -PathType Leaf)) {
+        # Ni le modèle ni config.ini n'existent - ERREUR FATALE
+        [System.Windows.Forms.MessageBox]::Show(
+            $lang.ConfigForm_ModelFileNotFoundError, 
+            $lang.ConfigForm_ModelFileNotFoundCaption, 
+            "OK", 
+            "Error"
+        )
         exit 1
     }
+    # Le modèle n'existe pas mais config.ini existe déjà - on continue normalement
 } else {
-    if (-not (Test-Path $ConfigIniPath -PathType Leaf)) {
+    # Le modèle existe
+    if (-not (Test-Path $ConfigFile -PathType Leaf)) {
+        # config.ini n'existe pas - on le crée depuis le modèle
         try {
-            Copy-Item -Path $DefaultConfigPath -Destination $ConfigIniPath -Force -ErrorAction Stop
+            Copy-Item -Path $DefaultConfigPath -Destination $ConfigFile -Force -ErrorAction Stop
+            $configWasCreated = $true  # MARQUE que le fichier a été créé
+            
+            # AFFICHAGE IMMÉDIAT du message de création
+            [System.Windows.Forms.MessageBox]::Show(
+                ($lang.ConfigForm_SaveSuccessMessage -f $ConfigFile),
+                $lang.ConfigForm_ResetSuccessCaption,
+                "OK",
+                "Information"
+            )
         } catch {
-            [System.Windows.Forms.MessageBox]::Show(($lang.ConfigForm_CopyError -f $_.Exception.Message), $lang.ConfigForm_CopyErrorCaption, "OK", "Error")
+            [System.Windows.Forms.MessageBox]::Show(
+                ($lang.ConfigForm_CopyError -f $_.Exception.Message), 
+                $lang.ConfigForm_CopyErrorCaption, 
+                "OK", 
+                "Error"
+            )
             exit 1
         }
     } else {
-        $message = $lang.ConfigForm_OverwritePrompt
+        # Les deux existent - demander si on veut réinitialiser
+        $message = $lang.ConfigForm_OverwritePrompt.Replace('\n', "`n")
         $caption = $lang.ConfigForm_OverwriteCaption
-        $result = [System.Windows.Forms.MessageBox]::Show($message, $caption, [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Warning, [System.Windows.Forms.MessageBoxDefaultButton]::Button2)
+        $result = [System.Windows.Forms.MessageBox]::Show(
+            $message, 
+            $caption, 
+            [System.Windows.Forms.MessageBoxButtons]::YesNo, 
+            [System.Windows.Forms.MessageBoxIcon]::Warning, 
+            [System.Windows.Forms.MessageBoxDefaultButton]::Button2
+        )
+        
         if ($result -eq [System.Windows.Forms.DialogResult]::Yes) {
             try {
-                Copy-Item -Path $DefaultConfigPath -Destination $ConfigIniPath -Force -ErrorAction Stop
-                [System.Windows.Forms.MessageBox]::Show($lang.ConfigForm_ResetSuccess, $lang.ConfigForm_ResetSuccessCaption, "OK", "Information")
+                Copy-Item -Path $DefaultConfigPath -Destination $ConfigFile -Force -ErrorAction Stop
+                [System.Windows.Forms.MessageBox]::Show(
+                    $lang.ConfigForm_ResetSuccess, 
+                    $lang.ConfigForm_ResetSuccessCaption, 
+                    "OK", 
+                    "Information"
+                )
             } catch {
-                [System.Windows.Forms.MessageBox]::Show(($lang.ConfigForm_OverwriteError -f $_.Exception.Message), $lang.ConfigForm_OverwriteErrorCaption, "OK", "Error")
+                [System.Windows.Forms.MessageBox]::Show(
+                    ($lang.ConfigForm_OverwriteError -f $_.Exception.Message), 
+                    $lang.ConfigForm_OverwriteErrorCaption, 
+                    "OK", 
+                    "Error"
+                )
                 exit 1
             }
         }
@@ -241,29 +216,38 @@ if (-not (Test-Path $DefaultConfigPath -PathType Leaf)) {
 #region Création du Formulaire
 $form = New-Object System.Windows.Forms.Form
 $form.Text = $lang.ConfigForm_Title
-$form.Size = New-Object System.Drawing.Size(590, 530)
+$form.Size = New-Object System.Drawing.Size(600, 520)
+$form.Font = New-Object System.Drawing.Font("Segoe UI", 9)
 $form.StartPosition = "CenterScreen"
 $form.FormBorderStyle = 'FixedDialog'
 $form.MaximizeBox = $false
 $form.MinimizeBox = $false
 #endregion Création du Formulaire
 
+# --- Pré-chargement du contenu du fichier INI pour le module ---
+$Global:Config = Get-IniContent -FilePath $ConfigFile
+
 #region Chargement des Valeurs Initiales depuis config.ini
 $defaultValues = @{
     AutoLoginUsername = ""; DisableFastStartup = $true; DisableSleep = $true
-    DisableScreenSleep = $false; EnableAutoLogin = $true; DisableWindowsUpdate = $true
-    DisableAutoReboot = $true; PreRebootActionTime = "02:55"; PreRebootActionCommand = ""
-    PreRebootActionArguments = ""; PreRebootActionLaunchMethod = "cmd"
-    ScheduledRebootTime = "03:00"; DisableOneDrive = $true; ProcessName = ""
-    ProcessArguments = ""; LaunchMethod = "cmd"; Language = "en"
+    DisableScreenSleep = $false; DisableWindowsUpdate = $true
+    DisableAutoReboot = $true; ScheduledCloseTime = "02:55"; ScheduledCloseCommand = ""
+    ScheduledCloseArguments = ""
+    ScheduledRebootTime = "03:00"; OneDriveManagementMode = "Block";     ProcessToLaunch = "LaunchApp.bat"
+    ProcessArguments = ""
+    ProcessToMonitor = ""; StartProcessMinimized = $false; SessionStartupMode = "Standard"
+    EnableBackup = $false; DatabaseSourcePath = "..\..\AllUser"; DatabaseDestinationPath = "C:\Backup\AllSys"; DatabaseKeepDays = 30; ScheduledBackupTime = "02:59"
+    UseAutologonAssistant = $true; SilentMode = $false; ShowContextMessages = $true
 }
 $currentValues = @{}
 foreach ($key in $defaultValues.Keys) {
     $section = "SystemConfig" # Par défaut
-    if ($key -in ("ProcessName", "ProcessArguments", "LaunchMethod")) { $section = "Process" }
-    if ($key -in ("Language", "EnableLogRotation", "MaxSystemLogsToKeep", "MaxUserLogsToKeep")) { $section = "Logging" }
+    if ($key -in ("ScheduledCloseTime", "ScheduledCloseCommand", "ScheduledCloseArguments", "ScheduledRebootTime", "ProcessToLaunch", "ProcessArguments", "ProcessToMonitor", "StartProcessMinimized")) { $section = "Process" }
+    if ($key -in ("EnableLogRotation", "MaxSystemLogsToKeep", "MaxUserLogsToKeep")) { $section = "Logging" }
+    if ($key -in ("EnableBackup", "DatabaseSourcePath", "DatabaseDestinationPath", "DatabaseKeepDays", "ScheduledBackupTime")) { $section = "DatabaseBackup" }
+    if ($key -in ("UseAutologonAssistant", "RebootOnCompletion", "RebootGracePeriod", "PowerShellExitMode", "PowerShellExitDelay", "SilentMode", "ShowContextMessages")) { $section = "Installation" }
 
-    $rawValue = Get-IniValue -FilePath $ConfigIniPath -Section $section -Key $key -DefaultValue $defaultValues[$key]
+    $rawValue = Get-ConfigValue -Section $section -Key $key -DefaultValue $defaultValues[$key]
 
     # Les fichiers INI ne stockent que des chaînes. Il faut donc convertir explicitement
     # les valeurs "true"/"false" en booléens PowerShell pour les contrôles CheckBox.
@@ -288,179 +272,351 @@ foreach ($key in $defaultValues.Keys) {
 [int]$lblWidth = 230         # Largeur standard pour les étiquettes (Labels).
 [int]$ctrlWidth = 270        # Largeur standard pour les contrôles (TextBox, etc.).
 [int]$ctrlHeight = 20        # Hauteur standard pour les contrôles.
-[int]$itemSpacing = 5        # Espace horizontal entre un label et son contrôle, ou vertical entre les éléments.
+[int]$itemSpacing = 8        # Espace horizontal entre un label et son contrôle, ou vertical entre les éléments.
 [int]$sectionSpacing = 10    # Espace vertical supplémentaire pour séparer les groupes de contrôles.
 [int]$itemTotalHeight = $ctrlHeight + $itemSpacing # Hauteur totale d'un contrôle + son espacement vertical.
 
+# --- Création du TabControl principal ---
+$tabControl = New-Object System.Windows.Forms.TabControl
+$tabControl.Location = New-Object System.Drawing.Point(10, 10)
+$tabControl.Size = New-Object System.Drawing.Size(580, 400)
+$form.Controls.Add($tabControl)
 
-# --- Contrôle : Nom d'utilisateur pour l'AutoLogin (Label + TextBox) ---
+# Onglet Basique
+$tabBasique = New-Object System.Windows.Forms.TabPage
+$tabBasique.Text = $lang.ConfigForm_Tab_Basic
+$tabControl.Controls.Add($tabBasique)
 
-# 1. Création de l'étiquette (Label)
-$lblAutoLoginUsername = New-Object System.Windows.Forms.Label
-$lblAutoLoginUsername.Text = $lang.ConfigForm_AutoLoginUsernameLabel
-$lblAutoLoginUsername.Location = New-Object System.Drawing.Point($xPadding, $yCurrent)
-$lblAutoLoginUsername.Size = New-Object System.Drawing.Size($lblWidth, $ctrlHeight)
-$form.Controls.Add($lblAutoLoginUsername)
+# Onglet Avancées
+$tabAvancees = New-Object System.Windows.Forms.TabPage
+$tabAvancees.Text = $lang.ConfigForm_Tab_Advanced
+$tabControl.Controls.Add($tabAvancees)
 
-# 2. Création de la zone de texte (TextBox)
-$txtAutoLoginUsername = New-Object System.Windows.Forms.TextBox
-$txtAutoLoginUsername.Text = $currentValues.AutoLoginUsername
-$txtAutoLoginUsername.Location = New-Object System.Drawing.Point(($xPadding + $lblWidth + $itemSpacing), $yCurrent)
-$txtAutoLoginUsername.Size = New-Object System.Drawing.Size($ctrlWidth, $ctrlHeight)
-$form.Controls.Add($txtAutoLoginUsername)
+# Sous-TabControl pour Avancées
+$subTabControl = New-Object System.Windows.Forms.TabControl
+$subTabControl.Location = New-Object System.Drawing.Point(0, 0)
+$subTabControl.Size = New-Object System.Drawing.Size(570, 370)
+$tabAvancees.Controls.Add($subTabControl)
 
-# 3. Mise à jour de la position verticale pour le prochain contrôle
-$yCurrent += $itemTotalHeight
+# Sous-onglets
+$subTabPrincipal = New-Object System.Windows.Forms.TabPage
+$subTabPrincipal.Text = $lang.ConfigForm_SubTabMain
+$subTabControl.Controls.Add($subTabPrincipal)
 
-#endregion Création des Contrôles de l'UI
+$subTabSauvegarde = New-Object System.Windows.Forms.TabPage
+$subTabSauvegarde.Text = $lang.ConfigForm_SubTabBackup
+$subTabControl.Controls.Add($subTabSauvegarde)
 
-$checkboxes = @(
-    @{Name="DisableFastStartup"; Label=$lang.ConfigForm_DisableFastStartupCheckbox; Initial=$currentValues.DisableFastStartup},
-    @{Name="DisableSleep"; Label=$lang.ConfigForm_DisableSleepCheckbox; Initial=$currentValues.DisableSleep},
-    @{Name="DisableScreenSleep"; Label=$lang.ConfigForm_DisableScreenSleepCheckbox; Initial=$currentValues.DisableScreenSleep},
-    @{Name="EnableAutoLogin"; Label=$lang.ConfigForm_EnableAutoLoginCheckbox; Initial=$currentValues.EnableAutoLogin},
-    @{Name="DisableWindowsUpdate"; Label=$lang.ConfigForm_DisableWindowsUpdateCheckbox; Initial=$currentValues.DisableWindowsUpdate},
-    @{Name="DisableAutoReboot"; Label=$lang.ConfigForm_DisableAutoRebootCheckbox; Initial=$currentValues.DisableAutoReboot},
-    @{Name="DisableOneDrive"; Label=$lang.ConfigForm_DisableOneDriveCheckbox; Initial=$currentValues.DisableOneDrive}
-)
-# --- Boucle pour les cases à cocher (déjà bien structurée) ---
-foreach ($cbInfo in $checkboxes) {
-    Create-And-Add-Checkbox -FormInst $form -KeyName $cbInfo.Name -LabelText $cbInfo.Label -YPos_ref ([ref]$yCurrent) -InitialValue $cbInfo.Initial -LocalXPadding $xPadding -LocalItemSpacing $itemSpacing
+$subTabAutreCompte = New-Object System.Windows.Forms.TabPage
+$subTabAutreCompte.Text = $lang.ConfigForm_SubTabOtherAccount
+$subTabControl.Controls.Add($subTabAutreCompte)
+
+# --- Section : Compte Utilisateur Cible (dans Autre compte) ---
+$gbTargetAccount = New-Object System.Windows.Forms.GroupBox
+$gbTargetAccount.Text = $lang.ConfigForm_OtherAccountGroupTitle
+$gbTargetAccount.Location = New-Object System.Drawing.Point($xPadding, 20)
+$gbTargetAccount.Size = New-Object System.Drawing.Size(530, 110)
+$subTabAutreCompte.Controls.Add($gbTargetAccount)
+
+$lblDescription = New-Object System.Windows.Forms.Label
+$lblDescription.Text = $lang.ConfigForm_OtherAccountDescription
+$lblDescription.Location = New-Object System.Drawing.Point(10, 25)
+$lblDescription.Size = New-Object System.Drawing.Size(510, 40)
+$gbTargetAccount.Controls.Add($lblDescription)
+
+$lblUsername = New-Object System.Windows.Forms.Label
+$lblUsername.Text = $lang.ConfigForm_OtherAccountUsernameLabel
+$lblUsername.Location = New-Object System.Drawing.Point(10, 75)
+$lblUsername.AutoSize = $true
+$gbTargetAccount.Controls.Add($lblUsername)
+
+$usernameVal = Get-ConfigValue -Section "SystemConfig" -Key "AutoLoginUsername"
+if ([string]::IsNullOrWhiteSpace($usernameVal)) { $usernameVal = $env:USERNAME }
+$txtUsername = New-Object System.Windows.Forms.TextBox
+$txtUsername.Name = "txtUsername"
+$txtUsername.Text = $usernameVal
+$txtUsername.Location = New-Object System.Drawing.Point(280, 72)
+$txtUsername.Size = New-Object System.Drawing.Size(200, 20)
+$gbTargetAccount.Controls.Add($txtUsername)
+
+# --- Section : Gestion de la Session Automatique ---
+
+# Ajout du Label AllSys (Position Absolue Haute) - AFFICHE AVANT TOUT AUTRE CONTRÔLE
+$yBasique = 20 # Réinitialisation de la position Y
+if ($currentValues.ProcessToMonitor -eq "MyApp" -and $currentValues.ShowContextMessages) {
+    $lblAllSys = New-Object System.Windows.Forms.Label
+    $lblAllSys.Text = $lang.ConfigForm_AllSysOptimizedNote
+    $lblAllSys.ForeColor = [System.Drawing.Color]::FromArgb(0, 102, 204)
+    $lblAllSys.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
+    $lblAllSys.Size = New-Object System.Drawing.Size(510, 60) # Taille fixe pour multi-lignes
+    $lblAllSys.AutoSize = $false
+    $lblAllSys.Location = New-Object System.Drawing.Point($xPadding, $yBasique)
+    $tabBasique.Controls.Add($lblAllSys)
+    $yBasique += $lblAllSys.Height + $sectionSpacing # Mise à jour de Y
 }
 
-$yCurrent += $sectionSpacing
+# 1. Case à cocher principale
+$cbEnableSessionManagement = New-Object System.Windows.Forms.CheckBox
+$cbEnableSessionManagement.Name = "cbEnableSessionManagement"
+$cbEnableSessionManagement.Text = $lang.ConfigForm_EnableSessionManagementCheckbox
+$cbEnableSessionManagement.Location = New-Object System.Drawing.Point($xPadding, $yBasique)
+$cbEnableSessionManagement.AutoSize = $true
 
-# --- Contrôle : Heure de l'action pré-redémarrage (Label + TextBox) ---
-$lblPreRebootActionTime = New-Object System.Windows.Forms.Label
-$lblPreRebootActionTime.Text = $lang.ConfigForm_PreRebootActionTimeLabel
-$lblPreRebootActionTime.Location = New-Object System.Drawing.Point($xPadding, $yCurrent)
-$lblPreRebootActionTime.Size = New-Object System.Drawing.Size($lblWidth, $ctrlHeight)
-$form.Controls.Add($lblPreRebootActionTime)
+# État initial
+$currentSessionMode = Get-ConfigValue -Section "SystemConfig" -Key "SessionStartupMode" -DefaultValue "Standard"
+$cbEnableSessionManagement.Checked = ($currentSessionMode -eq "Autologon")
 
-$txtPreRebootActionTime = New-Object System.Windows.Forms.TextBox
-$txtPreRebootActionTime.Text = $currentValues.PreRebootActionTime
-$txtPreRebootActionTime.Location = New-Object System.Drawing.Point(($xPadding + $lblWidth + $itemSpacing), $yCurrent)
-$txtPreRebootActionTime.Size = New-Object System.Drawing.Size(100, $ctrlHeight)
-$form.Controls.Add($txtPreRebootActionTime)
+$tabBasique.Controls.Add($cbEnableSessionManagement)
+$yBasique += $cbEnableSessionManagement.Height + 5
 
-$yCurrent += $itemTotalHeight
+# 2. Note sur la licence
+$lblSessionNote = New-Object System.Windows.Forms.Label
+$lblSessionNote.Text = $lang.ConfigForm_SessionEulaNote
+# Sécurisation du calcul de position pour éviter l'erreur op_Addition
+$noteX = [int]$xPadding + 20
+$noteY = [int]$yBasique
+$lblSessionNote.Location = New-Object System.Drawing.Point($noteX, $noteY)
+$lblSessionNote.AutoSize = $true
+$lblSessionNote.ForeColor = [System.Drawing.Color]::Gray
+$tabBasique.Controls.Add($lblSessionNote)
 
-# --- Contrôle : Commande de l'action pré-redémarrage (Label + TextBox) ---
-$lblPreRebootActionCommand = New-Object System.Windows.Forms.Label
-$lblPreRebootActionCommand.Text = $lang.ConfigForm_PreRebootActionCommandLabel
-$lblPreRebootActionCommand.Location = New-Object System.Drawing.Point($xPadding, $yCurrent)
-$lblPreRebootActionCommand.Size = New-Object System.Drawing.Size($lblWidth, $ctrlHeight)
-$form.Controls.Add($lblPreRebootActionCommand)
+$yBasique += $lblSessionNote.Height + $sectionSpacing
 
-$txtPreRebootActionCommand = New-Object System.Windows.Forms.TextBox
-$txtPreRebootActionCommand.Text = $currentValues.PreRebootActionCommand
-$txtPreRebootActionCommand.Location = New-Object System.Drawing.Point(($xPadding + $lblWidth + $itemSpacing), $yCurrent)
-$txtPreRebootActionCommand.Size = New-Object System.Drawing.Size($ctrlWidth, $ctrlHeight)
-$form.Controls.Add($txtPreRebootActionCommand)
 
-$yCurrent += $itemTotalHeight
 
-# --- Contrôle : Arguments de l'action pré-redémarrage (Label + TextBox) ---
-$lblPreRebootActionArguments = New-Object System.Windows.Forms.Label
-$lblPreRebootActionArguments.Text = $lang.ConfigForm_PreRebootActionArgumentsLabel
-$lblPreRebootActionArguments.Location = New-Object System.Drawing.Point($xPadding, $yCurrent)
-$lblPreRebootActionArguments.Size = New-Object System.Drawing.Size($lblWidth, $ctrlHeight)
-$form.Controls.Add($lblPreRebootActionArguments)
+# --- Section des autres Checkboxes ---
+Create-And-Add-Checkbox -FormInst $tabBasique -KeyName "DisableFastStartup" -LabelText $lang.ConfigForm_DisableFastStartupCheckbox -YPos_ref ([ref]$yBasique) -InitialValue $currentValues.DisableFastStartup -LocalXPadding $xPadding -LocalItemSpacing $itemSpacing
+Create-And-Add-Checkbox -FormInst $tabBasique -KeyName "DisableSleep" -LabelText $lang.ConfigForm_DisableSleepCheckbox -YPos_ref ([ref]$yBasique) -InitialValue $currentValues.DisableSleep -LocalXPadding $xPadding -LocalItemSpacing $itemSpacing
+Create-And-Add-Checkbox -FormInst $tabBasique -KeyName "DisableScreenSleep" -LabelText $lang.ConfigForm_DisableScreenSleepCheckbox -YPos_ref ([ref]$yBasique) -InitialValue $currentValues.DisableScreenSleep -LocalXPadding $xPadding -LocalItemSpacing $itemSpacing
 
-$txtPreRebootActionArguments = New-Object System.Windows.Forms.TextBox
-$txtPreRebootActionArguments.Text = $currentValues.PreRebootActionArguments
-$txtPreRebootActionArguments.Location = New-Object System.Drawing.Point(($xPadding + $lblWidth + $itemSpacing), $yCurrent)
-$txtPreRebootActionArguments.Size = New-Object System.Drawing.Size($ctrlWidth, $ctrlHeight)
-$form.Controls.Add($txtPreRebootActionArguments)
+# --- Section : Gestion de Windows Update ---
+Create-And-Add-Checkbox -FormInst $tabBasique -KeyName "DisableWindowsUpdate" -LabelText $lang.ConfigForm_DisableWindowsUpdateCheckbox -YPos_ref ([ref]$yBasique) -InitialValue $currentValues.DisableWindowsUpdate -LocalXPadding $xPadding -LocalItemSpacing $itemSpacing
 
-$yCurrent += $itemTotalHeight
+$gbUpdateOptions = New-Object System.Windows.Forms.GroupBox
+$gbUpdateOptions.Location = New-Object System.Drawing.Point($xPadding, $yBasique)
+$gbUpdateOptions.Size = New-Object System.Drawing.Size(530, 45)
+$gbUpdateOptions.Text = ""
+$tabBasique.Controls.Add($gbUpdateOptions)
 
-# --- Contrôle : Méthode de lancement de l'action (Label + ComboBox) ---
-$lblPreRebootActionLaunchMethod = New-Object System.Windows.Forms.Label
-$lblPreRebootActionLaunchMethod.Text = $lang.ConfigForm_PreRebootActionLaunchMethodLabel
-$lblPreRebootActionLaunchMethod.Location = New-Object System.Drawing.Point($xPadding, $yCurrent)
-$lblPreRebootActionLaunchMethod.Size = New-Object System.Drawing.Size($lblWidth, $ctrlHeight)
-$form.Controls.Add($lblPreRebootActionLaunchMethod)
+$gbUpdateY = 10
+Create-And-Add-Checkbox -FormInst $gbUpdateOptions -KeyName "DisableAutoReboot" -LabelText $lang.ConfigForm_DisableAutoRebootCheckbox -YPos_ref ([ref]$gbUpdateY) -InitialValue $currentValues.DisableAutoReboot -LocalXPadding 10 -LocalItemSpacing $itemSpacing
 
-$cmbPreRebootActionLaunchMethod = New-Object System.Windows.Forms.ComboBox
-$cmbPreRebootActionLaunchMethod.Items.AddRange(@("direct", "powershell", "cmd"))
-$cmbPreRebootActionLaunchMethod.Text = $currentValues.PreRebootActionLaunchMethod
-$cmbPreRebootActionLaunchMethod.DropDownStyle = "DropDownList"
-$cmbPreRebootActionLaunchMethod.Location = New-Object System.Drawing.Point(($xPadding + $lblWidth + $itemSpacing), $yCurrent)
-$cmbPreRebootActionLaunchMethod.Size = New-Object System.Drawing.Size(100, $ctrlHeight)
-$form.Controls.Add($cmbPreRebootActionLaunchMethod)
+$yBasique += $gbUpdateOptions.Height
 
-$yCurrent += $itemTotalHeight + $sectionSpacing
+# Logique d'activation du groupe Windows Update
+$cbDisableWU = $tabBasique.Controls["cbDisableWindowsUpdate"]
+$gbUpdateOptions.Enabled = -not $cbDisableWU.Checked
+$cbDisableWU.Add_CheckedChanged({
+    $gbUpdateOptions.Enabled = -not $cbDisableWU.Checked
+})
 
-# --- Contrôle : Heure du redémarrage planifié (Label + TextBox) ---
-$lblScheduledRebootTime = New-Object System.Windows.Forms.Label
-$lblScheduledRebootTime.Text = $lang.ConfigForm_ScheduledRebootTimeLabel
-$lblScheduledRebootTime.Location = New-Object System.Drawing.Point($xPadding, $yCurrent)
-$lblScheduledRebootTime.Size = New-Object System.Drawing.Size($lblWidth, $ctrlHeight)
-$form.Controls.Add($lblScheduledRebootTime)
+# --- Contrôle : Gestion de OneDrive (Label + ComboBox) ---
+$lblOneDriveMode = New-Object System.Windows.Forms.Label
+$lblOneDriveMode.Text = $lang.ConfigForm_OneDriveModeLabel
+$lblOneDriveMode.Location = New-Object System.Drawing.Point($xPadding, $yBasique)
+$lblOneDriveMode.Size = New-Object System.Drawing.Size($lblWidth, $ctrlHeight)
+$tabBasique.Controls.Add($lblOneDriveMode)
 
-$txtScheduledRebootTime = New-Object System.Windows.Forms.TextBox
-$txtScheduledRebootTime.Text = $currentValues.ScheduledRebootTime
-$txtScheduledRebootTime.Location = New-Object System.Drawing.Point(($xPadding + $lblWidth + $itemSpacing), $yCurrent)
-$txtScheduledRebootTime.Size = New-Object System.Drawing.Size(100, $ctrlHeight)
-$form.Controls.Add($txtScheduledRebootTime)
+$cmbOneDriveMode = New-Object System.Windows.Forms.ComboBox
+$cmbOneDriveMode.Name = "cmbOneDriveMode"
+$cmbOneDriveMode.Location = New-Object System.Drawing.Point(($xPadding + $lblWidth + $itemSpacing), $yBasique)
+$cmbOneDriveMode.Size = New-Object System.Drawing.Size($ctrlWidth, $ctrlHeight)
+$cmbOneDriveMode.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList # Force le choix depuis la liste
 
-$yCurrent += $itemTotalHeight + $sectionSpacing
+# Ajoute les options traduites
+$cmbOneDriveMode.Items.AddRange(@(
+    $lang.ConfigForm_OneDriveMode_Block,
+    $lang.ConfigForm_OneDriveMode_Close,
+    $lang.ConfigForm_OneDriveMode_Ignore
+))
+$tabBasique.Controls.Add($cmbOneDriveMode)
 
-# --- Contrôle : Nom du processus (Label + TextBox) ---
-$lblProcessName = New-Object System.Windows.Forms.Label
-$lblProcessName.Text = $lang.ConfigForm_ProcessNameLabel
-$lblProcessName.Location = New-Object System.Drawing.Point($xPadding, $yCurrent)
-$lblProcessName.Size = New-Object System.Drawing.Size($lblWidth, $ctrlHeight)
-$form.Controls.Add($lblProcessName)
-
-$txtProcessName = New-Object System.Windows.Forms.TextBox
-$txtProcessName.Text = $currentValues.ProcessName
-$txtProcessName.Location = New-Object System.Drawing.Point(($xPadding + $lblWidth + $itemSpacing), $yCurrent)
-$txtProcessName.Size = New-Object System.Drawing.Size($ctrlWidth, $ctrlHeight)
-$form.Controls.Add($txtProcessName)
+# Sélectionne l'élément initial en fonction de la configuration chargée
+$currentOneDriveMode = Get-ConfigValue -Section "SystemConfig" -Key "OneDriveManagementMode" -DefaultValue "Block"
+switch ($currentOneDriveMode) {
+    "Block" { $cmbOneDriveMode.SelectedItem = $lang.ConfigForm_OneDriveMode_Block }
+    "Close" { $cmbOneDriveMode.SelectedItem = $lang.ConfigForm_OneDriveMode_Close }
+    "Ignore" { $cmbOneDriveMode.SelectedItem = $lang.ConfigForm_OneDriveMode_Ignore }
+    default { $cmbOneDriveMode.SelectedIndex = 0 }
+}
 
 $yCurrent += $itemTotalHeight
 
-# --- Contrôle : Arguments du processus (Label + TextBox) ---
-$lblProcessArguments = New-Object System.Windows.Forms.Label
-$lblProcessArguments.Text = $lang.ConfigForm_ProcessArgumentsLabel
-$lblProcessArguments.Location = New-Object System.Drawing.Point($xPadding, $yCurrent)
-$lblProcessArguments.Size = New-Object System.Drawing.Size($lblWidth, $ctrlHeight)
-$form.Controls.Add($lblProcessArguments)
+# --- GroupBox : Action Fermeture (dans Principal) ---
+$yPrincipal = 20
+$gbPreReboot = New-Object System.Windows.Forms.GroupBox
+$gbPreReboot.Text = $lang.ConfigForm_CloseAppGroupTitle
+$gbPreReboot.Location = New-Object System.Drawing.Point($xPadding, $yPrincipal)
+$gbPreReboot.Size = New-Object System.Drawing.Size(530, 110)
+$subTabPrincipal.Controls.Add($gbPreReboot)
 
-$txtProcessArguments = New-Object System.Windows.Forms.TextBox
-$txtProcessArguments.Text = $currentValues.ProcessArguments
-$txtProcessArguments.Location = New-Object System.Drawing.Point(($xPadding + $lblWidth + $itemSpacing), $yCurrent)
-$txtProcessArguments.Size = New-Object System.Drawing.Size($ctrlWidth, $ctrlHeight)
-$form.Controls.Add($txtProcessArguments)
+$gb1Y = 25 # Y de départ à l'intérieur du premier GroupBox
 
-$yCurrent += $itemTotalHeight
+# Contrôles pour l'action de fermeture (Heure de Fermeture - EXISTANT)
+$lblScheduledCloseTime = New-Object System.Windows.Forms.Label; $lblScheduledCloseTime.Text = $lang.ConfigForm_CloseTimeLabel; $lblScheduledCloseTime.Location = New-Object System.Drawing.Point(10, $gb1Y); $lblScheduledCloseTime.Size = New-Object System.Drawing.Size($lblWidth, $ctrlHeight); $gbPreReboot.Controls.Add($lblScheduledCloseTime)
+$txtScheduledCloseTime = New-Object System.Windows.Forms.TextBox; $txtScheduledCloseTime.Text = $currentValues.ScheduledCloseTime; $txtScheduledCloseTime.Location = New-Object System.Drawing.Point((10 + $lblWidth + $itemSpacing), $gb1Y); $txtScheduledCloseTime.Size = New-Object System.Drawing.Size(100, $ctrlHeight); $gbPreReboot.Controls.Add($txtScheduledCloseTime)
+$gb1Y += $itemTotalHeight
 
-# --- Contrôle : Méthode de lancement du processus (Label + ComboBox) ---
-$lblLaunchMethod = New-Object System.Windows.Forms.Label
-$lblLaunchMethod.Text = $lang.ConfigForm_LaunchMethodLabel
-$lblLaunchMethod.Location = New-Object System.Drawing.Point($xPadding, $yCurrent)
-$lblLaunchMethod.Size = New-Object System.Drawing.Size($lblWidth, $ctrlHeight)
-$form.Controls.Add($lblLaunchMethod)
+# Commande de fermeture (MANQUANT - RESTAURÉ)
+$lblScheduledCloseCommand = New-Object System.Windows.Forms.Label; $lblScheduledCloseCommand.Text = $lang.ConfigForm_CloseCommandLabel; $lblScheduledCloseCommand.Location = New-Object System.Drawing.Point(10, $gb1Y); $lblScheduledCloseCommand.Size = New-Object System.Drawing.Size($lblWidth, $ctrlHeight); $gbPreReboot.Controls.Add($lblScheduledCloseCommand)
+$txtScheduledCloseCommand = New-Object System.Windows.Forms.TextBox; $txtScheduledCloseCommand.Text = $currentValues.ScheduledCloseCommand; $txtScheduledCloseCommand.Location = New-Object System.Drawing.Point((10 + $lblWidth + $itemSpacing), $gb1Y); $txtScheduledCloseCommand.Size = New-Object System.Drawing.Size($ctrlWidth, $ctrlHeight); $gbPreReboot.Controls.Add($txtScheduledCloseCommand)
+$gb1Y += $itemTotalHeight
 
-$cmbLaunchMethod = New-Object System.Windows.Forms.ComboBox
-$cmbLaunchMethod.Items.AddRange(@("direct", "powershell", "cmd"))
-$cmbLaunchMethod.Text = $currentValues.LaunchMethod
-$cmbLaunchMethod.DropDownStyle = "DropDownList"
-$cmbLaunchMethod.Location = New-Object System.Drawing.Point(($xPadding + $lblWidth + $itemSpacing), $yCurrent)
-$cmbLaunchMethod.Size = New-Object System.Drawing.Size(100, $ctrlHeight)
-$form.Controls.Add($cmbLaunchMethod)
+# Arguments pour la commande (MANQUANT - RESTAURÉ)
+$lblScheduledCloseArguments = New-Object System.Windows.Forms.Label; $lblScheduledCloseArguments.Text = $lang.ConfigForm_CloseArgumentsLabel; $lblScheduledCloseArguments.Location = New-Object System.Drawing.Point(10, $gb1Y); $lblScheduledCloseArguments.Size = New-Object System.Drawing.Size($lblWidth, $ctrlHeight); $gbPreReboot.Controls.Add($lblScheduledCloseArguments)
+$txtScheduledCloseArguments = New-Object System.Windows.Forms.TextBox; $txtScheduledCloseArguments.Text = $currentValues.ScheduledCloseArguments; $txtScheduledCloseArguments.Location = New-Object System.Drawing.Point((10 + $lblWidth + $itemSpacing), $gb1Y); $txtScheduledCloseArguments.Size = New-Object System.Drawing.Size($ctrlWidth, $ctrlHeight); $gbPreReboot.Controls.Add($txtScheduledCloseArguments)
 
-$yCurrent += $itemTotalHeight
+$yPrincipal += $gbPreReboot.Height + $itemSpacing
+
+# --- GroupBox : Application Principale et Cycle Quotidien ---
+$gbMainApp = New-Object System.Windows.Forms.GroupBox
+$gbMainApp.Text = $lang.ConfigForm_MainAppGroupTitle
+$gbMainApp.Location = New-Object System.Drawing.Point($xPadding, $yPrincipal)
+$gbMainApp.Size = New-Object System.Drawing.Size(530, 165)
+$subTabPrincipal.Controls.Add($gbMainApp)
+
+$gb2Y = 25 # Y de départ à l'intérieur du second GroupBox
+
+# Contrôles pour le cycle quotidien et l'application (Heure du Redémarrage - EXISTANT)
+$lblScheduledRebootTime = New-Object System.Windows.Forms.Label; $lblScheduledRebootTime.Text = $lang.ConfigForm_RebootTimeLabel; $lblScheduledRebootTime.Location = New-Object System.Drawing.Point(10, $gb2Y); $lblScheduledRebootTime.Size = New-Object System.Drawing.Size($lblWidth, $ctrlHeight); $gbMainApp.Controls.Add($lblScheduledRebootTime)
+$txtScheduledRebootTime = New-Object System.Windows.Forms.TextBox; $txtScheduledRebootTime.Text = $currentValues.ScheduledRebootTime; $txtScheduledRebootTime.Location = New-Object System.Drawing.Point((10 + $lblWidth + $itemSpacing), $gb2Y); $txtScheduledRebootTime.Size = New-Object System.Drawing.Size(100, $ctrlHeight); $gbMainApp.Controls.Add($txtScheduledRebootTime)
+$gb2Y += $itemTotalHeight
+
+# Application à Lancer (MANQUANT - RESTAURÉ)
+$lblProcessToLaunch = New-Object System.Windows.Forms.Label; $lblProcessToLaunch.Text = $lang.ConfigForm_ProcessToLaunchLabel; $lblProcessToLaunch.Location = New-Object System.Drawing.Point(10, $gb2Y); $lblProcessToLaunch.Size = New-Object System.Drawing.Size($lblWidth, $ctrlHeight); $gbMainApp.Controls.Add($lblProcessToLaunch)
+$txtProcessToLaunch = New-Object System.Windows.Forms.TextBox; $txtProcessToLaunch.Text = $currentValues.ProcessToLaunch; $txtProcessToLaunch.Location = New-Object System.Drawing.Point((10 + $lblWidth + $itemSpacing), $gb2Y); $txtProcessToLaunch.Size = New-Object System.Drawing.Size($ctrlWidth, $ctrlHeight); $gbMainApp.Controls.Add($txtProcessToLaunch)
+$gb2Y += $itemTotalHeight
+
+# Arguments pour l'application (MANQUANT - RESTAURÉ)
+$lblProcessArguments = New-Object System.Windows.Forms.Label; $lblProcessArguments.Text = $lang.ConfigForm_ProcessArgumentsLabel; $lblProcessArguments.Location = New-Object System.Drawing.Point(10, $gb2Y); $lblProcessArguments.Size = New-Object System.Drawing.Size($lblWidth, $ctrlHeight); $gbMainApp.Controls.Add($lblProcessArguments)
+$txtProcessArguments = New-Object System.Windows.Forms.TextBox; $txtProcessArguments.Text = $currentValues.ProcessArguments; $txtProcessArguments.Location = New-Object System.Drawing.Point((10 + $lblWidth + $itemSpacing), $gb2Y); $txtProcessArguments.Size = New-Object System.Drawing.Size($ctrlWidth, $ctrlHeight); $gbMainApp.Controls.Add($txtProcessArguments)
+$gb2Y += $itemTotalHeight
+
+# Nom du Processus à Surveiller (MANQUANT - RESTAURÉ)
+$lblProcessToMonitor = New-Object System.Windows.Forms.Label; $lblProcessToMonitor.Text = $lang.ConfigForm_ProcessToMonitorLabel; $lblProcessToMonitor.Location = New-Object System.Drawing.Point(10, $gb2Y); $lblProcessToMonitor.Size = New-Object System.Drawing.Size($lblWidth, $ctrlHeight); $gbMainApp.Controls.Add($lblProcessToMonitor)
+$txtProcessToMonitor = New-Object System.Windows.Forms.TextBox; $txtProcessToMonitor.Text = (Get-ConfigValue -Section "Process" -Key "ProcessToMonitor"); $txtProcessToMonitor.Location = New-Object System.Drawing.Point((10 + $lblWidth + $itemSpacing), $gb2Y); $txtProcessToMonitor.Size = New-Object System.Drawing.Size($ctrlWidth, $ctrlHeight); $gbMainApp.Controls.Add($txtProcessToMonitor)
+$gb2Y += $itemTotalHeight
+
+# Mode de Lancement Console (MANQUANT - RESTAURÉ)
+$lblLaunchConsoleMode = New-Object System.Windows.Forms.Label; $lblLaunchConsoleMode.Text = $lang.ConfigForm_LaunchConsoleModeLabel; $lblLaunchConsoleMode.Location = New-Object System.Drawing.Point(10, $gb2Y); $lblLaunchConsoleMode.Size = New-Object System.Drawing.Size($lblWidth, $ctrlHeight); $gbMainApp.Controls.Add($lblLaunchConsoleMode)
+$cmbLaunchConsoleMode = New-Object System.Windows.Forms.ComboBox; $cmbLaunchConsoleMode.Name = "cmbLaunchConsoleMode"; $cmbLaunchConsoleMode.Location = New-Object System.Drawing.Point((10 + $lblWidth + $itemSpacing), $gb2Y); $cmbLaunchConsoleMode.Size = New-Object System.Drawing.Size($ctrlWidth, $ctrlHeight); $cmbLaunchConsoleMode.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
+$cmbLaunchConsoleMode.Items.AddRange(@($lang.ConfigForm_LaunchConsoleMode_Standard, $lang.ConfigForm_LaunchConsoleMode_Legacy))
+$currentConsoleMode = Get-ConfigValue -Section "Process" -Key "LaunchConsoleMode" -DefaultValue "Standard"
+$cmbLaunchConsoleMode.SelectedItem = if ($currentConsoleMode -eq 'Legacy') { $lang.ConfigForm_LaunchConsoleMode_Legacy } else { $lang.ConfigForm_LaunchConsoleMode_Standard }
+$gbMainApp.Controls.Add($cmbLaunchConsoleMode)
+$gb2Y += $itemTotalHeight
+
+# Case à cocher Minimized (EXISTANT)
+$cbStartMinimized = New-Object System.Windows.Forms.CheckBox; $cbStartMinimized.Name = "cbStartProcessMinimized"; $cbStartMinimized.Text = $lang.ConfigForm_StartProcessMinimizedCheckbox; $cbStartMinimized.Checked = [bool]$currentValues.StartProcessMinimized; $cbStartMinimized.Location = New-Object System.Drawing.Point(10, $gb2Y); $cbStartMinimized.AutoSize = $true; $gbMainApp.Controls.Add($cbStartMinimized)
+
+$yPrincipal += $gbMainApp.Height + $itemSpacing
+
+# --- Section : Options d'Installation (Mode Silencieux) ---
+$gbInstallOptions = New-Object System.Windows.Forms.GroupBox
+$gbInstallOptions.Text = $lang.ConfigForm_InstallOptionsGroup
+# Correction de la taille : 530px au lieu de 740px pour tenir dans le formulaire de 600px
+$gbInstallOptions.Size = New-Object System.Drawing.Size(530, 80)
+
+# Repositionnement dans subTabAutreCompte
+$gbInstallOptions.Parent = $subTabAutreCompte
+$gbInstallOptions.Location = New-Object System.Drawing.Point($xPadding, 140)
+
+$cbSilentMode = New-Object System.Windows.Forms.CheckBox
+$cbSilentMode.Text = $lang.ConfigForm_SilentModeCheckbox
+$cbSilentMode.Location = New-Object System.Drawing.Point(10, 20)
+# Correction de la taille : 510px pour tenir dans le groupe de 530px
+$cbSilentMode.Size = New-Object System.Drawing.Size(510, 50)
+$cbSilentMode.AutoSize = $false # Permet le wrap du texte sur plusieurs lignes si nécessaire
+$silentModeVal = Get-ConfigValue -Section "Installation" -Key "SilentMode" -DefaultValue $false -Type ([bool])
+$cbSilentMode.Checked = $silentModeVal
+$gbInstallOptions.Controls.Add($cbSilentMode)
 #endregion Création des Contrôles
 
+
+
+# --- GroupBox : Sauvegarde des Bases de Données (dans Sauvegarde) ---
+$ySauvegarde = 20
+$gbDatabaseBackup = New-Object System.Windows.Forms.GroupBox
+$gbDatabaseBackup.Text = $lang.ConfigForm_DatabaseBackupGroupTitle
+$gbDatabaseBackup.Location = New-Object System.Drawing.Point($xPadding, $ySauvegarde)
+$gbDatabaseBackup.Size = New-Object System.Drawing.Size(530, 210)
+$subTabSauvegarde.Controls.Add($gbDatabaseBackup)
+
+$gbDbY = 25 # Y de départ à l'intérieur de ce GroupBox
+
+# Case à cocher pour activer la sauvegarde
+$cbEnableBackup = New-Object System.Windows.Forms.CheckBox
+$cbEnableBackup.Name = "cbEnableBackup" # Nommage explicite
+$cbEnableBackup.Text = $lang.ConfigForm_EnableBackupCheckbox
+$cbEnableBackup.Checked = [bool]$currentValues.EnableBackup
+$cbEnableBackup.Location = New-Object System.Drawing.Point(10, $gbDbY)
+$cbEnableBackup.AutoSize = $true
+$gbDatabaseBackup.Controls.Add($cbEnableBackup)
+$gbDbY += $itemTotalHeight
+
+# Add Backup Time field
+$lblBackupTime = New-Object System.Windows.Forms.Label
+$lblBackupTime.Text = $lang.ConfigForm_BackupTimeLabel
+$lblBackupTime.Location = New-Object System.Drawing.Point(10, $gbDbY)
+$lblBackupTime.Size = New-Object System.Drawing.Size($lblWidth, $ctrlHeight)
+$gbDatabaseBackup.Controls.Add($lblBackupTime)
+
+$txtBackupTime = New-Object System.Windows.Forms.TextBox
+$txtBackupTime.Name = "txtBackupTime"
+$txtBackupTime.Text = $currentValues.ScheduledBackupTime
+$txtBackupTime.Location = New-Object System.Drawing.Point((10 + $lblWidth + $itemSpacing), $gbDbY)
+$txtBackupTime.Size = New-Object System.Drawing.Size(100, $ctrlHeight)
+$gbDatabaseBackup.Controls.Add($txtBackupTime)
+
+$gbDbY += $itemTotalHeight
+# Label et TextBox pour le chemin Source
+$lblBackupSource = New-Object System.Windows.Forms.Label; $lblBackupSource.Text = $lang.ConfigForm_BackupSourceLabel; $lblBackupSource.Location = New-Object System.Drawing.Point(10, $gbDbY); $lblBackupSource.Size = New-Object System.Drawing.Size($lblWidth, $ctrlHeight); $gbDatabaseBackup.Controls.Add($lblBackupSource)
+$txtBackupSource = New-Object System.Windows.Forms.TextBox; $txtBackupSource.Name = "txtBackupSource"; $txtBackupSource.Text = $currentValues.DatabaseSourcePath; $txtBackupSource.Location = New-Object System.Drawing.Point((10 + $lblWidth + $itemSpacing), $gbDbY); $txtBackupSource.Size = New-Object System.Drawing.Size($ctrlWidth, $ctrlHeight); $gbDatabaseBackup.Controls.Add($txtBackupSource)
+$gbDbY += $itemTotalHeight
+
+# Label et TextBox pour le chemin Destination
+$lblBackupDest = New-Object System.Windows.Forms.Label; $lblBackupDest.Text = $lang.ConfigForm_BackupDestinationLabel; $lblBackupDest.Location = New-Object System.Drawing.Point(10, $gbDbY); $lblBackupDest.Size = New-Object System.Drawing.Size($lblWidth, $ctrlHeight); $gbDatabaseBackup.Controls.Add($lblBackupDest)
+$txtBackupDest = New-Object System.Windows.Forms.TextBox; $txtBackupDest.Name = "txtBackupDest"; $txtBackupDest.Text = $currentValues.DatabaseDestinationPath; $txtBackupDest.Location = New-Object System.Drawing.Point((10 + $lblWidth + $itemSpacing), $gbDbY); $txtBackupDest.Size = New-Object System.Drawing.Size($ctrlWidth, $ctrlHeight); $gbDatabaseBackup.Controls.Add($txtBackupDest)
+$gbDbY += $itemTotalHeight
+
+# Label et TextBox pour la durée de conservation
+$lblBackupKeepDays = New-Object System.Windows.Forms.Label; $lblBackupKeepDays.Text = $lang.ConfigForm_BackupKeepDaysLabel; $lblBackupKeepDays.Location = New-Object System.Drawing.Point(10, $gbDbY); $lblBackupKeepDays.Size = New-Object System.Drawing.Size(280, $ctrlHeight); $gbDatabaseBackup.Controls.Add($lblBackupKeepDays)
+$txtBackupKeepDays = New-Object System.Windows.Forms.TextBox; $txtBackupKeepDays.Name = "txtBackupKeepDays"; $txtBackupKeepDays.Text = $currentValues.DatabaseKeepDays; $txtBackupKeepDays.Location = New-Object System.Drawing.Point(300, $gbDbY); $txtBackupKeepDays.Size = New-Object System.Drawing.Size(100, $ctrlHeight); $gbDatabaseBackup.Controls.Add($txtBackupKeepDays)
+
+# Définition de l'état initial des TextBox (avant d'attacher l'événement)
+$txtBackupSource.Enabled = $cbEnableBackup.Checked
+$txtBackupDest.Enabled = $cbEnableBackup.Checked
+$txtBackupTime.Enabled = $cbEnableBackup.Checked
+$txtBackupKeepDays.Enabled = $cbEnableBackup.Checked
+
+# Gestionnaire d'événement
+$cbEnableBackup.Add_CheckedChanged({
+    param($sender, $e) # Utilisation des paramètres d'événement standards
+
+    # On récupère l'état de la case qui a déclenché l'événement
+    $isChecked = $sender.Checked
+
+    # On recherche les contrôles de manière récursive DANS LE FORMULAIRE ENTIER au moment du clic
+    # C'est la méthode la plus robuste.
+    $sourceTextBox = $form.Controls.Find("txtBackupSource", $true)[0]
+    $destTextBox = $form.Controls.Find("txtBackupDest", $true)[0]
+    $timeTextBox = $form.Controls.Find("txtBackupTime", $true)[0]
+    $keepDaysTextBox = $form.Controls.Find("txtBackupKeepDays", $true)[0]
+
+    # On applique le nouvel état
+    $sourceTextBox.Enabled = $isChecked
+    $destTextBox.Enabled = $isChecked
+    $timeTextBox.Enabled = $isChecked
+    $keepDaysTextBox.Enabled = $isChecked
+})
+
+$yCurrent += $gbDatabaseBackup.Height + $itemSpacing
 #region Création des Boutons
 
 # --- Bouton Enregistrer ---
 
 # Calcul de la position du bouton "Enregistrer"
-$buttonY = $yCurrent + $sectionSpacing # Ajoute un espacement au-dessus des boutons
+    $buttonY = 420 # Position en bas du TabControl
 $buttonSaveX = $xPadding + ($lblWidth / 2)
 
 $btnSave = New-Object System.Windows.Forms.Button
@@ -472,7 +628,6 @@ $btnSave.DialogResult = [System.Windows.Forms.DialogResult]::OK
 # Définit ce bouton comme celui qui est activé par la touche "Entrée"
 $form.AcceptButton = $btnSave
 $form.Controls.Add($btnSave)
-
 
 # --- Bouton Annuler ---
 
@@ -489,7 +644,6 @@ $btnCancel.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
 $form.CancelButton = $btnCancel
 $form.Controls.Add($btnCancel)
 
-
 # --- Ajustement final de la taille du formulaire ---
 
 # Redimensionne la hauteur du formulaire pour s'adapter parfaitement aux boutons,
@@ -500,31 +654,68 @@ $form.ClientSize = New-Object System.Drawing.Size($form.ClientSize.Width, $newFo
 
 #region Gestionnaires d'Événements du Formulaire
 $btnSave.Add_Click({
-    if (($txtPreRebootActionTime.Text -ne "" -and $txtPreRebootActionTime.Text -notmatch "^\d{2}:\d{2}$") -or ($txtScheduledRebootTime.Text -ne "" -and $txtScheduledRebootTime.Text -notmatch "^\d{2}:\d{2}$")) {
+    if (($txtScheduledCloseTime.Text -ne "" -and $txtScheduledCloseTime.Text -notmatch "^\d{2}:\d{2}$") -or ($txtScheduledRebootTime.Text -ne "" -and $txtScheduledRebootTime.Text -notmatch "^\d{2}:\d{2}$") -or ($txtBackupTime.Text -ne "" -and $txtBackupTime.Text -notmatch "^\d{2}:\d{2}$")) {
         [System.Windows.Forms.MessageBox]::Show($lang.ConfigForm_InvalidTimeFormat, $lang.ConfigForm_InvalidTimeFormatCaption, "OK", "Warning")
         $form.DialogResult = [System.Windows.Forms.DialogResult]::None; return
     }
-    Set-IniValue $ConfigIniPath "SystemConfig" "AutoLoginUsername" $txtAutoLoginUsername.Text
-    Set-IniValue $ConfigIniPath "SystemConfig" "EnableAutoLogin" $form.Controls["cbEnableAutoLogin"].Checked.ToString().ToLower()
-    Set-IniValue $ConfigIniPath "SystemConfig" "DisableFastStartup" $form.Controls["cbDisableFastStartup"].Checked.ToString().ToLower()
-    Set-IniValue $ConfigIniPath "SystemConfig" "DisableSleep" $form.Controls["cbDisableSleep"].Checked.ToString().ToLower()
-    Set-IniValue $ConfigIniPath "SystemConfig" "DisableScreenSleep" $form.Controls["cbDisableScreenSleep"].Checked.ToString().ToLower()
-    Set-IniValue $ConfigIniPath "SystemConfig" "DisableWindowsUpdate" $form.Controls["cbDisableWindowsUpdate"].Checked.ToString().ToLower()
-    Set-IniValue $ConfigIniPath "SystemConfig" "DisableAutoReboot" $form.Controls["cbDisableAutoReboot"].Checked.ToString().ToLower()
-    Set-IniValue $ConfigIniPath "SystemConfig" "ScheduledRebootTime" $txtScheduledRebootTime.Text
-    Set-IniValue $ConfigIniPath "SystemConfig" "PreRebootActionTime" $txtPreRebootActionTime.Text
-    Set-IniValue $ConfigIniPath "SystemConfig" "PreRebootActionCommand" $txtPreRebootActionCommand.Text
-    Set-IniValue $ConfigIniPath "SystemConfig" "PreRebootActionArguments" $txtPreRebootActionArguments.Text
-    Set-IniValue $ConfigIniPath "SystemConfig" "PreRebootActionLaunchMethod" $cmbPreRebootActionLaunchMethod.Text
-    Set-IniValue $ConfigIniPath "SystemConfig" "DisableOneDrive" $form.Controls["cbDisableOneDrive"].Checked.ToString().ToLower()
-    Set-IniValue $ConfigIniPath "Process" "ProcessName" $txtProcessName.Text
-    Set-IniValue $ConfigIniPath "Process" "ProcessArguments" $txtProcessArguments.Text
-    Set-IniValue $ConfigIniPath "Process" "LaunchMethod" $cmbLaunchMethod.Text
 
-    $detectedLanguageShort = ($cultureName.Split('-'))[0]
-    Set-IniValue $ConfigIniPath "Logging" "Language" $detectedLanguageShort
+    # --- NOUVEAU BLOC DE VALIDATION LOGIQUE ---
+    if (-not [string]::IsNullOrWhiteSpace($txtScheduledCloseTime.Text) -and -not [string]::IsNullOrWhiteSpace($txtScheduledRebootTime.Text)) {
+        try {
+            $preRebootTime = [datetime]::ParseExact($txtScheduledCloseTime.Text, "HH:mm", $null)
+            $rebootTime = [datetime]::ParseExact($txtScheduledRebootTime.Text, "HH:mm", $null)
 
-    [System.Windows.Forms.MessageBox]::Show(($lang.ConfigForm_SaveSuccessMessage -f $ConfigIniPath), $lang.ConfigForm_SaveSuccessCaption, "OK", "Information")
+            if ($preRebootTime -ge $rebootTime) {
+                [System.Windows.Forms.MessageBox]::Show($lang.ConfigForm_InvalidTimeLogic, $lang.ConfigForm_InvalidTimeLogicCaption, "OK", "Warning")
+                $form.DialogResult = [System.Windows.Forms.DialogResult]::None; return
+            }
+        } catch {
+            # Géré par la validation de format précédente, ce bloc est une sécurité
+        }
+    }
+    # --- FIN DU NOUVEAU BLOC ---
+
+    # Sauvegarde du nom d'utilisateur depuis le champ de texte
+    Set-IniValue $ConfigFile "SystemConfig" "AutoLoginUsername" $form.Controls.Find('txtUsername', $true)[0].Text
+
+    # Détermination et sauvegarde du mode de session
+    $sessionModeToSave = "Standard"
+    if ($form.Controls.Find('cbEnableSessionManagement', $true)[0].Checked) {
+        $sessionModeToSave = "Autologon"
+    }
+    Set-IniValue $ConfigFile "SystemConfig" "SessionStartupMode" $sessionModeToSave
+
+    Set-IniValue $ConfigFile "SystemConfig" "DisableFastStartup" $form.Controls.Find("cbDisableFastStartup", $true)[0].Checked.ToString().ToLower()
+    Set-IniValue $ConfigFile "SystemConfig" "DisableSleep" $form.Controls.Find("cbDisableSleep", $true)[0].Checked.ToString().ToLower()
+    Set-IniValue $ConfigFile "SystemConfig" "DisableScreenSleep" $form.Controls.Find("cbDisableScreenSleep", $true)[0].Checked.ToString().ToLower()
+    Set-IniValue $ConfigFile "SystemConfig" "DisableWindowsUpdate" $form.Controls.Find("cbDisableWindowsUpdate", $true)[0].Checked.ToString().ToLower()
+    Set-IniValue $ConfigFile "SystemConfig" "DisableAutoReboot" $form.Controls.Find('cbDisableAutoReboot', $true)[0].Checked.ToString().ToLower()
+    Set-IniValue $ConfigFile "Process" "ScheduledRebootTime" $txtScheduledRebootTime.Text
+    Set-IniValue $ConfigFile "Process" "ScheduledCloseTime" $txtScheduledCloseTime.Text
+    Set-IniValue $ConfigFile "Process" "ScheduledCloseCommand" $txtScheduledCloseCommand.Text
+    Set-IniValue $ConfigFile "Process" "ScheduledCloseArguments" $txtScheduledCloseArguments.Text
+    # Détermine la valeur technique à sauvegarder pour OneDrive
+    $oneDriveValueToSave = "Ignore" # Valeur par défaut sécurisée
+    switch ($cmbOneDriveMode.SelectedItem.ToString()) {
+        $lang.ConfigForm_OneDriveMode_Block { $oneDriveValueToSave = "Block" }
+        $lang.ConfigForm_OneDriveMode_Close { $oneDriveValueToSave = "Close" }
+        $lang.ConfigForm_OneDriveMode_Ignore { $oneDriveValueToSave = "Ignore" }
+    }
+    Set-IniValue $ConfigFile "SystemConfig" "OneDriveManagementMode" $oneDriveValueToSave
+    Set-IniValue $ConfigFile "Process" "ProcessToLaunch" $txtProcessToLaunch.Text
+    Set-IniValue $ConfigFile "Process" "ProcessArguments" $txtProcessArguments.Text
+    Set-IniValue $ConfigFile "Process" "ProcessToMonitor" $txtProcessToMonitor.Text
+    $consoleModeToSave = if ($cmbLaunchConsoleMode.SelectedItem -eq $lang.ConfigForm_LaunchConsoleMode_Legacy) { "Legacy" } else { "Standard" }
+    Set-IniValue $ConfigFile "Process" "LaunchConsoleMode" $consoleModeToSave
+    Set-IniValue $ConfigFile "Process" "StartProcessMinimized" $form.Controls.Find('cbStartProcessMinimized', $true)[0].Checked.ToString().ToLower()
+    Set-IniValue $ConfigFile "DatabaseBackup" "EnableBackup" $form.Controls.Find('cbEnableBackup', $true)[0].Checked.ToString().ToLower()
+    Set-IniValue $ConfigFile "DatabaseBackup" "ScheduledBackupTime" $form.Controls.Find('txtBackupTime', $true)[0].Text
+    Set-IniValue $ConfigFile "DatabaseBackup" "DatabaseSourcePath" $form.Controls.Find('txtBackupSource', $true)[0].Text
+    Set-IniValue $ConfigFile "DatabaseBackup" "DatabaseDestinationPath" $form.Controls.Find('txtBackupDest', $true)[0].Text
+    Set-IniValue $ConfigFile "DatabaseBackup" "DatabaseKeepDays" $form.Controls.Find('txtBackupKeepDays', $true)[0].Text
+    Set-IniValue $ConfigFile "Installation" "SilentMode" $cbSilentMode.Checked.ToString().ToLower()
+
+    [System.Windows.Forms.MessageBox]::Show(($lang.ConfigForm_SaveSuccessMessage -f $ConfigFile), $lang.ConfigForm_SaveSuccessCaption, "OK", "Information")
 })
 $form.Add_FormClosing({ param($sender, $e)
     if ($form.DialogResult -ne [System.Windows.Forms.DialogResult]::OK) {}
