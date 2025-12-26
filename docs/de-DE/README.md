@@ -1,7 +1,7 @@
-# WindowsOrchestrator 1.72
+# WindowsOrchestrator 1.73
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-v1.72-2ea44f" alt="Version">
+  <img src="https://img.shields.io/badge/Version-v1.73-2ea44f" alt="Version">
   <img src="https://img.shields.io/badge/Licence-GPLv3-blue.svg" alt="Licence">
   <img src="https://img.shields.io/badge/Plateforme-Windows_10_|_11-0078D6" alt="OS Supportés">
   <img src="https://img.shields.io/badge/Architecture-x86_|_x64_|_ARM64-blueviolet" alt="Architecture CPU">
@@ -83,8 +83,24 @@ Der Orchestrator priorisiert Stabilität und die Verwendung nativer Windows-Mech
 * **Feedback**: Endbenachrichtigung via Dialogbox (`MessageBox`) mit Erfolg oder Fehler.
 
 ### Internationalisierung & Benachrichtigungen
-* **i18n**: Automatische Sprach-Erkennung des Systems (Native Unterstützung: `fr-FR`, `en-US`).
+* **i18n**: Automatische Sprach-Erkennung des Systems (Native Unterstützung: `fr-FR`, `en-US`, `es-ES`, `de-DE`).
 * **Gotify**: Optionales Modul für den Versand von Ausführungsberichten (Erfolg/Fehler) an einen Gotify-Server.
+
+### Neue Funktionen v1.73
+
+#### Dynamischer Launcher
+* **Konfigurationsbasierter Start**: Liest `config.ini`, um dynamisch Anwendungsstartparameter, -modi und -pfade zu bestimmen, ohne feste Kodierung.
+* **Flexible Ausführungsmodi**: Unterstützt mehrere Startstrategien basierend auf Konfiguration, einschließlich minimiertem Start und Konsolenauswahl.
+
+#### Watchdog-Sicherheit
+* **Prozessüberwachung**: Kontinuierliche Überwachung von gestarteten Anwendungsprozessen zur Erkennung von Fehlern oder Abstürzen.
+* **Automatische Wiederherstellung**: Bei Erkennung von Prozessbeendigung aktiviert automatische Neustartmechanismen zur Aufrechterhaltung der Systembetriebszeit.
+* **Gesundheitsprüfungen**: Periodische Überprüfung der Anwendungsreaktionsfähigkeit, um stille Fehler zu verhindern.
+
+#### Zeitliche Intelligenz (Automatische Inferenz und Domino-Effekt)
+* **Intelligente Planung**: Analysiert Nutzungsmuster und Systemzustände, um automatisch optimale Zeiten für Sicherungen, Neustarts und Wartung zu inferieren.
+* **Domino-Effekt-Prävention**: Erkennt kaskadierende Abhängigkeiten zwischen Systemoperationen, um Konflikte zu vermeiden und sequentielle Ausführung zu gewährleisten.
+* **Adaptives Verhalten**: Passt Zeitpläne basierend auf Echtzeit-Systemleistung und Anwendungsbedürfnissen an.
 
 ## Bereitstellungs-Prozedur
 

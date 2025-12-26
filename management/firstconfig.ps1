@@ -20,16 +20,17 @@ param(
     Lance l'assistant de configuration graphique.
 .NOTES
     Projet      : WindowsOrchestrator
-    Version     : 1.72
+    Version     : 1.73
     Licence     : GNU GPLv3
 
     --- CRÉDITS & RÔLES ---
     Ce projet est le fruit d'une collaboration hybride Humain-IA :
 
-    Architecte Principal & QA      : Ronan Davalan
-    Architecte IA & Planification  : Google Gemini
-    Développeur IA Principal       : Grok (xAI)
-    Consultant Technique IA        : Claude (Anthropic)
+    Direction Produit & Spécifications  : Christophe Lévêque
+    Architecte Principal & QA           : Ronan Davalan
+    Architecte IA & Planification       : Google Gemini
+    Développeur IA Principal            : Grok (xAI)
+    Consultant Technique IA             : Claude (Anthropic)
 #>
 
 
@@ -105,6 +106,9 @@ try {
         throw "Aucun fichier de langue valide (ni pour $cultureName, ni en-US) n'a été trouvé."
     }
 
+    # Identifier le code de langue chargé au démarrage
+    $loadedLanguageCode = if (Test-Path (Join-Path $ProjectRootDir "i18n\$cultureName\strings.psd1")) { $cultureName } else { "en-US" }
+
     if ($null -eq $lang -or $lang.Count -eq 0) {
         throw "Le fichier de langue '$langFilePath' a été trouvé mais n'a retourné aucune donnée."
     }
@@ -162,13 +166,9 @@ if (-not (Test-Path $DefaultConfigPath -PathType Leaf)) {
             Copy-Item -Path $DefaultConfigPath -Destination $ConfigFile -Force -ErrorAction Stop
             $configWasCreated = $true  # MARQUE que le fichier a été créé
             
-            # AFFICHAGE IMMÉDIAT du message de création
-            [System.Windows.Forms.MessageBox]::Show(
-                ($lang.ConfigForm_SaveSuccessMessage -f $ConfigFile),
-                $lang.ConfigForm_ResetSuccessCaption,
-                "OK",
-                "Information"
-            )
+            # MODIFICATION v1.73 : Suppression de la notification au démarrage.
+            # La création initiale doit être silencieuse pour l'utilisateur.
+            # [System.Windows.Forms.MessageBox]::Show(...) est supprimé ici.
         } catch {
             [System.Windows.Forms.MessageBox]::Show(
                 ($lang.ConfigForm_CopyError -f $_.Exception.Message), 
@@ -233,7 +233,7 @@ $defaultValues = @{
     DisableScreenSleep = $false; DisableWindowsUpdate = $true
     DisableAutoReboot = $true; ScheduledCloseTime = "02:55"; ScheduledCloseCommand = ""
     ScheduledCloseArguments = ""
-    ScheduledRebootTime = "03:00"; OneDriveManagementMode = "Block";     ProcessToLaunch = "LaunchApp.bat"
+    ScheduledRebootTime = "03:00"; EnableScheduledClose = $true; EnableScheduledReboot = $true; OneDriveManagementMode = "Block";     ProcessToLaunch = "LaunchApp.bat"
     ProcessArguments = ""
     ProcessToMonitor = ""; StartProcessMinimized = $false; SessionStartupMode = "Standard"
     EnableBackup = $false; DatabaseSourcePath = "..\..\AllUser"; DatabaseDestinationPath = "C:\Backup\AllSys"; DatabaseKeepDays = 30; ScheduledBackupTime = "02:59"
@@ -242,7 +242,7 @@ $defaultValues = @{
 $currentValues = @{}
 foreach ($key in $defaultValues.Keys) {
     $section = "SystemConfig" # Par défaut
-    if ($key -in ("ScheduledCloseTime", "ScheduledCloseCommand", "ScheduledCloseArguments", "ScheduledRebootTime", "ProcessToLaunch", "ProcessArguments", "ProcessToMonitor", "StartProcessMinimized")) { $section = "Process" }
+    if ($key -in ("ScheduledCloseTime", "ScheduledCloseCommand", "ScheduledCloseArguments", "ScheduledRebootTime", "ProcessToLaunch", "ProcessArguments", "ProcessToMonitor", "StartProcessMinimized", "EnableScheduledClose", "EnableScheduledReboot")) { $section = "Process" }
     if ($key -in ("EnableLogRotation", "MaxSystemLogsToKeep", "MaxUserLogsToKeep")) { $section = "Logging" }
     if ($key -in ("EnableBackup", "DatabaseSourcePath", "DatabaseDestinationPath", "DatabaseKeepDays", "ScheduledBackupTime")) { $section = "DatabaseBackup" }
     if ($key -in ("UseAutologonAssistant", "RebootOnCompletion", "RebootGracePeriod", "PowerShellExitMode", "PowerShellExitDelay", "SilentMode", "ShowContextMessages")) { $section = "Installation" }
@@ -298,7 +298,7 @@ $subTabControl.Location = New-Object System.Drawing.Point(0, 0)
 $subTabControl.Size = New-Object System.Drawing.Size(570, 370)
 $tabAvancees.Controls.Add($subTabControl)
 
-# Sous-onglets
+# Sous-onglets (Structure v1.73 - 4 Onglets)
 $subTabPrincipal = New-Object System.Windows.Forms.TabPage
 $subTabPrincipal.Text = $lang.ConfigForm_SubTabMain
 $subTabControl.Controls.Add($subTabPrincipal)
@@ -341,18 +341,21 @@ $gbTargetAccount.Controls.Add($txtUsername)
 
 # --- Section : Gestion de la Session Automatique ---
 
-# Ajout du Label AllSys (Position Absolue Haute) - AFFICHE AVANT TOUT AUTRE CONTRÔLE
-$yBasique = 20 # Réinitialisation de la position Y
-if ($currentValues.ProcessToMonitor -eq "MyApp" -and $currentValues.ShowContextMessages) {
+# Label Contextuel Dynamique (v1.73)
+$yBasique = 20
+if ($currentValues.ShowContextMessages) {
     $lblAllSys = New-Object System.Windows.Forms.Label
-    $lblAllSys.Text = $lang.ConfigForm_AllSysOptimizedNote
+    # Récupération dynamique du nom ou valeur par défaut
+    $processName = if (-not [string]::IsNullOrWhiteSpace($currentValues.ProcessToMonitor)) { $currentValues.ProcessToMonitor } else { "Application" }
+    # Injection dans le placeholder {0}
+    $lblAllSys.Text = ($lang.ConfigForm_AllSysOptimizedNote -f $processName)
+    
     $lblAllSys.ForeColor = [System.Drawing.Color]::FromArgb(0, 102, 204)
     $lblAllSys.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
-    $lblAllSys.Size = New-Object System.Drawing.Size(510, 60) # Taille fixe pour multi-lignes
-    $lblAllSys.AutoSize = $false
+    $lblAllSys.Size = New-Object System.Drawing.Size(510, 60)
     $lblAllSys.Location = New-Object System.Drawing.Point($xPadding, $yBasique)
     $tabBasique.Controls.Add($lblAllSys)
-    $yBasique += $lblAllSys.Height + $sectionSpacing # Mise à jour de Y
+    $yBasique += $lblAllSys.Height + $sectionSpacing
 }
 
 # 1. Case à cocher principale
@@ -445,12 +448,22 @@ $yCurrent += $itemTotalHeight
 # --- GroupBox : Action Fermeture (dans Principal) ---
 $yPrincipal = 20
 $gbPreReboot = New-Object System.Windows.Forms.GroupBox
-$gbPreReboot.Text = $lang.ConfigForm_CloseAppGroupTitle
+$gbPreReboot.Text = $lang.ConfigForm_Section_Closure
 $gbPreReboot.Location = New-Object System.Drawing.Point($xPadding, $yPrincipal)
 $gbPreReboot.Size = New-Object System.Drawing.Size(530, 110)
 $subTabPrincipal.Controls.Add($gbPreReboot)
 
 $gb1Y = 25 # Y de départ à l'intérieur du premier GroupBox
+
+# Checkbox pour activer/désactiver la fermeture planifiée
+$cbEnableScheduledClose = New-Object System.Windows.Forms.CheckBox
+$cbEnableScheduledClose.Name = "cbEnableScheduledClose"
+$cbEnableScheduledClose.Text = $lang.ConfigForm_EnableScheduledCloseCheckbox
+$cbEnableScheduledClose.Checked = [bool]$currentValues.EnableScheduledClose
+$cbEnableScheduledClose.Location = New-Object System.Drawing.Point(10, $gb1Y)
+$cbEnableScheduledClose.AutoSize = $true
+$gbPreReboot.Controls.Add($cbEnableScheduledClose)
+$gb1Y += $cbEnableScheduledClose.Height + $itemSpacing
 
 # Contrôles pour l'action de fermeture (Heure de Fermeture - EXISTANT)
 $lblScheduledCloseTime = New-Object System.Windows.Forms.Label; $lblScheduledCloseTime.Text = $lang.ConfigForm_CloseTimeLabel; $lblScheduledCloseTime.Location = New-Object System.Drawing.Point(10, $gb1Y); $lblScheduledCloseTime.Size = New-Object System.Drawing.Size($lblWidth, $ctrlHeight); $gbPreReboot.Controls.Add($lblScheduledCloseTime)
@@ -470,12 +483,22 @@ $yPrincipal += $gbPreReboot.Height + $itemSpacing
 
 # --- GroupBox : Application Principale et Cycle Quotidien ---
 $gbMainApp = New-Object System.Windows.Forms.GroupBox
-$gbMainApp.Text = $lang.ConfigForm_MainAppGroupTitle
+$gbMainApp.Text = $lang.ConfigForm_Section_Reboot
 $gbMainApp.Location = New-Object System.Drawing.Point($xPadding, $yPrincipal)
 $gbMainApp.Size = New-Object System.Drawing.Size(530, 165)
 $subTabPrincipal.Controls.Add($gbMainApp)
 
 $gb2Y = 25 # Y de départ à l'intérieur du second GroupBox
+
+# Checkbox pour activer/désactiver le redémarrage planifié
+$cbEnableScheduledReboot = New-Object System.Windows.Forms.CheckBox
+$cbEnableScheduledReboot.Name = "cbEnableScheduledReboot"
+$cbEnableScheduledReboot.Text = $lang.ConfigForm_EnableScheduledRebootCheckbox
+$cbEnableScheduledReboot.Checked = [bool]$currentValues.EnableScheduledReboot
+$cbEnableScheduledReboot.Location = New-Object System.Drawing.Point(10, $gb2Y)
+$cbEnableScheduledReboot.AutoSize = $true
+$gbMainApp.Controls.Add($cbEnableScheduledReboot)
+$gb2Y += $cbEnableScheduledReboot.Height + $itemSpacing
 
 # Contrôles pour le cycle quotidien et l'application (Heure du Redémarrage - EXISTANT)
 $lblScheduledRebootTime = New-Object System.Windows.Forms.Label; $lblScheduledRebootTime.Text = $lang.ConfigForm_RebootTimeLabel; $lblScheduledRebootTime.Location = New-Object System.Drawing.Point(10, $gb2Y); $lblScheduledRebootTime.Size = New-Object System.Drawing.Size($lblWidth, $ctrlHeight); $gbMainApp.Controls.Add($lblScheduledRebootTime)
@@ -534,7 +557,7 @@ $gbInstallOptions.Controls.Add($cbSilentMode)
 
 
 
-# --- GroupBox : Sauvegarde des Bases de Données (dans Sauvegarde) ---
+# --- GroupBox : Sauvegarde des Bases de Données (dans son propre onglet) ---
 $ySauvegarde = 20
 $gbDatabaseBackup = New-Object System.Windows.Forms.GroupBox
 $gbDatabaseBackup.Text = $lang.ConfigForm_DatabaseBackupGroupTitle
@@ -610,7 +633,7 @@ $cbEnableBackup.Add_CheckedChanged({
     $keepDaysTextBox.Enabled = $isChecked
 })
 
-$yCurrent += $gbDatabaseBackup.Height + $itemSpacing
+$yPrincipal += $gbDatabaseBackup.Height + $itemSpacing
 #region Création des Boutons
 
 # --- Bouton Enregistrer ---
@@ -654,26 +677,18 @@ $form.ClientSize = New-Object System.Drawing.Size($form.ClientSize.Width, $newFo
 
 #region Gestionnaires d'Événements du Formulaire
 $btnSave.Add_Click({
-    if (($txtScheduledCloseTime.Text -ne "" -and $txtScheduledCloseTime.Text -notmatch "^\d{2}:\d{2}$") -or ($txtScheduledRebootTime.Text -ne "" -and $txtScheduledRebootTime.Text -notmatch "^\d{2}:\d{2}$") -or ($txtBackupTime.Text -ne "" -and $txtBackupTime.Text -notmatch "^\d{2}:\d{2}$")) {
+    # Validation Assouplie v1.73 (Accepte les champs vides pour l'inférence)
+    $timeRegex = "^\d{2}:\d{2}$"
+    $timeError = $false
+
+    if ($txtScheduledCloseTime.Text -ne "" -and $txtScheduledCloseTime.Text -notmatch $timeRegex) { $timeError = $true }
+    if ($txtScheduledRebootTime.Text -ne "" -and $txtScheduledRebootTime.Text -notmatch $timeRegex) { $timeError = $true }
+    if ($txtBackupTime.Text -ne "" -and $txtBackupTime.Text -notmatch $timeRegex) { $timeError = $true }
+
+    if ($timeError) {
         [System.Windows.Forms.MessageBox]::Show($lang.ConfigForm_InvalidTimeFormat, $lang.ConfigForm_InvalidTimeFormatCaption, "OK", "Warning")
         $form.DialogResult = [System.Windows.Forms.DialogResult]::None; return
     }
-
-    # --- NOUVEAU BLOC DE VALIDATION LOGIQUE ---
-    if (-not [string]::IsNullOrWhiteSpace($txtScheduledCloseTime.Text) -and -not [string]::IsNullOrWhiteSpace($txtScheduledRebootTime.Text)) {
-        try {
-            $preRebootTime = [datetime]::ParseExact($txtScheduledCloseTime.Text, "HH:mm", $null)
-            $rebootTime = [datetime]::ParseExact($txtScheduledRebootTime.Text, "HH:mm", $null)
-
-            if ($preRebootTime -ge $rebootTime) {
-                [System.Windows.Forms.MessageBox]::Show($lang.ConfigForm_InvalidTimeLogic, $lang.ConfigForm_InvalidTimeLogicCaption, "OK", "Warning")
-                $form.DialogResult = [System.Windows.Forms.DialogResult]::None; return
-            }
-        } catch {
-            # Géré par la validation de format précédente, ce bloc est une sécurité
-        }
-    }
-    # --- FIN DU NOUVEAU BLOC ---
 
     # Sauvegarde du nom d'utilisateur depuis le champ de texte
     Set-IniValue $ConfigFile "SystemConfig" "AutoLoginUsername" $form.Controls.Find('txtUsername', $true)[0].Text
@@ -690,6 +705,8 @@ $btnSave.Add_Click({
     Set-IniValue $ConfigFile "SystemConfig" "DisableScreenSleep" $form.Controls.Find("cbDisableScreenSleep", $true)[0].Checked.ToString().ToLower()
     Set-IniValue $ConfigFile "SystemConfig" "DisableWindowsUpdate" $form.Controls.Find("cbDisableWindowsUpdate", $true)[0].Checked.ToString().ToLower()
     Set-IniValue $ConfigFile "SystemConfig" "DisableAutoReboot" $form.Controls.Find('cbDisableAutoReboot', $true)[0].Checked.ToString().ToLower()
+    Set-IniValue $ConfigFile "Process" "EnableScheduledClose" $form.Controls.Find('cbEnableScheduledClose', $true)[0].Checked.ToString().ToLower()
+    Set-IniValue $ConfigFile "Process" "EnableScheduledReboot" $form.Controls.Find('cbEnableScheduledReboot', $true)[0].Checked.ToString().ToLower()
     Set-IniValue $ConfigFile "Process" "ScheduledRebootTime" $txtScheduledRebootTime.Text
     Set-IniValue $ConfigFile "Process" "ScheduledCloseTime" $txtScheduledCloseTime.Text
     Set-IniValue $ConfigFile "Process" "ScheduledCloseCommand" $txtScheduledCloseCommand.Text
@@ -714,6 +731,8 @@ $btnSave.Add_Click({
     Set-IniValue $ConfigFile "DatabaseBackup" "DatabaseDestinationPath" $form.Controls.Find('txtBackupDest', $true)[0].Text
     Set-IniValue $ConfigFile "DatabaseBackup" "DatabaseKeepDays" $form.Controls.Find('txtBackupKeepDays', $true)[0].Text
     Set-IniValue $ConfigFile "Installation" "SilentMode" $cbSilentMode.Checked.ToString().ToLower()
+    # Sauvegarde du code de langue chargé au démarrage
+    Set-IniValue $ConfigFile "Installation" "SelectedLanguage" $loadedLanguageCode
 
     [System.Windows.Forms.MessageBox]::Show(($lang.ConfigForm_SaveSuccessMessage -f $ConfigFile), $lang.ConfigForm_SaveSuccessCaption, "OK", "Information")
 })

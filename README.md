@@ -1,7 +1,7 @@
-# WindowsOrchestrator 1.72
+# WindowsOrchestrator 1.73
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-v1.72-2ea44f" alt="Version">
+  <img src="https://img.shields.io/badge/Version-v1.73-2ea44f" alt="Version">
   <img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License">
   <img src="https://img.shields.io/badge/Platform-Windows_10_|_11-0078D6" alt="Supported OS">
   <img src="https://img.shields.io/badge/Architecture-x86_|_x64_|_ARM64-blueviolet" alt="CPU Architecture">
@@ -81,6 +81,22 @@ The orchestrator prioritizes stability and use of native Windows mechanisms to g
 * Installation and uninstallation possible without visible console windows (`-WindowStyle Hidden`).
 * **Splash Screen**: Graphical waiting interface with indeterminate progress bar to reassure user.
 * **Feedback**: Final notification by MessageBox (`MessageBox`) indicating success or failure.
+
+### v1.73 New Features
+
+#### Dynamic Launcher
+* **Configuration-Driven Launch**: Reads `config.ini` to dynamically determine application launch parameters, modes, and paths without hardcoding.
+* **Flexible Execution Modes**: Supports multiple launch strategies based on configuration, including minimized startup and console selection.
+
+#### Watchdog Security
+* **Process Monitoring**: Continuous monitoring of launched application processes to detect failures or crashes.
+* **Automatic Recovery**: Upon detection of process termination, triggers automatic restart mechanisms to maintain system uptime.
+* **Health Checks**: Periodic verification of application responsiveness to prevent silent failures.
+
+#### Time Intelligence (Auto-Inference & Domino Effect)
+* **Intelligent Scheduling**: Analyzes usage patterns and system states to automatically infer optimal times for backups, reboots, and maintenance.
+* **Domino Effect Prevention**: Detects cascading dependencies between system operations to avoid conflicts and ensure sequential execution.
+* **Adaptive Behavior**: Adjusts schedules based on real-time system performance and application needs.
 
 ### Internationalization & Notifications
 * **i18n**: Automatic system language detection (Native support: `fr-FR`, `en-US`).

@@ -7,16 +7,17 @@
     Ce script effectue la sauvegarde des fichiers de base de données modifiés récemment.
 .NOTES
     Projet      : WindowsOrchestrator
-    Version     : 1.72
+    Version     : 1.73
     Licence     : GNU GPLv3
 
     --- CRÉDITS & RÔLES ---
     Ce projet est le fruit d'une collaboration hybride Humain-IA :
 
-    Architecte Principal & QA      : Ronan Davalan
-    Architecte IA & Planification  : Google Gemini
-    Développeur IA Principal       : Grok (xAI)
-    Consultant Technique IA        : Claude (Anthropic)
+    Direction Produit & Spécifications  : Christophe Lévêque
+    Architecte Principal & QA           : Ronan Davalan
+    Architecte IA & Planification       : Google Gemini
+    Développeur IA Principal            : Grok (xAI)
+    Consultant Technique IA             : Claude (Anthropic)
 #>
 
 # --- Initialisation de l'Environnement ---
@@ -51,9 +52,40 @@ try {
 function Invoke-DatabaseBackup {
     Write-Log -DefaultMessage "Starting database backup process..." -MessageId "Log_Backup_Starting"
 
-    if (-not ($Global:Config['DatabaseBackup']['EnableBackup'] -eq 'true')) {
+    if (-not (Get-ConfigValue -Section "DatabaseBackup" -Key "EnableBackup" -Type ([bool]) -DefaultValue $false)) {
         Write-Log -DefaultMessage "Backup is disabled in configuration. Step skipped."
         return
+    }
+
+    # --- WATCHDOG v1.73 : Surveillance Active ---
+    $processToMonitor = $Global:Config['Process']['ProcessToMonitor']
+    $monitorInterval = Get-ConfigValue -Section "Process" -Key "MonitorCheckInterval" -Type ([int]) -DefaultValue 10
+    $monitorTimeout = Get-ConfigValue -Section "Process" -Key "MonitorTimeout" -Type ([int]) -DefaultValue 300
+    $forceKill = Get-ConfigValue -Section "Process" -Key "ForceKillOnTimeout" -Type ([bool]) -DefaultValue $false
+    $elapsed = 0
+
+    if (-not [string]::IsNullOrWhiteSpace($processToMonitor)) {
+        $processActive = Get-Process -Name $processToMonitor -ErrorAction SilentlyContinue
+        if ($processActive) {
+            Write-Log -DefaultMessage "Watchdog monitoring started for process '{0}' (Interval: {1}s, Timeout: {2}s)." -MessageId "Log_Backup_WatcherStarted" -MessageArgs $processToMonitor, $monitorInterval, $monitorTimeout
+
+            while ($processActive) {
+                if ($elapsed -ge $monitorTimeout) {
+                    if ($forceKill) {
+                        Stop-Process -Name $processToMonitor -Force -ErrorAction SilentlyContinue
+                        Write-Log -DefaultMessage "Process '{0}' killed after timeout ({1}s)." -MessageId "Log_Backup_TimeoutKill" -MessageArgs $processToMonitor, $monitorTimeout -Level WARN
+                        break
+                    } else {
+                        Add-Error -DefaultErrorMessage "Process '{0}' still running after timeout ({1}s). Backup aborted." -ErrorId "Error_Backup_TimeoutNoKill" -ErrorArgs $processToMonitor, $monitorTimeout
+                        exit 1 # Arrêt d'urgence
+                    }
+                }
+                Start-Sleep -Seconds $monitorInterval
+                $elapsed += $monitorInterval
+                $processActive = Get-Process -Name $processToMonitor -ErrorAction SilentlyContinue
+            }
+            Write-Log -DefaultMessage "Process '{0}' closed successfully." -MessageId "Log_Backup_ProcessClosed" -MessageArgs $processToMonitor
+        }
     }
 
     $sourcePath = $Global:Config['DatabaseBackup']['DatabaseSourcePath']
@@ -113,6 +145,18 @@ function Invoke-DatabaseBackup {
         }
     }
     Add-Action -DefaultActionMessage "Backup of {0} file(s) completed." -ActionId "Action_Backup_Completed" -ActionArgs $filesToCopy.Count
+
+}
+
+# --- Enchaînement Système v1.73 (Domino Effect) ---
+$enableReboot = Get-ConfigValue -Section "Process" -Key "EnableScheduledReboot" -Type ([bool]) -DefaultValue $true
+$scheduledRebootTime = Get-ConfigValue -Section "Process" -Key "ScheduledRebootTime"
+
+if ($enableReboot -and [string]::IsNullOrWhiteSpace($scheduledRebootTime)) {
+    Write-Log -DefaultMessage "Chained reboot initiated after cycle completion." -MessageId "Log_Backup_ChainedReboot"
+    # Pause de sécurité pour la clôture des fichiers logs
+    Start-Sleep -Seconds 5
+    Restart-Computer -Force
 }
 
 try {

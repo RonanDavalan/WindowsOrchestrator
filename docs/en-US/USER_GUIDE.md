@@ -1,4 +1,4 @@
-# User Guide - WindowsOrchestrator 1.72
+# User Guide - WindowsOrchestrator 1.73
 
 📘 **[DEVELOPER GUIDE](DEVELOPER_GUIDE.md)**
 *Intended for system administrators.*
@@ -542,6 +542,20 @@ Once WindowsOrchestrator is installed, the machine enters an autonomous operatin
 
 #### 5.1.1. Typical Day Timeline
 
+##### Domino Effect Flow: Logical Task Sequencing
+
+Unlike parallel tasks, WindowsOrchestrator v1.73 uses a sequential "Domino Effect" flow where times can be calculated automatically by inference.
+
+If the backup or reboot time is not explicitly defined, the system intelligently chains them following closure:
+
+- Application closure (example: 02:50)
+
+- Data backup (calculated: closure + 5 minutes)
+
+- Scheduled reboot (calculated: backup + 2 minutes)
+
+This ensures logical sequencing without overlap, eliminating data corruption risks.
+
 ##### Phase 1: Normal Usage (00:00 → Closure Time)
 
 The system operates normally. The business application is active. No orchestrator intervention.
@@ -552,8 +566,9 @@ The `WindowsOrchestrator-User-CloseApp` task executes if configured. The default
 
 ##### Phase 3: Data Backup (Example: 02:57)
 
-The `WindowsOrchestrator-SystemBackup` task executes if enabled. The action consists of copying files modified in the last 24 hours to the destination folder.
-**Important note:** To ensure database integrity (e.g., SQLite), if a file is detected as modified, the script also forces backup of all files with the same name (e.g., `.db-wal`, `.db-shm`), even if not recently modified. The result is logged in `Invoke-DatabaseBackup_log.txt`.
+The `WindowsOrchestrator-SystemBackup` task executes if enabled. The system waits for the application to be fully closed (via Watchdog monitoring) before launching the copy to avoid corruption.
+
+**Important note:** To ensure database integrity (e.g., SQLite), if a file is detected as modified, the script forces backup of all files with the same name (e.g., `.db-wal`, `.db-shm`), even if not recently modified. The result is logged in `Invoke-DatabaseBackup_log.txt`.
 
 ##### Phase 4: Scheduled Reboot (Example: 02:59)
 
@@ -573,7 +588,7 @@ If autologon is enabled, the session opens automatically. If autologon is disabl
 
 ##### Phase 8: Application Launch (00:02+)
 
-The `WindowsOrchestrator-UserLogon` task executes with the "At Logon" trigger. The actions are as follows: check if the `ProcessToMonitor` process is already running, launch via the configured method (direct/cmd/powershell/legacy) if the process is absent, no action if the process is present (only an info log is generated). The system does not perform continuous monitoring (no watchdog). The result is logged in `config_utilisateur_ps.txt`.
+The `WindowsOrchestrator-UserLogon` task executes with the "At Logon" trigger. The actions are as follows: check if the `ProcessToMonitor` process is already running, launch via the configured method (Direct, Cmd, PowerShell, Legacy) if the process is absent, no action if the process is present (only an info log is generated). The system does not perform continuous monitoring (no watchdog). The result is logged in `config_utilisateur_ps.txt`.
 
 #### 5.1.2. Understanding Execution Contexts
 
@@ -587,7 +602,11 @@ The `config_utilisateur.ps1` script executes at the configured user's session op
 
 ### 5.2. Monitoring and Verification
 
-#### 5.2.1. Log Files Location and Reading
+#### 5.2.1. Watchdog: Active Application Monitoring
+
+The system includes active Watchdog monitoring that checks the application is closed before launching backup. The Watchdog uses a While loop with configurable timeout (`MonitorTimeout`, default 300 seconds) to wait for process disappearance from memory. If the application remains stuck, the system can force shutdown or cancel backup for safety to avoid data corruptions.
+
+#### 5.2.2. Log Files Location and Reading
 
 Logs are located in the `Logs/` folder at the project root.
 
@@ -618,7 +637,7 @@ $today = Get-Date -Format "yyyy-MM-dd"
 Get-Content "C:\WindowsOrchestrator\Logs\config_systeme_ps.txt" | Select-String "^$today"
 ```
 
-#### 5.2.2. Interpreting Gotify Notifications
+#### 5.2.3. Interpreting Gotify Notifications
 
 If you configured the `[Gotify]` section in `config.ini`, you don't need to check logs. Your monitoring server will receive real-time messages.
 
@@ -626,11 +645,11 @@ An INFO level message (green or blue) indicates everything is nominal: "Startup 
 
 An ERROR level message (red) signals that an action failed: "Unable to launch application", "Full disk during backup". Intervention is required.
 
-#### 5.2.3. Monitoring the Daily Cycle
+#### 5.2.4. Monitoring the Daily Cycle
 
 Check logs every morning to verify the backup executed correctly, the reboot occurred, and the application relaunched.
 
-#### 5.2.4. Verifying System Status
+#### 5.2.5. Verifying System Status
 
 Open Task Scheduler (`taskschd.msc`). Consult the "History" tab of the `WindowsOrchestrator-*` tasks. A result code `0x0` means success.
 

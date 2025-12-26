@@ -1,9 +1,6 @@
-# Guide du développeur - WindowsOrchestrator 1.72
+# Guide du développeur - WindowsOrchestrator 1.73
 
 ---
-
-[toc]
-
 
 📘 **[Guide utilisateur](GUIDE_UTILISATEUR.md)**
 *Destiné aux administrateurs système et techniciens de déploiement.*
@@ -57,7 +54,7 @@ Contient les procédures pas-à-pas, les captures d'écran de l'assistant et les
             [Set-IniValue : écriture sécurisée INI](#set-inivalue--écriture-sécurisée-ini)
             [Get-ConfigValue : lecture typée avec valeurs par défaut](#get-configvalue--lecture-typée-avec-valeurs-par-défaut)
         4.2.2. [Système d'internationalisation (i18n)](#422-système-dinternationalisation-i18n)
-            [Stratégie de localisation (v1.72+)](#stratégie-de-localisation-v172)
+            [Stratégie de localisation (v1.73)](#stratégie-de-localisation-v173)
         4.2.3. [Système de journalisation](#423-système-de-journalisation)
             [Write-Log : écriture structurée et résiliente](#write-log--écriture-structurée-et-résiliente)
             [Add-Action / Add-Error : agrégateurs](#add-action--add-error--agrégateurs)
@@ -264,11 +261,11 @@ Liste des tâches dynamiques :
 
 #### 2.2.3. Analyse critique du LogonType : Interactive vs Password vs S4U
 
-Le choix du `LogonType` pour la tâche `UserLogon` est une décision d'architecture centrale de la version 1.72, qui résout les problèmes de gestion de mots de passe des versions précédentes.
+Le choix du `LogonType` pour la tâche `UserLogon` est une décision d'architecture centrale de la version 1.73, qui résout les problèmes de gestion de mots de passe des versions précédentes.
 
 | LogonType | Mot de passe requis ? | Session graphique ? | Analyse technique |
 | :--- | :---: | :---: | :--- |
-| **`Interactive`** | ❌ Non | ✅ Oui | **Choisi pour v1.72**. La tâche ne crée pas sa propre session ; elle s'injecte **dans** la session utilisateur au moment précis où celle-ci s'ouvre. Elle hérite du jeton d'accès (*token*) généré par le processus Winlogon (ou l'Autologon). C'est pourquoi l'orchestrateur n'a **pas** besoin de connaître le mot de passe de l'utilisateur pour lancer l'application graphique. |
+| **`Interactive`** | ❌ Non | ✅ Oui | **Choisi pour v1.73**. La tâche ne crée pas sa propre session ; elle s'injecte **dans** la session utilisateur au moment précis où celle-ci s'ouvre. Elle hérite du jeton d'accès (*token*) généré par le processus Winlogon (ou l'Autologon). C'est pourquoi l'orchestrateur n'a **pas** besoin de connaître le mot de passe de l'utilisateur pour lancer l'application graphique. |
 | **`Password`** | ✅ Oui | ✅ Oui | Mode classique "Run whether user is logged on or not". Nécessite le stockage du mot de passe dans le *Credential Store* de Windows (moins sécurisé) et exige impérativement que le compte dispose du privilège local `SeBatchLogonRight` ("Log on as a batch job"), ce qui est souvent bloqué par les GPO de sécurité en entreprise. |
 | **`S4U`** | ❌ Non | ❌ Non | "Service for User". Permet d'exécuter une tâche sous l'identité de l'utilisateur sans mot de passe, mais sans charger son profil complet et **sans accès au réseau authentifié** (Kerberos/NTLM). De plus, ce mode ne peut pas afficher d'interface graphique. Inutilisable pour `MyApp`. |
 
@@ -292,24 +289,15 @@ Le choix du LogonType `Interactive` est la pierre angulaire de l'architecture. V
 
 ### 2.3. Orchestration temporelle et parallélisme
 
-L'orchestrateur ne repose pas sur un script unique qui "dort" (boucle `Start-Sleep`) en attendant l'heure d'une action. Il s'appuie sur le planificateur pour déclencher des actions ponctuelles et indépendantes.
+L'orchestrateur utilise un algorithme d'inférence temporelle pour calculer automatiquement les horaires manquants, créant un flux séquentiel "Effet Domino".
 
-#### 2.3.1. Découplage Backup/Close
+#### 2.3.1. Algorithme d'Inférence temporelle
 
-Il est impératif de noter que la tâche de **Fermeture** (`User-CloseApp`) et la tâche de **Sauvegarde** (`SystemBackup`) sont totalement découplées architecturalement.
+Le système calcule les horaires par priorité décroissante :
+1. **Backup Time** = `ScheduledCloseTime` (si vide, inféré à fermeture + 5 minutes)
+2. **Reboot Time** = `ScheduledRebootTime` (si vide, déclenché automatiquement après la sauvegarde)
 
-*   **Indépendance technique** : ce sont deux objets "Tâche planifiée" distincts avec leurs propres déclencheurs horaires et leurs propres contextes d'exécution (USER pour l'un, SYSTEM pour l'autre).
-*   **Découplage technique mais pas logique** :
-    *   **Techniquement** : les deux tâches sont des objets distincts dans le planificateur. Si `Close-AppByTitle.ps1` crashe, la tâche de backup s'exécutera quand même.
-    *   **Risque réel** : si l'application n'est pas fermée à l'heure de la sauvegarde (02:57), les fichiers peuvent être verrouillés (*file handles* ouverts). Dans ce cas :
-        *   Les fichiers SQLite (`.db`) seront copiés mais **potentiellement dans un état incohérent**.
-        *   Les fichiers WAL (`.db-wal`) peuvent contenir des transactions non commitées.
-        *   La restauration d'une telle sauvegarde peut échouer ou produire une base corrompue.
-    *   **Mitigation actuelle** : aucune garde automatique dans le code. L'administrateur doit :
-        1.  Laisser un délai suffisant entre Close et Backup (recommandé : 2 minutes minimum).
-        2.  Vérifier manuellement les journaux de sauvegarde pour détecter les échecs.
-        3.  Tester régulièrement les restaurations de backup.
-*   **Consistance des données** : bien que découplées, ces tâches sont séquencées temporellement (Fermeture avant Sauvegarde) pour garantir que les fichiers ne sont pas verrouillés (*open file handles*) lors de la copie. Cependant, la sauvegarde fonctionnera même sur des fichiers ouverts (bien que la cohérence applicative soit moins garantie dans ce cas précis).
+Cela garantit que si l'heure de sauvegarde ou de redémarrage n'est pas définie, le système les enchaîne intelligemment sans chevauchement.
 
 #### 2.3.2. Chronologie quotidienne type (workflow)
 
@@ -414,6 +402,8 @@ C'est un concept fondamental pour l'idempotence du lanceur.
 1.  Le script vérifie : "Est-ce que `ProcessToMonitor` existe dans la liste des processus ?"
 2.  **Si OUI** : l'application tourne déjà. L'orchestrateur ne fait rien. Cela évite de lancer 50 instances de l'application si l'utilisateur ferme sa session et la rouvre, ou si le script est relancé manuellement.
 3.  **Si NON** : l'orchestrateur exécute `ProcessToLaunch`.
+
+Le nouveau `LaunchApp.bat` utilise `findstr` pour parser le `.ini` et `!VALUE:"=!` pour nettoyer les guillemets, permettant un lancement dynamique sans modification manuelle.
 
 > **Note développeur** : Si `ProcessToMonitor` est laissé vide, l'orchestrateur perd sa capacité de détection et lancera `ProcessToLaunch` à chaque exécution, ce qui peut créer des doublons.
 
@@ -745,6 +735,8 @@ if ($launchMinimized) {
 }
 ```
 
+Les arguments métier (`tb 00 W`) sont désormais portés par le Launcher Batch dynamique, éliminant les modifications manuelles.
+
 #### 4.2.5. Gestion de l'interface d'attente (*splash screen*)
 
 En mode silencieux (`SilentMode=true`), la console PowerShell est masquée. Pour éviter que l'utilisateur ne pense que l'installation a planté, l'orchestrateur affiche une interface graphique minimale (*splash screen*) via WinForms.
@@ -956,6 +948,19 @@ Le script assure l'intégrité des groupes de fichiers (ex : *shapefiles* `.shp/
     1.  Identifie les fichiers modifiés < 24h.
     2.  Extrait leur "nom de base" (nom de fichier sans extension).
     3.  Force la sauvegarde de **tous** les fichiers du dossier source partageant ce nom de base exact, quelle que soit leur extension ou leur date de modification.
+
+##### D. Boucle Watchdog et MonitorTimeout
+Le système utilise une boucle While pour surveiller la fermeture de l'application :
+```powershell
+$timeout = Get-Date).AddSeconds($MonitorTimeout)
+while ((Get-Date) -lt $timeout) {
+    if (-not (Get-Process -Name $ProcessToMonitor -ErrorAction SilentlyContinue)) {
+        break
+    }
+    Start-Sleep -Seconds 5
+}
+```
+Si l'application reste bloquée après le timeout, la sauvegarde peut être annulée pour éviter les corruptions.
 
 ##### D. Vérifications préalables
 *   **Test d'écriture** : tente de créer/supprimer un fichier temporaire sur la destination pour valider les permissions NTFS/réseau avant de commencer.
@@ -1358,7 +1363,7 @@ Ce projet est distribué sous les termes de la **GNU General Public License v3 (
 | **DPAPI (Data Protection API)** | API de chiffrement Windows utilisée par le sous-système LSA pour protéger les mots de passe de l'Autologon. Les données chiffrées sont liées à la machine et inutilisables si copiées sur un autre système. |
 | **Evil maid attack** | Scénario de menace où un attaquant ayant un accès physique à la machine démarre sur un OS alternatif pour voler des données. L'orchestrateur mitige ce risque en ne stockant aucun mot de passe en clair dans ses fichiers de configuration. |
 | **Idempotence** | Propriété d'un script qui peut être exécuté plusieurs fois sans changer le résultat au-delà de l'application initiale, et sans provoquer d'erreurs (ex : `config_systeme.ps1` vérifie l'état avant d'appliquer une modification). |
-| **Interactive (LogonType)** | Type spécifique de tâche planifiée qui s'exécute **dans** la session de l'utilisateur connecté. C'est la clé de voûte de l'architecture v1.72, permettant de lancer une application graphique sans connaître le mot de passe de l'utilisateur. |
+| **Interactive (LogonType)** | Type spécifique de tâche planifiée qui s'exécute **dans** la session de l'utilisateur connecté. C'est la clé de voûte de l'architecture v1.73, permettant de lancer une application graphique sans connaître le mot de passe de l'utilisateur. |
 | **Kill switch** | Mécanisme de sécurité (`EnableBackup`, `EnableGotify`) permettant de désactiver instantanément une fonctionnalité complexe via un simple booléen dans `config.ini`, sans avoir à supprimer le code ou la configuration associée. |
 | **LSA secrets** | *Local Security Authority*. Zone protégée du registre Windows (`HKLM\SECURITY`) utilisée pour stocker les informations d'identification sensibles. Accessible uniquement via les API système, pas par l'éditeur de registre standard. |
 | **P/Invoke** | *Platform Invoke*. Technologie permettant au code managé (PowerShell, .NET) d'appeler des fonctions non managées dans des DLL natives (Win32 API). Utilisé pour la gestion des fenêtres (`Close-AppByTitle`) et l'affichage au premier plan (`MessageBoxFixer`). |
@@ -1395,12 +1400,13 @@ Tout développement futur sur ce projet doit impérativement respecter les règl
 
 ### 8.4. Crédits
 
-Ce projet (v1.72) est le résultat d'une collaboration hybride Humain-IA :
+Ce projet (v1.73) est le résultat d'une collaboration hybride Humain-IA :
 
+*   **Christophe Lévêque** : direction produit et spécifications métier.
 *   **Ronan Davalan** : chef de projet, architecte principal, assurance qualité (QA).
 *   **Google Gemini** : architecte IA, planificateur, rédacteur technique.
-*   **Grok** : développeur IA (implémentation).
-*   **Claude** : consultant technique IA (revue de code et solutions P/Invoke).
+*   **Grok (xAI)** : développeur IA principal (implémentation).
+*   **Claude (Anthropic)** : consultant technique IA (revue de code et solutions P/Invoke).
 
 ### 8.5. Commandes PowerShell de diagnostic rapide
 

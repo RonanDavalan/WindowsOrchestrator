@@ -1,7 +1,7 @@
-# WindowsOrchestrator 1.72
+# WindowsOrchestrator 1.73
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-v1.72-2ea44f" alt="Version">
+  <img src="https://img.shields.io/badge/Version-v1.73-2ea44f" alt="Version">
   <img src="https://img.shields.io/badge/Licence-GPLv3-blue.svg" alt="Licence">
   <img src="https://img.shields.io/badge/Plateforme-Windows_10_|_11-0078D6" alt="OS supportés">
   <img src="https://img.shields.io/badge/Architecture-x86_|_x64_|_ARM64-blueviolet" alt="Architecture CPU">
@@ -58,6 +58,7 @@ L'orchestrateur privilégie la stabilité et l'utilisation des mécanismes natif
 *   **Modes de lancement console** :
     *   *Standard* : utilise le terminal par défaut (ex : Windows Terminal).
     *   *Legacy* : force l'utilisation de `conhost.exe` pour la compatibilité des vieux scripts `.bat`.
+*   **Launcher Dynamique** : Le script `LaunchApp.bat` lit désormais automatiquement le nom de l'application dans le `config.ini`. Plus aucune modification manuelle du script n'est nécessaire.
 *   Option pour lancer l'application **minimisée** dans la barre des tâches.
 
 ### Sauvegarde de données
@@ -65,6 +66,7 @@ L'orchestrateur privilégie la stabilité et l'utilisation des mécanismes natif
 *   **Logique différentielle** : copie uniquement les fichiers modifiés dans les dernières 24 heures.
 *   **Support des fichiers appairés** : idéal pour les bases de données (ex : copie simultanée de `.db`, `.db-wal`, `.db-shm`).
 *   **Politique de rétention** : purge automatique des archives dépassant une ancienneté définie (défaut : 30 jours).
+*   **Surveillance Watchdog** : Vérifie activement que l'application est fermée avant de lancer la copie pour éviter toute corruption.
 
 ### Gestion de l'environnement système
 *   **Windows Update** : blocage du service et désactivation du redémarrage forcé post-mise à jour.
@@ -76,6 +78,10 @@ L'orchestrateur privilégie la stabilité et l'utilisation des mécanismes natif
 *   **Fermeture application** : envoi de commandes de fermeture propre (ex : {ESC}{ESC}x{ENTER} via API) à une heure précise.
 *   **Redémarrage système** : reboot complet planifié quotidiennement.
 *   **Sauvegarde** : tâche indépendante, exécutée en parallèle de la fermeture.
+
+### Intelligence Temporelle
+*   **Calcul automatique des horaires manquants (Inférence)** : Si l'heure de sauvegarde ou de redémarrage n'est pas définie explicitement, le système les calcule intelligemment à partir de l'heure de fermeture (ex : sauvegarde 5 minutes après fermeture).
+*   **Enchaînement logique des tâches (Fermeture -> Sauvegarde -> Redémarrage)** : Flux séquentiel "Effet Domino" garantissant l'ordre et la cohérence des opérations.
 
 ### Mode silencieux
 *   Installation et désinstallation possibles sans fenêtres de console visibles (`-WindowStyle Hidden`).

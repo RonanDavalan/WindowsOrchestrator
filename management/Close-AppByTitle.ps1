@@ -23,24 +23,25 @@
     le fichier sous le nom "monfichier.txt".
 .NOTES
     Projet      : WindowsOrchestrator
-    Version     : 1.72
+    Version     : 1.73
     Licence     : GNU GPLv3
 
     --- CRÉDITS & RÔLES ---
     Ce projet est le fruit d'une collaboration hybride Humain-IA :
 
-    Architecte Principal & QA      : Ronan Davalan
-    Architecte IA & Planification  : Google Gemini
-    Développeur IA Principal       : Grok (xAI)
-    Consultant Technique IA        : Claude (Anthropic)
+    Direction Produit & Spécifications  : Christophe Lévêque
+    Architecte Principal & QA           : Ronan Davalan
+    Architecte IA & Planification       : Google Gemini
+    Développeur IA Principal            : Grok (xAI)
+    Consultant Technique IA             : Claude (Anthropic)
 #>
 
 param(
     # Le titre EXACT de la fenêtre de l'application à fermer.
-    [string]$WindowTitle = "MyApp",
+    [string]$WindowTitle = "AllSys-Clk",
 
     # La séquence de touches pour la fermer.
-    [string]$KeysToSend = "{ESC}{ESC}x{ENTER}"
+    [string]$KeysToSend = "{ESC}{ESC}{ESC}x{ENTER}"
 )
 
 # --- Initialisation de l'Internationalisation (I18N) ---
@@ -148,6 +149,10 @@ try {
         # --- Envoi de la séquence de touches avec pauses ---
         # L'envoi des touches est décomposé avec des pauses pour simuler une interaction humaine
         # et gérer les applications qui peuvent avoir un léger temps de latence pour traiter chaque commande.
+        Write-StyledHost "Sending first key {ESC}..." "INFO"
+        [System.Windows.Forms.SendKeys]::SendWait("{ESC}")
+        Start-Sleep -Seconds 1 # Pause de 1 seconde
+
         Write-StyledHost "Sending first key {ESC}..." "INFO"
         [System.Windows.Forms.SendKeys]::SendWait("{ESC}")
         Start-Sleep -Seconds 1 # Pause de 1 seconde

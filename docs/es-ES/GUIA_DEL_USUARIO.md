@@ -1,4 +1,4 @@
-# Guía del Usuario - WindowsOrchestrator 1.72
+# Guía del Usuario - WindowsOrchestrator 1.73
 
 📘 **[GUÍA DEL DESARROLLADOR](GUIA_DEL_DESARROLLADOR.md)**
 *Destinado a administradores de sistemas.*
@@ -366,7 +366,7 @@ Configura los ajustes deseados mediante la interfaz gráfica. Una vez que la con
 
 ### 4.4. Configuración mediante el asistente gráfico
 
-El asistente `firstconfig.ps1` permite generar el archivo `config.ini` de manera intuitiva. Está organizado en dos pestañas principales.
+El asistente `firstconfig.ps1` permite generar el archivo `config.ini` de manera intuitiva. El asistente ahora está organizado en **4 subpestañas** (Principal, Copia de seguridad, Otro cuenta, Opciones de instalación) para una mayor claridad.
 
 #### 4.4.1. Pestaña "Básico" - Configuraciones esenciales
 
@@ -400,7 +400,7 @@ Un menú desplegable ofrece tres opciones.
 
 #### Indicación de preconfiguración (Configuración congelada)
 
-Cuando la opción `ShowContextMessages` está activa, aparece un banner azul en la parte superior de la ventana. Simplemente indica que la configuración ya ha sido definida internamente, para evitar ajustes erróneos.
+Cuando la opción `ShowContextMessages` está activa, aparece un banner azul en la parte superior de la ventana. Simplemente indica que la configuración ya ha sido definida internamente, para evitar ajustes erróneos. El mensaje de optimización (banner azul) se adapta dinámicamente al nombre de la aplicación.
 
 ![Configuración Validada](../../assets/es-ES/asistente-config-02-sistema-optimizado.png)
 
@@ -542,6 +542,17 @@ Una vez que WindowsOrchestrator está instalado, la máquina entra en un ciclo o
 
 #### 5.1.1. Cronología típica de un día
 
+##### Efecto Dominó: Encadenamiento lógico de tareas
+
+WindowsOrchestrator v1.73 utiliza un flujo secuencial "Efecto Dominó" donde los tiempos pueden calcularse automáticamente si no se definen explícitamente.
+
+Si el tiempo de copia de seguridad o de reinicio no está definido explícitamente, el sistema los encadena inteligentemente después del cierre:
+- Cierre de la aplicación (ejemplo: 02:50)
+- Copia de seguridad de datos (calculado: cierre + 5 minutos)
+- Reinicio programado (calculado: copia de seguridad + 2 minutos)
+
+Esto garantiza un encadenamiento lógico sin superposiciones, eliminando riesgos de corrupción de datos.
+
 ##### Fase 1: Uso normal (00:00 → Hora de cierre)
 
 El sistema funciona normalmente. La aplicación empresarial está activa. Ninguna intervención del orquestador.
@@ -587,7 +598,11 @@ El script `config_utilisateur.ps1` se ejecuta al abrir la sesión del usuario co
 
 ### 5.2. Monitoreo y verificación
 
-#### 5.2.1. Ubicación y lectura de los archivos de registro
+#### 5.2.1. Vigilancia Watchdog
+
+El sistema incluye ahora una vigilancia Watchdog activa que verifica que la aplicación esté cerrada antes de iniciar la copia de seguridad. El Watchdog utiliza un bucle While con un tiempo de espera configurable (`MonitorTimeout`, predeterminado 300 segundos) para esperar que el proceso desaparezca de la memoria. Si la aplicación permanece bloqueada después del tiempo de espera, el sistema puede forzar el cierre o cancelar la copia de seguridad por seguridad para evitar corrupciones de datos.
+
+#### 5.2.2. Ubicación y lectura de los archivos de registro
 
 Los registros se encuentran en la carpeta `Logs/` en la raíz del proyecto.
 
@@ -618,7 +633,7 @@ $today = Get-Date -Format "yyyy-MM-dd"
 Get-Content "C:\WindowsOrchestrator\Logs\config_systeme_ps.txt" | Select-String "^$today"
 ```
 
-#### 5.2.2. Interpretación de las notificaciones de Gotify
+#### 5.2.3. Interpretación de las notificaciones de Gotify
 
 Si has configurado la sección `[Gotify]` en `config.ini`, no necesitas revisar los registros. Tu servidor de monitoreo recibirá mensajes en tiempo real.
 
@@ -626,11 +641,11 @@ Un mensaje de nivel INFO (verde o azul) indica que todo está nominal: "Inicio c
 
 Un mensaje de nivel ERROR (rojo) indica que una acción falló: "No se pudo lanzar la aplicación", "Disco lleno durante la copia de seguridad". Se requiere intervención.
 
-#### 5.2.3. Monitoreo del ciclo diario
+#### 5.2.4. Monitoreo del ciclo diario
 
 Revisa los registros cada mañana para confirmar que la copia de seguridad se ejecutó correctamente, que el reinicio ocurrió y que la aplicación se relanzó.
 
-#### 5.2.4. Verificación del estado del sistema
+#### 5.2.5. Verificación del estado del sistema
 
 Abre el Programador de tareas (`taskschd.msc`). Consulta la pestaña "Historial" de las tareas `WindowsOrchestrator-*`. Un código de resultado `0x0` significa éxito.
 

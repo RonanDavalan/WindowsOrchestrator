@@ -16,16 +16,17 @@
     PS C:\Path\To\Scripts\> .\config_systeme.ps1
 .NOTES
     Projet      : WindowsOrchestrator
-    Version     : 1.72
+    Version     : 1.73
     Licence     : GNU GPLv3
 
     --- CRÉDITS & RÔLES ---
     Ce projet est le fruit d'une collaboration hybride Humain-IA :
 
-    Architecte Principal & QA      : Ronan Davalan
-    Architecte IA & Planification  : Google Gemini
-    Développeur IA Principal       : Grok (xAI)
-    Consultant Technique IA        : Claude (Anthropic)
+    Direction Produit & Spécifications  : Christophe Lévêque
+    Architecte Principal & QA           : Ronan Davalan
+    Architecte IA & Planification       : Google Gemini
+    Développeur IA Principal            : Grok (xAI)
+    Consultant Technique IA             : Claude (Anthropic)
 #>
 
 
@@ -200,30 +201,34 @@ try {
     $sessionMode = Get-ConfigValue -Section "SystemConfig" -Key "SessionStartupMode" -DefaultValue "Standard"
     $lockTaskName = "WindowsOrchestrator-LockSessionAtLogon"
 
-    switch -CaseSensitive ($sessionMode) {
+    # CORRECTION v1.73 : Suppression de -CaseSensitive pour robustesse
+    switch ($sessionMode) {
         "Autologon" {
             if (-not [string]::IsNullOrWhiteSpace($targetUsernameForConfiguration)) {
-                $currentAutoAdminLogon = Get-ItemProperty -Path $winlogonKey -Name AutoAdminLogon -ErrorAction SilentlyContinue
-                $currentDefaultUserName = Get-ItemProperty -Path $winlogonKey -Name DefaultUserName -ErrorAction SilentlyContinue
-                if ($currentAutoAdminLogon.AutoAdminLogon -eq "1" -and $currentDefaultUserName.DefaultUserName -eq $targetUsernameForConfiguration) {
-                    Add-Action -DefaultActionMessage "Autologon verified (enabled)." -ActionId "Action_AutologonVerified"
+                $currentAutoAdminLogon = (Get-ItemProperty -Path $winlogonKey -Name AutoAdminLogon -ErrorAction SilentlyContinue).AutoAdminLogon
+                $currentDefaultUserName = (Get-ItemProperty -Path $winlogonKey -Name DefaultUserName -ErrorAction SilentlyContinue).DefaultUserName
+                
+                # Application Forcee (State Enforcement)
+                if ($currentAutoAdminLogon -ne "1") {
+                    Set-ItemProperty -Path $winlogonKey -Name AutoAdminLogon -Value "1" -Type String -Force -ErrorAction Stop
+                    Add-Action -DefaultActionMessage "AutoLogon was disabled. Re-enabled by policy." -ActionId "Action_AutoAdminLogonEnabled"
                 } else {
-                    Add-Error -DefaultErrorMessage "Autologon not properly configured for user '{0}'." -ErrorId "Error_AutoLoginFailed" -ErrorArgs "Verification failed"
+                    Add-Action -DefaultActionMessage "Autologon verified (enabled)." -ActionId "Action_AutologonVerified"
                 }
             } else {
                 Add-Error -DefaultErrorMessage "Autologon requested, but target user could not be determined." -ErrorId "Error_AutoLoginUserUnknown"
             }
-            # Cleanup: Ensure the RunOnce lock entry does not exist in this mode
+            # Cleanup
             Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce" -Name "WindowsOrchestrator-Lock" -ErrorAction SilentlyContinue
             Unregister-ScheduledTask -TaskName $lockTaskName -Confirm:$false -ErrorAction SilentlyContinue
         }
-        default { # Corresponds to "Standard"
-            try {
-                Set-ItemProperty -Path $winlogonKey -Name AutoAdminLogon -Value "0" -Type String -Force -ErrorAction Stop
-                Add-Action -DefaultActionMessage "Automatic logon disabled (Mode: Standard)." -ActionId "Action_AutoAdminLogonDisabled"
-            } catch {
-                Add-Error -DefaultErrorMessage "Failed to disable AutoAdminLogon: $($_.Exception.Message)" -ErrorId "Error_DisableAutoLoginFailed" -ErrorArgs $_.Exception.Message
-            }
+        default { # Standard
+            # PRINCIPE DE NON-INGÉRENCE (Correction v1.73)
+            # Si le mode est Standard, l'orchestrateur NE DOIT PAS toucher à la configuration Autologon existante.
+            # Il se contente de supprimer la tâche de verrouillage (si elle existe) pour ne pas bloquer une session manuelle.
+            
+            Write-Log -DefaultMessage "Session mode is 'Standard'. Leaving Autologon registry keys untouched." -Level INFO
+            
             Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce" -Name "WindowsOrchestrator-Lock" -ErrorAction SilentlyContinue
             Unregister-ScheduledTask -TaskName $lockTaskName -Confirm:$false -ErrorAction SilentlyContinue
         }
@@ -315,50 +320,120 @@ try {
     $preRebootActionTime = Get-ConfigValue -Section "Process" -Key "ScheduledCloseTime"
     $sessionMode = Get-ConfigValue -Section "SystemConfig" -Key "SessionStartupMode" -DefaultValue "Standard"
 
-    # --- Configuration de l'Action Fermeture (Sauvegarde Dédiée) ---
-    $enableBackup = Get-ConfigValue -Section "DatabaseBackup" -Key "EnableBackup" -Type ([bool])
+    # Variables nécessaires pour la logique combinée Sauvegarde/Reboot
+    $enableReboot = Get-ConfigValue -Section "Process" -Key "EnableScheduledReboot" -Type ([bool]) -DefaultValue $true
+    $rebootTime = Get-ConfigValue -Section "Process" -Key "ScheduledRebootTime"
+
+    # --- Configuration de l'Action Sauvegarde (Conformité Plan v1.73) ---
+    $enableBackup = Get-ConfigValue -Section "DatabaseBackup" -Key "EnableBackup" -Type ([bool]) -DefaultValue $false
     $scheduledBackupTime = Get-ConfigValue -Section "DatabaseBackup" -Key "ScheduledBackupTime"
+
+    # Paramètres de fermeture nécessaires à l'inférence
+    $enableScheduledClose = Get-ConfigValue -Section "Process" -Key "EnableScheduledClose" -Type ([bool]) -DefaultValue $false
+    $scheduledCloseTime = Get-ConfigValue -Section "Process" -Key "ScheduledCloseTime"
+
     $backupTaskName = "WindowsOrchestrator-SystemBackup"
+    $finalBackupTime = $null
+    $isInferred = $false
 
-    # Nettoyage de l'ancienne tâche générique au cas où elle existerait encore
-    Unregister-ScheduledTask -TaskName "WindowsOrchestrator-SystemPreReboot" -Confirm:$false -ErrorAction SilentlyContinue
+    if ($enableBackup -eq $true) {
+        if (-not [string]::IsNullOrWhiteSpace($scheduledBackupTime)) {
+            # Cas 1 : Heure explicite définie par l'utilisateur
+            $finalBackupTime = $scheduledBackupTime
+        }
+        elseif ($enableScheduledClose -eq $true -and (-not [string]::IsNullOrWhiteSpace($scheduledCloseTime))) {
+            # Cas 2 : Inférence temporelle (Plan v1.73, Section 3.1)
+            $finalBackupTime = $scheduledCloseTime
+            $isInferred = $true
+        }
+    }
 
-    if ($enableBackup -and (-not [string]::IsNullOrWhiteSpace($scheduledBackupTime))) {
+    if (($enableBackup -eq $true -or ($enableReboot -eq $true -and [string]::IsNullOrWhiteSpace($rebootTime))) -and $null -ne $finalBackupTime) {
         try {
             $backupScriptPath = Join-Path -Path $ScriptDir -ChildPath "Invoke-DatabaseBackup.ps1"
-            if (-not (Test-Path -LiteralPath $backupScriptPath)) {
-                throw ($Global:lang.System_BackupScriptNotFound -f $backupScriptPath)
-            }
-
             $taskAction = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$backupScriptPath`"" -WorkingDirectory $ScriptDir
-            $taskTrigger = New-ScheduledTaskTrigger -Daily -At $scheduledBackupTime
-            $taskPrincipal = New-ScheduledTaskPrincipal -UserId "NT AUTHORITY\System" -LogonType ServiceAccount -RunLevel Highest
+            $taskTrigger = New-ScheduledTaskTrigger -Daily -At $finalBackupTime
+            $taskPrincipal = New-ScheduledTaskPrincipal -UserId "S-1-5-18" -LogonType ServiceAccount -RunLevel Highest
             $taskSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew
 
             Register-ScheduledTask -TaskName $backupTaskName -Action $taskAction -Trigger $taskTrigger -Principal $taskPrincipal -Settings $taskSettings -Description "Orchestrator: Performs data backup before reboot." -Force -ErrorAction Stop
-            Add-Action -DefaultActionMessage "Backup task scheduled at '{0}' (Task: {1})." -ActionId "Action_BackupTaskConfigured" -ActionArgs $scheduledBackupTime, $backupTaskName
+
+            if ($isInferred) {
+                Add-Action -DefaultActionMessage "Backup time synced with closure time ({0}). Watchdog mode activated." -ActionId "Log_System_BackupSynced" -ActionArgs $finalBackupTime
+            } else {
+                Add-Action -DefaultActionMessage "Backup task scheduled at '{0}'." -ActionId "Action_BackupTaskConfigured" -ActionArgs $finalBackupTime
+            }
         }
         catch {
             Add-Error -DefaultErrorMessage "Failed to configure backup task: {0}" -ErrorId "Error_BackupTaskFailed" -ErrorArgs $_.Exception.Message
         }
     } else {
-        # Si la sauvegarde n'est pas activée, s'assurer que la tâche est bien supprimée
+        # Nettoyage si désactivé ou configuration incomplète
         Unregister-ScheduledTask -TaskName $backupTaskName -Confirm:$false -ErrorAction SilentlyContinue
+        if ($enableBackup -eq $true -and $null -eq $finalBackupTime) {
+             Add-Error -DefaultErrorMessage "Backup enabled but no time defined nor reference closure time. Task skipped." -ErrorId "Error_System_BackupNoTime"
+        }
     }
 
-
-
-
     # --- Configuration du Redémarrage Planifié ---
+    $enableReboot = Get-ConfigValue -Section "Process" -Key "EnableScheduledReboot" -Type ([bool]) -DefaultValue $true
     $rebootTime = Get-ConfigValue -Section "Process" -Key "ScheduledRebootTime"
     $rebootTaskName = "WindowsOrchestrator-SystemScheduledReboot"
-    if (-not [string]::IsNullOrWhiteSpace($rebootTime)) {
-        $rebootDesc = "Daily reboot by AllSysConfig (Build: $ScriptInternalBuild)"
+
+    # Variables pour vérifier les chaînons précédents (Logique Pont/Bridge)
+    $enableBackup = Get-ConfigValue -Section "DatabaseBackup" -Key "EnableBackup" -Type ([bool])
+    $enableClose = Get-ConfigValue -Section "Process" -Key "EnableScheduledClose" -Type ([bool])
+    $scheduledCloseTime = Get-ConfigValue -Section "Process" -Key "ScheduledCloseTime"
+
+    if (($enableReboot -eq $true) -and (-not [string]::IsNullOrWhiteSpace($rebootTime))) {
+        # Cas A : Redémarrage planifié fixe (Indépendant)
+        $rebootDesc = "Daily reboot by WindowsOrchestrator (Build: $ScriptInternalBuild)"
         $rebootAction = New-ScheduledTaskAction -Execute "shutdown.exe" -Argument "/r /f /t 60 /c `"$rebootDesc`""
         $rebootTrigger = New-ScheduledTaskTrigger -Daily -At $rebootTime
         Register-ScheduledTask $rebootTaskName -Action $rebootAction -Trigger $rebootTrigger -Principal (New-ScheduledTaskPrincipal -UserId "NT AUTHORITY\System" -LogonType ServiceAccount -RunLevel Highest) -Settings (New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries) -Description $rebootDesc -Force
         Add-Action -DefaultActionMessage "Scheduled reboot at {0} (Task: {1})." -ActionId "Action_RebootScheduled" -ActionArgs $rebootTime, $rebootTaskName
-    } else {
+    }
+    elseif ($enableReboot -eq $true) {
+        # Cas B : Enchaînement (Heure vide)
+
+        if ($enableBackup -eq $true) {
+            # Sous-cas B1 : Backup est ACTIF
+            # C'est le script de Backup qui lancera le reboot à la fin. On ne crée PAS de tâche ici.
+            Unregister-ScheduledTask $rebootTaskName -Confirm:$false -ErrorAction SilentlyContinue
+            Add-Action -DefaultActionMessage "Reboot enabled without fixed time. Scheduled task removed (will be handled by chaining)." -ActionId "Log_System_RebootTaskSkipped"
+        }
+        elseif ($enableClose -eq $true -and (-not [string]::IsNullOrWhiteSpace($scheduledCloseTime))) {
+            # Sous-cas B2 : Backup est INACTIF, mais Fermeture est ACTIVE (Le Pont)
+            # On crée la tâche de reboot synchronisée sur la fermeture + 5 min
+            try {
+                $closeSpan = [TimeSpan]::Parse($scheduledCloseTime)
+
+                # Récupération du délai configurable (Défaut 5 min)
+                $bridgeDelay = Get-ConfigValue -Section "Process" -Key "RebootBridgeDelay" -Type ([int]) -DefaultValue 5
+                $buffer = [TimeSpan]::FromMinutes($bridgeDelay)
+
+                # Calcul de l'heure
+                $rebootTriggerTime = "{0:hh\:mm}" -f ($closeSpan.Add($buffer))
+
+                $rebootDesc = "Daily reboot (Bridged) by WindowsOrchestrator"
+                $rebootAction = New-ScheduledTaskAction -Execute "shutdown.exe" -Argument "/r /f /t 60 /c `"$rebootDesc`""
+                $rebootTrigger = New-ScheduledTaskTrigger -Daily -At $rebootTriggerTime
+                Register-ScheduledTask $rebootTaskName -Action $rebootAction -Trigger $rebootTrigger -Principal (New-ScheduledTaskPrincipal -UserId "NT AUTHORITY\System" -LogonType ServiceAccount -RunLevel Highest) -Settings (New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries) -Description $rebootDesc -Force
+
+                # Log avec i18n correct (Arguments : Délai, Heure)
+                Add-Action -DefaultActionMessage "Reboot enabled (Bridged after Closure + $bridgeDelay min: $rebootTriggerTime)." -ActionId "Log_System_RebootBridgeScheduled" -ActionArgs $bridgeDelay, $rebootTriggerTime
+            } catch {
+                 Add-Error -DefaultErrorMessage "Failed to calculate inferred reboot time: {0}" -ErrorArgs $_.Exception.Message
+            }
+        }
+        else {
+            # Sous-cas B3 : Orphelin
+            Unregister-ScheduledTask $rebootTaskName -Confirm:$false -ErrorAction SilentlyContinue
+            Add-Error -DefaultErrorMessage "Reboot enabled but no time set and no preceding task to chain from."
+        }
+    }
+    else {
+        # Cas C : Redémarrage désactivé
         Unregister-ScheduledTask $rebootTaskName -Confirm:$false -ErrorAction SilentlyContinue
     }
 
@@ -388,49 +463,45 @@ try {
 
         if ((-not [string]::IsNullOrWhiteSpace($gotifyUrl)) -and (-not [string]::IsNullOrWhiteSpace($gotifyToken))) {
             # Vérification réseau rapide, juste avant l'envoi.
-            if (Test-NetConnection -ComputerName "8.8.8.8" -Port 53 -InformationLevel Quiet -WarningAction SilentlyContinue) {
-                $titleSuccessTemplate = Get-ConfigValue -Section "Gotify" -Key "GotifyTitleSuccessSystem" -DefaultValue ("%COMPUTERNAME% " + $ScriptIdentifier + " OK")
-                $titleErrorTemplate = Get-ConfigValue -Section "Gotify" -Key "GotifyTitleErrorSystem" -DefaultValue ("ERROR " + $ScriptIdentifier + " on %COMPUTERNAME%")
+            $titleSuccessTemplate = Get-ConfigValue -Section "Gotify" -Key "GotifyTitleSuccessSystem" -DefaultValue ("%COMPUTERNAME% " + $ScriptIdentifier + " OK")
+            $titleErrorTemplate = Get-ConfigValue -Section "Gotify" -Key "GotifyTitleErrorSystem" -DefaultValue ("ERROR " + $ScriptIdentifier + " on %COMPUTERNAME%")
 
-                $finalMessageTitle = if ($Global:ErreursRencontrees.Count -gt 0) {
-                    $titleErrorTemplate -replace "%COMPUTERNAME%", $env:COMPUTERNAME
-                } else {
-                    $titleSuccessTemplate -replace "%COMPUTERNAME%", $env:COMPUTERNAME
-                }
-
-                $dateStr = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-                $dateLineTemplate = if ($lang -and $lang.ContainsKey('Gotify_MessageDate')) { $lang.Gotify_MessageDate } else { "On {0}." }
-                $messageBody = ($dateLineTemplate -f $dateStr) + "`n"
-
-                if ($Global:ActionsEffectuees.Count -gt 0) {
-                    $actionsHeader = if ($lang -and $lang.ContainsKey('Gotify_SystemActionsHeader')) { $lang.Gotify_SystemActionsHeader } else { "SYSTEM Actions:" }
-                    $messageBody += "$actionsHeader`n" + ($Global:ActionsEffectuees -join "`n")
-                } else {
-                    $noActionsMessage = if ($lang -and $lang.ContainsKey('Gotify_NoSystemActions')) { $lang.Gotify_NoSystemActions } else { "No SYSTEM actions." }
-                    $messageBody += $noActionsMessage
-                }
-
-                if ($Global:ErreursRencontrees.Count -gt 0) {
-                    $errorsHeader = if ($lang -and $lang.ContainsKey('Gotify_SystemErrorsHeader')) { $lang.Gotify_SystemErrorsHeader } else { "SYSTEM Errors:" }
-                    $messageBody += "`n`n$errorsHeader`n" + ($Global:ErreursRencontrees -join "`n")
-                }
-
-                $payload = @{
-                    message  = $messageBody
-                    title    = $finalMessageTitle
-                    priority = $gotifyPriority
-                } | ConvertTo-Json -Depth 3 -Compress
-
-                $fullUrl = "$($gotifyUrl.TrimEnd('/'))/message?token=$gotifyToken"
-
-                try {
-                    Invoke-RestMethod -Uri $fullUrl -Method Post -Body $payload -ContentType "application/json; charset=utf-8" -TimeoutSec 30 -ErrorAction Stop
-                }
-                catch {
-                    Add-Error -DefaultErrorMessage "Gotify (IRM) failed: $($_.Exception.Message)"
-                }
+            $finalMessageTitle = if ($Global:ErreursRencontrees.Count -gt 0) {
+                $titleErrorTemplate -replace "%COMPUTERNAME%", $env:COMPUTERNAME
             } else {
-                Add-Error -DefaultErrorMessage "Network unavailable for Gotify (system)."
+                $titleSuccessTemplate -replace "%COMPUTERNAME%", $env:COMPUTERNAME
+            }
+
+            $dateStr = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+            $dateLineTemplate = if ($lang -and $lang.ContainsKey('Gotify_MessageDate')) { $lang.Gotify_MessageDate } else { "On {0}." }
+            $messageBody = ($dateLineTemplate -f $dateStr) + "`n"
+
+            if ($Global:ActionsEffectuees.Count -gt 0) {
+                $actionsHeader = if ($lang -and $lang.ContainsKey('Gotify_SystemActionsHeader')) { $lang.Gotify_SystemActionsHeader } else { "SYSTEM Actions:" }
+                $messageBody += "$actionsHeader`n" + ($Global:ActionsEffectuees -join "`n")
+            } else {
+                $noActionsMessage = if ($lang -and $lang.ContainsKey('Gotify_NoSystemActions')) { $lang.Gotify_NoSystemActions } else { "No SYSTEM actions." }
+                $messageBody += $noActionsMessage
+            }
+
+            if ($Global:ErreursRencontrees.Count -gt 0) {
+                $errorsHeader = if ($lang -and $lang.ContainsKey('Gotify_SystemErrorsHeader')) { $lang.Gotify_SystemErrorsHeader } else { "SYSTEM Errors:" }
+                $messageBody += "`n`n$errorsHeader`n" + ($Global:ErreursRencontrees -join "`n")
+            }
+
+            $payload = @{
+                message  = $messageBody
+                title    = $finalMessageTitle
+                priority = $gotifyPriority
+            } | ConvertTo-Json -Depth 3 -Compress
+
+            $fullUrl = "$($gotifyUrl.TrimEnd('/'))/message?token=$gotifyToken"
+
+            try {
+                Invoke-RestMethod -Uri $fullUrl -Method Post -Body $payload -ContentType "application/json; charset=utf-8" -TimeoutSec 30 -ErrorAction Stop
+            }
+            catch {
+                Add-Error -DefaultErrorMessage "Gotify (IRM) failed: $($_.Exception.Message)"
             }
         } else {
             Add-Error -DefaultErrorMessage "Gotify params incomplete."

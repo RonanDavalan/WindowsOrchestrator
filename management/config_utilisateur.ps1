@@ -15,16 +15,17 @@
     PS C:\Path\To\Scripts\> .\config_utilisateur.ps1
 .NOTES
     Projet      : WindowsOrchestrator
-    Version     : 1.72
+    Version     : 1.73
     Licence     : GNU GPLv3
 
     --- CRÉDITS & RÔLES ---
     Ce projet est le fruit d'une collaboration hybride Humain-IA :
 
-    Architecte Principal & QA      : Ronan Davalan
-    Architecte IA & Planification  : Google Gemini
-    Développeur IA Principal       : Grok (xAI)
-    Consultant Technique IA        : Claude (Anthropic)
+    Direction Produit & Spécifications  : Christophe Lévêque
+    Architecte Principal & QA           : Ronan Davalan
+    Architecte IA & Planification       : Google Gemini
+    Développeur IA Principal            : Grok (xAI)
+    Consultant Technique IA             : Claude (Anthropic)
 #>
 
 # --- Initialisation de l'Internationalisation (I18N) ---
@@ -143,10 +144,11 @@ if ($sessionMode -in ("Standard", "Autologon")) {
 
 if ($sessionMode -in ("Standard", "Autologon")) {
     # --- Création de la tâche de fermeture de l'application ---
+    $enableClose = Get-ConfigValue -Section "Process" -Key "EnableScheduledClose" -Type ([bool]) -DefaultValue $true
     $preRebootCloseTime = Get-ConfigValue -Section "Process" -Key "ScheduledCloseTime"
     $closeAppUserTaskName = "WindowsOrchestrator-User-CloseApp"
 
-    if (-not [string]::IsNullOrWhiteSpace($preRebootCloseTime)) {
+    if (($enableClose -eq $true) -and (-not [string]::IsNullOrWhiteSpace($preRebootCloseTime))) {
         try {
             $closeScriptPath = Join-Path -Path $ScriptDir -ChildPath "Close-AppByTitle.ps1"
             $closeAction = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$closeScriptPath`"" -WorkingDirectory $ScriptDir

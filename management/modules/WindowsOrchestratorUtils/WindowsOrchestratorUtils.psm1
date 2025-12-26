@@ -14,16 +14,17 @@
 #   - Get-ConfigValue: Récupère les valeurs de configuration de manière sécurisée.
 #
 #   Projet      : WindowsOrchestrator
-#   Version     : 1.72
+#   Version     : 1.73
 #   Licence     : GNU GPLv3
 #
 # CRÉDITS & RÔLES
 #   Ce projet est le fruit d'une collaboration hybride Humain-IA :
 #
-#   Architecte Principal & QA      : Ronan Davalan
-#   Architecte IA & Planification  : Google Gemini
-#   Développeur IA Principal       : Grok (xAI)
-#   Consultant Technique IA        : Claude (Anthropic)
+#   Direction Produit & Spécifications  : Christophe Lévêque
+#   Architecte Principal & QA           : Ronan Davalan
+#   Architecte IA & Planification       : Google Gemini
+#   Développeur IA Principal            : Grok (xAI)
+#   Consultant Technique IA             : Claude (Anthropic)
 #
 # =================================================================================================
 
@@ -37,16 +38,29 @@ function Set-OrchestratorLanguage {
     $lang = @{}
     try {
         $projectRoot = (Resolve-Path (Join-Path $ScriptRoot "..\")).Path
-        
-        # DÉTECTION AUTOMATIQUE PURE (Source de vérité système)
-        $cultureName = (Get-Culture).Name
+
+        # PRIORITÉ 1 : Lire SelectedLanguage depuis config.ini
+        $configFile = Join-Path $projectRoot "config.ini"
+        $selectedLang = $null
+        if (Test-Path $configFile) {
+            $ini = Get-IniContent -FilePath $configFile
+            if ($ini.ContainsKey("Installation") -and $ini["Installation"].ContainsKey("SelectedLanguage")) {
+                $selectedLang = $ini["Installation"]["SelectedLanguage"]
+            }
+        }
 
         # CHARGEMENT
-        $langFilePath = Join-Path $projectRoot "i18n\$cultureName\strings.psd1"
-        
-        # Fallback : Si la langue précise n'existe pas, on tente l'anglais (en-US)
-        if (-not (Test-Path $langFilePath)) {
-             $langFilePath = Join-Path $projectRoot "i18n\en-US\strings.psd1"
+        if ($selectedLang -and (Test-Path (Join-Path $projectRoot "i18n\$selectedLang\strings.psd1"))) {
+            $langFilePath = Join-Path $projectRoot "i18n\$selectedLang\strings.psd1"
+        } else {
+            # PRIORITÉ 2 : Détection automatique (Culture système)
+            $cultureName = (Get-Culture).Name
+            $langFilePath = Join-Path $projectRoot "i18n\$cultureName\strings.psd1"
+
+            # PRIORITÉ 3 : Fallback ultime sur en-US
+            if (-not (Test-Path $langFilePath)) {
+                  $langFilePath = Join-Path $projectRoot "i18n\en-US\strings.psd1"
+            }
         }
 
         if (Test-Path $langFilePath) {
@@ -109,7 +123,7 @@ function Write-StyledHost {
 .EXAMPLE
     PS C:\> $disableUpdates = Get-ConfigValue -Section "SystemConfig" -Key "DisableWindowsUpdate" -Type ([bool]) -DefaultValue $false
 .NOTES
-    Auteurs et Collaboration (v1.72)
+    Auteurs et Collaboration (v1.73)
 
     Ce projet est le fruit d'une collaboration tripartite :
     - Chef de Projet & Assurance Qualité : Ronan Davalan

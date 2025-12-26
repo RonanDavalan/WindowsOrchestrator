@@ -38,13 +38,18 @@
     ConfigForm_OneDriveMode_Ignore = "Ne rien faire"
 
     # Groupe : Fermeture & Application
-    ConfigForm_CloseAppGroupTitle = "Fermeture Planifiée de l'Application"
+    # MISE A JOUR v1.73 : Intégration des clés ici pour éviter les doublons
+    ConfigForm_Section_Closure = "Fermeture Planifiée de l'Application"
+    ConfigForm_EnableScheduledCloseCheckbox = "Activer la fermeture planifiée"
     ConfigForm_CloseTimeLabel = "Heure de Fermeture (HH:MM) :"
     ConfigForm_CloseCommandLabel = "Commande de fermeture à exécuter :"
     ConfigForm_CloseArgumentsLabel = "Arguments pour la commande :"
 
-    ConfigForm_MainAppGroupTitle = "Application Principale et Cycle Quotidien"
+    # MISE A JOUR v1.73
+    ConfigForm_Section_Reboot = "Redémarrage et Cycle Quotidien"
+    ConfigForm_EnableScheduledRebootCheckbox = "Activer le redémarrage quotidien"
     ConfigForm_RebootTimeLabel = "Heure du Redémarrage Planifié (HH:MM) :"
+
     ConfigForm_ProcessToLaunchLabel = "Application à Lancer :"
     ConfigForm_ProcessArgumentsLabel = "Arguments pour l'application :"
     ConfigForm_ProcessToMonitorLabel = "Nom du Processus à Surveiller (sans .exe) :"
@@ -90,7 +95,7 @@
     ConfigForm_InvalidTimeFormatCaption = "Format Invalide"
     ConfigForm_InvalidTimeLogic = "L'heure de fermeture doit être ANTÉRIEURE à l'heure du redémarrage planifié."
     ConfigForm_InvalidTimeLogicCaption = "Logique Temporelle Invalide"
-    ConfigForm_AllSysOptimizedNote = "✔ Ces paramètres sont optimisés pour assurer la stabilité du système et le bon fonctionnement de votre application. Il est recommandé de ne pas les modifier."
+    ConfigForm_AllSysOptimizedNote = "✔ Ces paramètres sont optimisés pour {0}. Il est recommandé de ne pas les modifier."
 
     # ------------------------------------------------------------------------------
     # 2. SCRIPT SYSTÈME (config_systeme.ps1)
@@ -188,6 +193,11 @@
     System_BackupTaskDescription = "Orchestrator : Exécute la sauvegarde des données avant le redémarrage."
     System_BackupScriptNotFound = "Le script de sauvegarde dédié '{0}' est introuvable."
 
+    # --- NOUVEAUX MESSAGES SYSTÈME V1.73 (Inférence) ---
+    Log_System_BackupSynced = "- Heure de sauvegarde synchronisée avec la fermeture ({0}). Mode Watchdog activé."
+    Log_System_RebootTaskSkipped = "- Redémarrage activé sans heure fixe. Tâche planifiée supprimée (sera géré par l'enchaînement)."
+    Error_System_BackupNoTime = "Sauvegarde activée mais aucune heure définie ni heure de fermeture de référence. Tâche ignorée."
+
     # Gestion Processus Système (Tâche de fond)
     Log_System_NoProcessSpecified = "Aucune application à lancer spécifiée. Aucune action effectuée."
     Log_System_ProcessToMonitor = "Surveillance du nom de processus : '{0}'."
@@ -262,9 +272,17 @@
     Error_Backup_InsufficientSpace = "Espace disque insuffisant. Requis : {0:N2} MB, Disponible : {1:N2} MB"
     Error_Backup_PurgeFailed = "Échec de la purge de l'ancienne sauvegarde '{0}' : '{1}'"
     Error_Backup_CopyFailed = "Échec de la sauvegarde du fichier '{0}' : '{1}'"
+    Error_Backup_ProcessRunning = "ABANDON SAUVEGARDE : Le processus '{0}' est actif. Risque de corruption de données."
     Error_Backup_Critical = "ERREUR CRITIQUE lors du processus de sauvegarde : '{0}'"
     Backup_ConfigLoadError = "Impossible de lire config.ini"
     Backup_InitError = "Erreur critique d'initialisation : '{0}'"
+
+    # --- NOUVEAUX MESSAGES WATCHDOG V1.73 ---
+    Log_Backup_WatcherStarted = "Surveillance Watchdog démarrée pour le processus '{0}'."
+    Log_Backup_ProcessClosed = "Processus '{0}' fermé avec succès."
+    Log_Backup_TimeoutKill = "Processus '{0}' tué après timeout ({1}s)."
+    Error_Backup_TimeoutNoKill = "Processus '{0}' toujours en cours après timeout ({1}s). Sauvegarde annulée."
+    Log_Backup_ChainedReboot = "Redémarrage enchaîné initié après la fin de la sauvegarde."
 
     # ------------------------------------------------------------------------------
     # 5. INSTALLATION & DÉSINSTALLATION (install.ps1 / uninstall.ps1)
@@ -395,7 +413,7 @@ Voulez-vous continuer l'installation maintenant sans configurer Autologon ?
     Uninstall_AutoLogonDisabled = "- Ouverture de session automatique : Désactivée (via l'outil Autologon)."
     Uninstall_AutoLogonDisableError = "- ERREUR lors de la tentative de désactivation de l'ouverture de session automatique : '{0}'"
     Uninstall_AutoLogonLeftAsIs = "- Ouverture de session automatique : Laissée en l'état (choix de l'utilisateur)."
-    Uninstall_AutologonToolNotFound_Interactive = "[AVERTISSEMENT] L'outil Autologon.exe est introuvable. La désactivation automatique ne peut être effectuée. Si vous souhaitez désactiver l'ouverture de session automatique, veuillez le faire manuellement."
+    Uninstall_AutologonToolNotFound_Interactive = "[AVERTISSEMENT] L'outil Autologon.exe est introuvable. La désactivation automatique ne peut être effectuée. Si vous souhaitez désactiver la connexion automatique, veuillez le faire manuellement."
     Uninstall_AutologonDisablePrompt = "Veuillez cliquer sur 'Disable' dans la fenêtre de l'outil Autologon qui va s'ouvrir pour finaliser le nettoyage."
     Uninstall_AutologonNotActive = "INFO : L'ouverture de session automatique n'est pas active. Aucun nettoyage nécessaire."
     Uninstall_SilentMode_CompletedSuccessfully = "Désinstallation de WindowsOrchestrator terminée avec succès !\n\nTous les journaux ont été enregistrés dans le dossier Logs."
@@ -414,4 +432,7 @@ Voulez-vous continuer l'installation maintenant sans configurer Autologon ?
     Error_LanguageFileLoad = "Une erreur critique est survenue lors du chargement des fichiers de langue : '{0}'"
     Error_InvalidConfigValue = "Valeur de configuration invalide pour [{0}]{1} : '{2}'. Type attendu '{3}'. La valeur par défaut/vide est utilisée."
     Install_SplashMessage = "Opération en cours, veuillez patienter..."
+
+    # --- v1.73 Mode Pont ---
+    Log_System_RebootBridgeScheduled = '- Redémarrage activé (Pont après Fermeture + {0} min : {1}).'
 }

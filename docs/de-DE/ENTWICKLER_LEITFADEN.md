@@ -1,4 +1,4 @@
-# ENTWICKLER-LEITFADEN - WindowsOrchestrator 1.72
+# ENTWICKLER-LEITFADEN - WindowsOrchestrator 1.73
 
 ---
 
@@ -54,7 +54,7 @@ Enthält Schritt-für-Schritt-Anleitungen, Assistenten-Screenshots und Fehlerbeh
             [Set-IniValue: Sichere INI-Schreibung](#set-inivalue-sichere-ini-schreibung)
             [Get-ConfigValue: Typisierte Lesung mit Standardwerten](#get-configvalue-typisierte-lesung-mit-standardwerten)
         4.2.2. [Internationalisierungssystem (i18n)](#422-internationalisierungssystem-i18n)
-            [Lokalisierungsstrategie (v1.72+)](#lokalisierungsstrategie-v172)
+            [Lokalisierungsstrategie (v1.73)](#lokalisierungsstrategie-v172)
         4.2.3. [Protokollierungssystem](#423-protokollierungssystem)
             [Write-Log: Strukturierte und resiliente Schreibung](#write-log-strukturierte-und-resiliente-schreibung)
             [Add-Action / Add-Error: Aggregatoren](#add-action-add-error-aggregatoren)
@@ -261,11 +261,11 @@ Liste der dynamischen Aufgaben:
 
 ### 2.2.3. Kritische Analyse des LogonType: Interaktiv vs. Passwort vs. S4U
 
-Die Wahl des `LogonType` für die `UserLogon`-Aufgabe ist eine zentrale architektonische Entscheidung der Version 1.72, die die Passwortverwaltungsprobleme früherer Versionen löst.
+Die Wahl des `LogonType` für die `UserLogon`-Aufgabe ist eine zentrale architektonische Entscheidung der Version 1.73, die die Passwortverwaltungsprobleme früherer Versionen löst.
 
 | LogonType | Passwort erforderlich? | Grafische Session? | Technische Analyse |
 | :---------------- | :-------------------: | :-----------------: | :----------------------------------------------------------- |
-| **`Interactive`** | ❌ Nein | ✅ Ja | **Für v1.72 gewählt**. Die Aufgabe erstellt keine eigene Session; sie injiziert sich **in** die Benutzersession zum präzisen Moment ihrer Öffnung. Sie erbt das Zugriffstoken (Token), das vom Winlogon-Prozess generiert wird (oder Autologon). Dies ist der Grund, warum der Orchestrator **nicht** das Passwort des Benutzers kennen muss, um die grafische Anwendung zu starten. |
+| **`Interactive`** | ❌ Nein | ✅ Ja | **Für v1.73 gewählt**. Die Aufgabe erstellt keine eigene Session; sie injiziert sich **in** die Benutzersession zum präzisen Moment ihrer Öffnung. Sie erbt das Zugriffstoken (Token), das vom Winlogon-Prozess generiert wird (oder Autologon). Dies ist der Grund, warum der Orchestrator **nicht** das Passwort des Benutzers kennen muss, um die grafische Anwendung zu starten. |
 | **`Password`** | ✅ Ja | ✅ Ja | Klassischer Modus "Run whether user is logged on or not". Erfordert die Speicherung des Passworts im Windows Credential Store (weniger sicher) und erfordert zwingend, dass das Konto die lokale Berechtigung `SeBatchLogonRight` hat ("Log on as a batch job"), die oft durch Sicherheits-GPOs in Unternehmen blockiert ist. |
 | **`S4U`** | ❌ Nein | ❌ Nein | "Service for User". Ermöglicht die Ausführung einer Aufgabe unter der Identität des Benutzers ohne Passwort, aber ohne Laden seines vollständigen Profils und **ohne authentifizierten Netzwerkzugriff** (Kerberos/NTLM). Außerdem kann dieser Modus keine grafische Benutzeroberfläche anzeigen. Unbrauchbar für `MyApp`. |
 **Kritische architektonische Klarstellung**:
@@ -286,9 +286,17 @@ Die Wahl des LogonType `Interactive` ist der Eckpfeiler der Architektur. Hier is
 - Er funktioniert NICHT, wenn kein Benutzer angemeldet ist (die Aufgabe wartet auf Session-Öffnung)
 - Er erstellt keine virtuelle oder unsichtbare Terminal
 
-## 2.3. Zeitliche Orchestrierung und Parallelität
+## 2.3. Zeitliche Intelligenz
 
-Der Orchestrator stützt sich nicht auf ein einzelnes Skript, das "schläft" (Schleife `Start-Sleep`), während es auf eine Aktion wartet. Er stützt sich auf den Planer, um punktuelle und unabhängige Aktionen auszulösen.
+Der Orchestrator verwendet einen Algorithmus zur zeitlichen Inferenz, um automatisch fehlende Zeiten zu berechnen und einen sequentiellen "Domino-Effekt"-Fluss zu erstellen.
+
+### 2.3.1. Algorithmus zur zeitlichen Inferenz
+
+Das System berechnet Zeiten nach absteigender Priorität:
+1. **Backup-Zeit** = `ScheduledCloseTime` (falls leer, inferiert zu Schließung + 5 Minuten)
+2. **Neustart-Zeit** = `ScheduledRebootTime` (falls leer, automatisch nach Backup ausgelöst)
+
+Dies gewährleistet, dass wenn die Backup- oder Neustartzeit nicht explizit definiert ist, das System sie intelligent verkettet, ohne Überlappung.
 
 ### 2.3.1. Backup/Close-Entkopplung
 
@@ -412,6 +420,8 @@ Dies ist ein fundamentales Konzept für die Idempotenz des Launchers.
 3.  **Wenn NEIN**: Der Orchestrator führt `ProcessToLaunch` aus.
 
 > **Entwicklerhinweis**: Wenn `ProcessToMonitor` leer gelassen wird, verliert der Orchestrator seine Erkennungsfähigkeit und wird `ProcessToLaunch` bei jeder Ausführung starten, was Duplikate verursachen kann.
+
+Der neue `LaunchApp.bat` verwendet `findstr`, um die `.ini` zu parsen und `!VALUE:"=!`, um Anführungszeichen zu entfernen, was einen dynamischen Start ohne manuelle Änderungen ermöglicht.
 
 #### 3.2.2. `LaunchConsoleMode`: Standard vs. Legacy
 
@@ -1021,7 +1031,21 @@ Das Skript gewährleistet die Integrität von Dateigruppen (z. B.: Shapefiles `.
     2. Extrahiert ihren "Basisnamen" (Dateiname ohne Erweiterung).
     3. Erzwingt das Backup von **allen** Dateien im Quellordner, die diesen exakten Basisnamen teilen, unabhängig von Erweiterung oder Änderungsdatum.
 
-##### D. Vorabprüfungen
+##### D. Watchdog-Schleife und MonitorTimeout
+
+Das System verwendet eine While-Schleife zur Überwachung der Anwendungsschließung:
+```powershell
+$timeout = (Get-Date).AddSeconds($MonitorTimeout)
+while ((Get-Date) -lt $timeout) {
+    if (-not (Get-Process -Name $ProcessToMonitor -ErrorAction SilentlyContinue)) {
+        break
+    }
+    Start-Sleep -Seconds 5
+}
+```
+Wenn die Anwendung nach dem Timeout blockiert bleibt, kann die Sicherung abgebrochen werden, um Korruptionen zu vermeiden.
+
+##### E. Vorabprüfungen
 *   **Schreibtest**: Versucht, eine temporäre Datei im Ziel zu erstellen/löschen, um NTFS-/Netzwerkberechtigungen vor dem Start zu validieren.
 *   **Datenträgerplatz**: Berechnet die gesamte erforderliche Größe und vergleicht sie mit dem freien Speicherplatz des Ziellaufwerks. Wirft eine explizite Ausnahme, wenn der Speicherplatz unzureichend ist.
 
@@ -1419,7 +1443,7 @@ Dieses Projekt wird unter den Bedingungen der **GNU General Public License v3 (G
 | **DPAPI (Data Protection API)** | Windows-Verschlüsselungs-API, die vom LSA-Subsystem verwendet wird, um Autologon-Passwörter zu schützen. Verschlüsselte Daten sind an die Maschine gebunden und bei Kopie auf ein anderes System unbrauchbar. |
 | **Evil Maid Attack** | Bedrohungsszenario, bei dem ein Angreifer mit physischem Zugriff auf die Maschine auf einem alternativen OS bootet, um Daten zu stehlen. Der Orchestrator mildert dieses Risiko, indem er keine Passwörter in Klartext in seinen Konfigurationsdateien speichert. |
 | **Idempotenz** | Eigenschaft eines Skripts, das mehrmals ausgeführt werden kann, ohne das Ergebnis über die anfängliche Anwendung hinaus zu ändern, und ohne Fehler zu produzieren. (z. B.: `config_systeme.ps1` prüft den Zustand vor der Anwendung einer Änderung). |
-| **Interactive (LogonType)** | Spezifischer Typ geplanter Aufgabe, der **in** der Session des angemeldeten Benutzers ausgeführt wird. Es ist der Eckpfeiler der Architektur von Version 1.72, der den Start einer grafischen Anwendung ohne Kenntnis des Benutzerpassworts ermöglicht. |
+| **Interactive (LogonType)** | Spezifischer Typ geplanter Aufgabe, der **in** der Session des angemeldeten Benutzers ausgeführt wird. Es ist der Eckpfeiler der Architektur von Version 1.73, der den Start einer grafischen Anwendung ohne Kenntnis des Benutzerpassworts ermöglicht. |
 | **Kill-Schalter** | Sicherheitsmechanismus (`EnableBackup`, `EnableGotify`), der eine komplexe Funktionalität instantan deaktiviert via einem einfachen Boolean in `config.ini`, ohne Code oder zugehörige Konfiguration zu löschen. |
 | **LSA-Geheimnisse** | *Local Security Authority*. Geschützte Registry-Zone (`HKLM\SECURITY`), die sensible Anmeldedaten speichert. Nur über System-APIs zugänglich, nicht über standardmäßiges Registry-Editor. |
 | **P/Invoke** | *Platform Invoke*. Technologie, die es verwaltetem Code (PowerShell, .NET) ermöglicht, unmanaged Funktionen in nativen DLLs aufzurufen (Win32-API). Verwendet für Fensterverwaltung (`Close-AppByTitle`) und Vordergrund-Anzeige (`MessageBoxFixer`). |
@@ -1456,12 +1480,13 @@ Jede zukünftige Entwicklung an diesem Projekt muss imperativ die folgenden Rege
 
 ### 8.4. Credits
 
-Dieses Projekt (v1.72) ist das Ergebnis einer hybriden Mensch-KI-Kollaboration:
+Dieses Projekt (v1.73) ist das Ergebnis einer hybriden Mensch-KI-Zusammenarbeit:
 
-*   **Ronan Davalan**: Projektmanager, Principal-Architekt, Qualitätssicherung (QA).
-*   **Google Gemini**: KI-Architekt, Planer, Technischer Schriftsteller.
-*   **Grok**: KI-Entwickler (Implementierung).
-*   **Claude**: KI-Technischer Berater (Code-Review & P/Invoke-Lösungen).
+*   **Christophe Lévêque**: Produktleitung und Geschäftsspezifikationen.
+*   **Ronan Davalan**: Projektleiter, Hauptarchitekt, Qualitätssicherung (QA).
+*   **Google Gemini**: KI-Architekt, Planer, technischer Redakteur.
+*   **Grok (xAI)**: Haupt-KI-Entwickler (Implementierung).
+*   **Claude (Anthropic)**: Technischer KI-Berater (Code-Review und P/Invoke-Lösungen).
 
 ### 8.5. Schnelle diagnostische PowerShell-Befehle
 

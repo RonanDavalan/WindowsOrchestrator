@@ -1,4 +1,4 @@
-# BENUTZERHANDBUCH - WindowsOrchestrator 1.72
+# BENUTZERHANDBUCH - WindowsOrchestrator 1.73
 
 📘 **[ENTWICKLERHANDBUCH](ENTWICKLER_LEITFADEN.md)**
 *Zielgruppe: Systemadministratoren.*
@@ -366,7 +366,7 @@ Konfigurieren Sie die gewünschten Einstellungen über die grafische Oberfläche
 
 ### 4.4. Konfiguration über den grafischen Assistenten
 
-Der `firstconfig.ps1`-Assistent ermöglicht die intuitive Generierung der `config.ini`-Datei. Er ist in zwei Hauptregisterkarten organisiert.
+Der `firstconfig.ps1`-Assistent ermöglicht die intuitive Generierung der `config.ini`-Datei. Der Assistent ist nun in **4 Unterregisterkarten** organisiert (Hauptmenü, Sicherung, Optionen & Konto, Installationsoptionen) für optimale Klarheit.
 
 #### 4.4.1. Registerkarte "Basis" - Wesentliche Einstellungen
 
@@ -400,7 +400,7 @@ Ein Dropdown-Menü bietet drei Auswahlmöglichkeiten.
 
 #### Vorkonfigurationsanzeige (Eingefrorene Konfiguration)
 
-Wenn die `ShowContextMessages`-Option aktiv ist, erscheint ein blauer Banner oben im Fenster. Er signalisiert einfach, dass die Konfiguration intern bereits festgelegt wurde, um schlechte Einstellungen zu vermeiden.
+Wenn die `ShowContextMessages`-Option aktiv ist, erscheint ein blauer Banner oben im Fenster. Er signalisiert einfach, dass die Konfiguration intern bereits festgelegt wurde, um schlechte Einstellungen zu vermeiden. Die Optimierungsnachricht (blauer Banner) passt sich dynamisch an den Namen der Anwendung an.
 
 ![Validierte Konfiguration](../../assets/de-DE/konfig-assistent-02-system-optimiert.png)
 
@@ -542,6 +542,17 @@ Sobald WindowsOrchestrator installiert ist, tritt die Maschine in einen autonome
 
 #### 5.1.1. Typische Tageschronologie
 
+##### Domino-Effekt: Logische Verkettung der Aufgaben
+
+Im Gegensatz zu parallelen Aufgaben verwendet WindowsOrchestrator v1.73 einen sequentiellen "Domino-Effekt"-Fluss, bei dem Zeiten automatisch berechnet werden können, wenn sie nicht explizit definiert sind.
+
+Wenn die Sicherungszeit oder die Neustartzeit nicht explizit definiert ist, verkettet das System sie intelligent nach der Beendigung:
+- Anwendungsbeendigung (Beispiel: 02:50)
+- Datensicherung (berechnet: Beendigung + 5 Minuten)
+- Geplanter Neustart (berechnet: Sicherung + 2 Minuten)
+
+Dies gewährleistet eine logische Verkettung ohne Überlappung, wodurch Datenkorruptionsrisiken eliminiert werden.
+
 ##### Phase 1: Normale Nutzung (00:00 → Beendigungszeit)
 
 Das System funktioniert normal. Die Geschäftsanwendung ist aktiv. Kein Eingriff des Orchestrators.
@@ -587,7 +598,11 @@ Das Skript `config_utilisateur.ps1` führt bei der Sitzungseröffnung des konfig
 
 ### 5.2. Überwachung und Überprüfung
 
-#### 5.2.1. Speicherort und Lesen der Protokolldateien
+#### 5.2.1. Watchdog-Überwachung
+
+Das System umfasst nun eine aktive Watchdog-Überwachung, die überprüft, ob die Anwendung vor dem Start der Sicherung geschlossen ist. Der Watchdog verwendet eine While-Schleife mit einem konfigurierbaren Timeout (`MonitorTimeout`, Standard 300 Sekunden), um auf das Verschwinden des Prozesses aus dem Speicher zu warten. Wenn die Anwendung blockiert bleibt, kann das System den erzwungenen Stopp durchführen oder die Sicherung aus Sicherheitsgründen abbrechen, um Datenkorruptionen zu vermeiden.
+
+#### 5.2.2. Speicherort und Lesen der Protokolldateien
 
 Protokolle befinden sich im `Logs/`-Ordner im Projektstamm.
 
@@ -618,7 +633,7 @@ $today = Get-Date -Format "yyyy-MM-dd"
 Get-Content "C:\WindowsOrchestrator\Logs\config_systeme_ps.txt" | Select-String "^$today"
 ```
 
-#### 5.2.2. Interpretation von Gotify-Benachrichtigungen
+#### 5.2.3. Interpretation von Gotify-Benachrichtigungen
 
 Wenn Sie den Abschnitt `[Gotify]` in `config.ini` konfiguriert haben, müssen Sie die Protokolle nicht überprüfen. Ihr Überwachungsserver erhält Echtzeitnachrichten.
 
@@ -626,11 +641,11 @@ Eine INFO-Level-Nachricht (grün oder blau) gibt an, dass alles nominal ist: "St
 
 Eine ERROR-Level-Nachricht (rot) signalisiert, dass eine Aktion fehlgeschlagen ist: "Anwendung kann nicht gestartet werden", "Voll disk während Sicherung". Ein Eingriff ist erforderlich.
 
-#### 5.2.3. Überwachung des täglichen Zyklus
+#### 5.2.4. Überwachung des täglichen Zyklus
 
 Überprüfen Sie die Protokolle jeden Morgen, um zu bestätigen, dass die Sicherung korrekt ausgeführt wurde, der Neustart stattgefunden hat und die Anwendung neu gestartet wurde.
 
-#### 5.2.4. Überprüfung des Systemstatus
+#### 5.2.5. Überprüfung des Systemstatus
 
 Öffnen Sie den Aufgabenplaner (`taskschd.msc`). Konsultieren Sie die "Historie"-Registerkarte der `WindowsOrchestrator-*`-Aufgaben. Ein Ergebniscode `0x0` bedeutet Erfolg.
 

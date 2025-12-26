@@ -1,7 +1,7 @@
-# WindowsOrchestrator 1.72
+# WindowsOrchestrator 1.73
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Versión-v1.72-2ea44f" alt="Versión">
+  <img src="https://img.shields.io/badge/Versión-v1.73-2ea44f" alt="Versión">
   <img src="https://img.shields.io/badge/Licencia-GPLv3-blue.svg" alt="Licencia">
   <img src="https://img.shields.io/badge/Plataforma-Windows_10_|_11-0078D6" alt="SO Soportados">
   <img src="https://img.shields.io/badge/Arquitectura-x86_|_x64_|_ARM64-blueviolet" alt="Arquitectura CPU">
@@ -77,14 +77,30 @@ El orquestador prioriza la estabilidad y el uso de los mecanismos nativos de Win
 *   **Reinicio del Sistema**: Reinicio completo planificado diariamente.
 *   **Copia de Seguridad**: Tarea independiente, ejecutada en paralelo al cierre.
 
-### Modo Silencioso (Nuevo v1.72)
+### Modo Silencioso (Nuevo v1.73)
 *   Instalación y desinstalación posibles sin ventanas de consola visibles (`-WindowStyle Hidden`).
 *   **Splash Screen**: Interfaz gráfica de espera con barra de progreso para tranquilizar al usuario.
 *   **Feedback**: Notificación final mediante un cuadro de diálogo (`MessageBox`) que indica el éxito o el fracaso.
 
 ### Internacionalización y Notificaciones
-*   **i18n**: Detección automática del idioma del sistema (Soporte nativo: `fr-FR`, `en-US`).
+*   **i18n**: Detección automática del idioma del sistema (Soporte nativo: `fr-FR`, `en-US`, `es-ES`, `de-DE`).
 *   **Gotify**: Módulo opcional para enviar informes de ejecución (éxito/errores) a un servidor Gotify.
+
+### Nuevas Funcionalidades v1.73
+
+#### Launcher Dinámico
+*   **Lanzamiento Basado en Configuración**: Lee `config.ini` para determinar dinámicamente los parámetros de lanzamiento de aplicaciones, modos y rutas sin codificación fija.
+*   **Modos de Ejecución Flexibles**: Soporta múltiples estrategias de lanzamiento basadas en configuración, incluyendo inicio minimizado y selección de consola.
+
+#### Seguridad Watchdog
+*   **Monitoreo de Procesos**: Monitoreo continuo de procesos de aplicaciones lanzadas para detectar fallos o crashes.
+*   **Recuperación Automática**: Tras la detección de terminación de procesos, activa mecanismos de reinicio automático para mantener el tiempo de actividad del sistema.
+*   **Verificaciones de Salud**: Verificación periódica de la capacidad de respuesta de la aplicación para prevenir fallos silenciosos.
+
+#### Inteligencia Temporal (Inferencia Automática y Efecto Dominó)
+*   **Programación Inteligente**: Analiza patrones de uso y estados del sistema para inferir automáticamente tiempos óptimos para respaldos, reinicios y mantenimiento.
+*   **Prevención del Efecto Dominó**: Detecta dependencias en cascada entre operaciones del sistema para evitar conflictos y asegurar ejecución secuencial.
+*   **Comportamiento Adaptativo**: Ajusta horarios basados en rendimiento del sistema en tiempo real y necesidades de aplicaciones.
 
 ## Procedimiento de despliegue
 

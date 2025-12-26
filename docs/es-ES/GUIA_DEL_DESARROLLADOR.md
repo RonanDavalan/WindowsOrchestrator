@@ -1,4 +1,4 @@
-# GUÍA DEL DESARROLLADOR - WindowsOrchestrator 1.72
+# GUÍA DEL DESARROLLADOR - WindowsOrchestrator 1.73
 
 ---
 
@@ -54,7 +54,7 @@ Contiene procedimientos paso a paso, capturas de pantalla del asistente y guías
             [Set-IniValue: Escritura Segura INI](#set-inivalue-escritura-segura-ini)
             [Get-ConfigValue: Lectura Tipificada con Valores Predeterminados](#get-configvalue-lectura-tipificada-con-valores-predeterminados)
         4.2.2. [Sistema de Internacionalización (i18n)](#422-sistema-de-internacionalización-i18n)
-            [Estrategia de Localización (v1.72+)](#estrategia-de-localización-v172)
+            [Estrategia de Localización (v1.73)](#estrategia-de-localización-v172)
         4.2.3. [Sistema de Registro](#423-sistema-de-registro)
             [Write-Log: Escritura Estructurada y Resiliente](#write-log-escritura-estructurada-y-resiliente)
             [Add-Action / Add-Error: Agregadores](#add-action-add-error-agregadores)
@@ -261,11 +261,11 @@ Lista de tareas dinámicas:
 
 ### 2.2.3. Análisis Crítico del LogonType: Interactivo vs. Contraseña vs. S4U
 
-La elección del `LogonType` para la tarea `UserLogon` es una decisión arquitectural central de la versión 1.72, que resuelve los problemas de gestión de contraseñas de las versiones anteriores.
+La elección del `LogonType` para la tarea `UserLogon` es una decisión arquitectural central de la versión 1.73, que resuelve los problemas de gestión de contraseñas de las versiones anteriores.
 
 | LogonType | ¿Contraseña Requerida? | ¿Sesión Gráfica? | Análisis Técnico |
 | :---------------- | :-------------------: | :-----------------: | :----------------------------------------------------------- |
-| **`Interactive`** | ❌ No | ✅ Sí | **Elegido para v1.72**. La tarea no crea su propia sesión; se inyecta **en** la sesión de usuario en el momento preciso en que se abre. Hereda el token de acceso (Token) generado por el proceso Winlogon (o Autologon). Es por eso que el orquestador **no** necesita conocer la contraseña del usuario para lanzar la aplicación gráfica. |
+| **`Interactive`** | ❌ No | ✅ Sí | **Elegido para v1.73**. La tarea no crea su propia sesión; se inyecta **en** la sesión de usuario en el momento preciso en que se abre. Hereda el token de acceso (Token) generado por el proceso Winlogon (o Autologon). Es por eso que el orquestador **no** necesita conocer la contraseña del usuario para lanzar la aplicación gráfica. |
 | **`Password`** | ✅ Sí | ✅ Sí | Modo clásico "Run whether user is logged on or not". Requiere almacenar la contraseña en el Credential Store de Windows (menos seguro) y requiere imperativamente que la cuenta disponga del privilegio local `SeBatchLogonRight` ("Log on as a batch job"), que a menudo está bloqueado por GPOs de seguridad en empresa. |
 | **`S4U`** | ❌ No | ❌ No | "Service for User". Permite ejecutar una tarea bajo la identidad del usuario sin contraseña, pero sin cargar su perfil completo y **sin acceso a red autenticada** (Kerberos/NTLM). Además, este modo no puede mostrar interfaz gráfica. Inutilizable para `MyApp`. |
 **Aclaración Arquitectural Crítica**:
@@ -286,11 +286,19 @@ La elección del LogonType `Interactive` es la piedra angular de la arquitectura
 - No funciona si ningún usuario está conectado (la tarea espera la apertura de sesión)
 - No crea una sesión virtual o terminal invisible
 
-## 2.3. Orquestación Temporal y Paralelismo
+## 2.3. Inteligencia Temporal
 
-El orquestador no se basa en un script único que "duerme" (bucle `Start-Sleep`) esperando la hora de una acción. Se apoya en el programador para activar acciones puntuales e independientes.
+El orquestador utiliza un algoritmo de inferencia temporal para calcular automáticamente tiempos faltantes y crear un flujo secuencial "Efecto Dominó".
 
-### 2.3.1. Desacoplamiento Backup/Close
+### 2.3.1. Algoritmo de Inferencia Temporal
+
+El sistema calcula tiempos por prioridad descendente:
+1. **Tiempo de Respaldo** = `ScheduledCloseTime` (si vacío, inferido a cierre + 5 minutos)
+2. **Tiempo de Reinicio** = `ScheduledRebootTime` (si vacío, activado automáticamente después del respaldo)
+
+Esto garantiza que si el tiempo de respaldo o reinicio no está definido explícitamente, el sistema los encadene inteligentemente sin superposiciones.
+
+### 2.3.2. Desacoplamiento Backup/Close
 
 Es imperativo notar que la tarea de **Cierre** (`User-CloseApp`) y la tarea de **Respaldo** (`SystemBackup`) están totalmente desacopladas arquitecturalmente.
 
@@ -307,7 +315,7 @@ Es imperativo notar que la tarea de **Cierre** (`User-CloseApp`) y la tarea de *
        3. Probar regularmente las restauraciones de respaldo
 *   **Consistencia de Datos**: Aunque desacopladas, estas tareas están secuenciadas temporalmente (Cierre antes de Respaldo) para asegurar que los archivos no estén bloqueados (Open File Handles) durante la copia. Sin embargo, el respaldo funcionará incluso en archivos abiertos (aunque la consistencia de aplicación sea menos garantizada en este caso específico).
 
-### 2.3.2. Cronología Diaria Típica (Workflow)
+### 2.3.3. Cronología Diaria Típica (Workflow)
 
 Aquí está el ciclo de vida exacto de una máquina gestionada por el orquestador, basado en la configuración recomendada en la Guía del Usuario.
 
@@ -412,6 +420,8 @@ Este es un concepto fundamental para la idempotencia del lanzador.
 3.  **Si NO**: El orquestador ejecuta `ProcessToLaunch`.
 
 > **Nota del Desarrollador**: Si `ProcessToMonitor` se deja vacío, el orquestador pierde su capacidad de detección y lanzará `ProcessToLaunch` en cada ejecución, lo que puede crear duplicados.
+
+El nuevo `LaunchApp.bat` utiliza `findstr` para analizar el `.ini` y `!VALUE:"=!` para eliminar las comillas, permitiendo un lanzamiento dinámico sin modificaciones manuales.
 
 #### 3.2.2. `LaunchConsoleMode`: Estándar vs. Legacy
 
@@ -1021,7 +1031,21 @@ El script garantiza la integridad de grupos de archivos (ej.: Shapefiles `.shp/.
     2. Extrae su "Nombre Base" (nombre de archivo sin extensión).
     3. Fuerza el respaldo de **todos** los archivos en la carpeta fuente que comparten ese nombre base exacto, independientemente de extensión o fecha de modificación.
 
-##### D. Verificaciones Previas
+##### D. Bucle Watchdog y MonitorTimeout
+
+El sistema utiliza un bucle While para monitorear el cierre de la aplicación:
+```powershell
+$timeout = (Get-Date).AddSeconds($MonitorTimeout)
+while ((Get-Date) -lt $timeout) {
+    if (-not (Get-Process -Name $ProcessToMonitor -ErrorAction SilentlyContinue)) {
+        break
+    }
+    Start-Sleep -Seconds 5
+}
+```
+Si la aplicación permanece bloqueada después del timeout, el respaldo puede cancelarse para evitar corrupciones.
+
+##### E. Verificaciones Previas
 *   **Prueba de Escritura**: Intenta crear/eliminar un archivo temporal en el destino para validar permisos NTFS/Red antes de comenzar.
 *   **Espacio en Disco**: Calcula el tamaño total requerido y lo compara con el espacio libre de la unidad de destino. Lanza una excepción explícita si el espacio es insuficiente.
 
@@ -1419,7 +1443,7 @@ Este proyecto se distribuye bajo los términos de la **Licencia Pública General
 | **DPAPI (Data Protection API)** | API de encriptación de Windows utilizada por el subsistema LSA para proteger contraseñas de Autologon. Los datos encriptados están ligados a la máquina y son inutilizables si se copian a otro sistema. |
 | **Evil Maid Attack** | Escenario de amenaza donde un atacante con acceso físico a la máquina arranca en un OS alternativo para robar datos. El orquestador mitiga este riesgo al no almacenar contraseñas en texto plano en sus archivos de configuración. |
 | **Idempotencia** | Propiedad de un script que puede ejecutarse múltiples veces sin cambiar el resultado más allá de la aplicación inicial, y sin producir errores. (ej.: `config_systeme.ps1` verifica el estado antes de aplicar un cambio). |
-| **Interactive (LogonType)** | Tipo específico de tarea programada que se ejecuta **en** la sesión del usuario conectado. Es la piedra angular de la arquitectura de la versión 1.72, permitiendo el lanzamiento de una aplicación gráfica sin conocer la contraseña del usuario. |
+| **Interactive (LogonType)** | Tipo específico de tarea programada que se ejecuta **en** la sesión del usuario conectado. Es la piedra angular de la arquitectura de la versión 1.73, permitiendo el lanzamiento de una aplicación gráfica sin conocer la contraseña del usuario. |
 | **Kill-Schalter** | Mecanismo de seguridad (`EnableBackup`, `EnableGotify`) que desactiva instantáneamente una funcionalidad compleja vía un booleano simple en `config.ini`, sin tener que eliminar código o configuración asociada. |
 | **LSA-Geheimnisse** | *Local Security Authority*. Zona protegida del registro (`HKLM\SECURITY`), utilizada para almacenar credenciales sensibles. Accesible solo vía APIs del sistema, no vía editor de registro estándar. |
 | **P/Invoke** | *Platform Invoke*. Tecnología que permite al código administrado (PowerShell, .NET) llamar a funciones no administradas en DLLs nativas (Win32 API). Utilizada para gestión de ventanas (`Close-AppByTitle`) y visualización en primer plano (`MessageBoxFixer`). |
@@ -1456,12 +1480,13 @@ Todo desarrollo futuro en este proyecto debe respetar imperativamente las siguie
 
 ### 8.4. Créditos
 
-Este proyecto (v1.72) es el resultado de una colaboración híbrida Humano-IA:
+Este proyecto (v1.73) es el resultado de una colaboración híbrida Humano-IA:
 
-*   **Ronan Davalan**: Gerente de Proyecto, Arquitecto Principal, Aseguramiento de Calidad (QA).
-*   **Google Gemini**: Arquitecto IA, Planificador, Escritor Técnico.
-*   **Grok**: Desarrollador IA (Implementación).
-*   **Claude**: Consultor Técnico IA (Revisión de código & Soluciones P/Invoke).
+*   **Christophe Lévêque**: Dirección de producto y especificaciones de negocio.
+*   **Ronan Davalan**: Jefe de proyecto, arquitecto principal, control de calidad (QA).
+*   **Google Gemini**: Arquitecto de IA, planificador, redactor técnico.
+*   **Grok (xAI)**: Desarrollador principal de IA (implementación).
+*   **Claude (Anthropic)**: Consultor técnico de IA (revisión de código y soluciones P/Invoke).
 
 ### 8.5. Comandos Rápidos de Diagnóstico en PowerShell
 

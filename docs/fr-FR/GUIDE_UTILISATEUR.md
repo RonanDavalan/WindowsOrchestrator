@@ -1,10 +1,154 @@
-# Guide Utilisateur - WindowsOrchestrator 1.72
+# Guide Utilisateur - WindowsOrchestrator 1.73
 
 📘 **[GUIDE DU DÉVELOPPEUR](GUIDE_DU_DEVELOPPEUR.md)**
-*Destiné aux administrateurs système.*
+*Destiné aux administrateurs système et techniciens de déploiement.*
 
 🏠 **[Retour à l'accueil](README.md)**
 *Retour au portail de la documentation française.*
+
+## Table des matières
+
+1. [Introduction et présentation du projet](#1-introduction-et-présentation-du-projet)
+    1.1. [Qu'est-ce que WindowsOrchestrator ?](#11-quest-ce-que-windowsorchestrator-)
+    1.2. [Nature technique : un outil d'orchestration, pas une installation classique](#12-nature-technique--un-outil-dorchestration-pas-une-installation-classique)
+    1.3. [Philosophie de conception](#13-philosophie-de-conception)
+    1.4. [Licence et garantie](#14-licence-et-garantie)
+2. [Comprendre les implications de sécurité](#2-comprendre-les-implications-de-sécurité)
+    2.1. [Désactivation de Windows Update : stabilité vs sécurité](#21-désactivation-de-windows-update--stabilité-vs-sécurité)
+        2.1.1. [Le compromis expliqué](#211-le-compromis-expliqué)
+        2.1.2. [Quand est-ce acceptable ?](#212-quand-est-ce-acceptable-)
+    2.2. [Autologon : disponibilité immédiate vs sécurité physique](#22-autologon--disponibilité-immédiate-vs-sécurité-physique)
+        2.2.1. [Fonctionnement technique](#221-fonctionnement-technique)
+        2.2.2. [Les risques réels](#222-les-risques-réels)
+        2.2.3. [Mitigation des risques](#223-mitigation-des-risques)
+    2.3. [Autres options de configuration et leurs implications](#23-autres-options-de-configuration-et-leurs-implications)
+        [Désactivation du démarrage rapide](#désactivation-du-démarrage-rapide)
+        [Désactivation de la veille](#désactivation-de-la-veille)
+        [Blocage de OneDrive](#blocage-de-onedrive)
+3. [Outils tiers intégrés](#3-outils-tiers-intégrés)
+    3.1. [Microsoft Sysinternals Autologon](#31-microsoft-sysinternals-autologon)
+        3.1.1. [Rôle et sécurité](#311-rôle-et-sécurité)
+        3.1.2. [Documentation et support](#312-documentation-et-support)
+    3.2. [Gotify (notifications - optionnel)](#32-gotify-notifications---optionnel)
+        3.2.1. [Présentation et usage](#321-présentation-et-usage)
+        3.2.2. [Configuration requise](#322-configuration-requise)
+        3.2.3. [Ressources](#323-ressources)
+4. [Installation et configuration](#4-installation-et-configuration)
+    4.1. [Prérequis système](#41-prérequis-système)
+        4.1.1. [Système d'exploitation](#411-système-dexploitation)
+        4.1.2. [Privilèges et environnement](#412-privilèges-et-environnement)
+    4.2. [Préparation de l'environnement](#42-préparation-de-lenvironnement)
+        4.2.1. [Téléchargement et extraction](#421-téléchargement-et-extraction)
+        4.2.2. [Vérification de l'intégrité](#422-vérification-de-lintégrité)
+    4.3. [Lancement de l'installation](#43-lancement-de-linstallation)
+        4.3.1. [Démarrage de l'assistant](#431-démarrage-de-lassistant)
+    4.4. [Configuration via l'assistant graphique](#44-configuration-via-lassistant-graphique)
+        4.4.1. [Onglet "Basique" - Paramètres essentiels](#441-onglet-basique---paramètres-essentiels)
+            [Section : Gestion de la session automatique](#section--gestion-de-la-session-automatique)
+            [Section : Paramètres Windows](#section--paramètres-windows)
+            [Section : Gestion de OneDrive](#section--gestion-de-onedrive)
+        4.4.2. [Onglet "Avancées" - Sous-onglet "Principal"](#442-onglet-avancées---sous-onglet-principal)
+            [GroupBox : Fermeture planifiée de l'application](#groupbox--fermeture-planifiée-de-lapplication)
+            [GroupBox : Application principale et cycle quotidien](#groupbox--application-principale-et-cycle-quotidien)
+        4.4.3. [Onglet "Avancées" - Sous-onglet "Sauvegarde"](#443-onglet-avancées---sous-onglet-sauvegarde)
+            [GroupBox : Sauvegarde des bases de données (Optionnel)](#groupbox--sauvegarde-des-bases-de-données-optionnel)
+        4.4.4. [Onglet "Avancées" - Sous-onglet "Options & Compte"](#444-onglet-avancées---sous-onglet-options--compte)
+            [GroupBox : Personnaliser pour un autre utilisateur](#groupbox--personnaliser-pour-un-autre-utilisateur)
+            [GroupBox : Options d'installation](#groupbox--options-dinstallation)
+    4.5. [Étape d'installation automatique](#45-étape-dinstallation-automatique)
+        4.5.1. [Validation et sauvegarde](#451-validation-et-sauvegarde)
+        4.5.2. [Assistant Autologon (si activé)](#452-assistant-autologon-si-activé)
+            [Téléchargement automatique (si l'outil est absent)](#téléchargement-automatique-si-loutil-est-absent)
+            [Acceptation de la licence (EULA)](#acceptation-de-la-licence-eula)
+            [Configuration du compte](#configuration-du-compte)
+        4.5.3. [Création des tâches planifiées](#453-création-des-tâches-planifiées)
+        4.5.4. [Exécution initiale](#454-exécution-initiale)
+        4.5.5. [Sortie](#455-sortie)
+    4.6. [Vérification post-installation](#46-vérification-post-installation)
+        4.6.1. [Contrôle visuel](#461-contrôle-visuel)
+        4.6.2. [Contrôle des logs](#462-contrôle-des-logs)
+        4.6.3. [Test du redémarrage](#463-test-du-redémarrage)
+5. [Vie quotidienne et cycle de fonctionnement](#5-vie-quotidienne-et-cycle-de-fonctionnement)
+    5.1. [Le cycle automatisé quotidien](#51-le-cycle-automatisé-quotidien)
+        5.1.1. [Chronologie type d'une journée](#511-chronologie-type-dune-journée)
+            [Phase 1 : Utilisation normale (00:00 → Heure de fermeture)](#phase-1--utilisation-normale-0000--heure-de-fermeture)
+            [Phase 2 : Fermeture de l'application (exemple : 02:50)](#phase-2--fermeture-de-lapplication-exemple--0250)
+            [Phase 3 : Sauvegarde des données (exemple : 02:57)](#phase-3--sauvegarde-des-données-exemple--0257)
+            [Phase 4 : Redémarrage planifié (exemple : 02:59)](#phase-4--redémarrage-planifié-exemple--0259)
+            [Phase 5 : Démarrage à froid (00:00+)](#phase-5--démarrage-à-froid-0000)
+            [Phase 6 : Configuration système (00:01+)](#phase-6--configuration-système-0001)
+            [Phase 7 : Ouverture de session (00:01+)](#phase-7--ouverture-de-session-0001)
+            [Phase 8 : Lancement de l'application (00:02+)](#phase-8--lancement-de-lapplication-0002)
+        5.1.2. [Comprendre les contextes d'exécution](#512-comprendre-les-contextes-dexécution)
+            [Contexte SYSTEM](#contexte-system)
+            [Contexte utilisateur](#contexte-utilisateur)
+    5.2. [Surveillance et vérification](#52-surveillance-et-vérification)
+        5.2.1. [Localisation et lecture des fichiers logs](#521-localisation-et-lecture-des-fichiers-logs)
+            [Les fichiers à consulter](#les-fichiers-à-consulter)
+            [Archivage automatique](#archivage-automatique)
+            [Lecture manuelle des logs](#lecture-manuelle-des-logs)
+            [Lecture avancée avec PowerShell](#lecture-avancée-avec-powershell)
+        5.2.2. [Interprétation des notifications Gotify](#522-interprétation-des-notifications-gotify)
+        5.2.3. [Surveillance du cycle quotidien](#523-surveillance-du-cycle-quotidien)
+        5.2.4. [Vérification de l'état du système](#524-vérification-de-létat-du-système)
+6. [Maintenance et modification](#6-maintenance-et-modification)
+    6.1. [Modification des paramètres après installation](#61-modification-des-paramètres-après-installation)
+        6.1.1. [Méthode A : Édition manuelle de config.ini (avancé)](#611-méthode-a--édition-manuelle-de-configini-avancé)
+            [Prise en compte des changements](#prise-en-compte-des-changements)
+        6.1.2. [Méthode B : Réutilisation de l'interface graphique (recommandé)](#612-méthode-b--réutilisation-de-linterface-graphique-recommandé)
+    6.2. [Ajout ou suppression de tâches planifiées](#62-ajout-ou-suppression-de-tâches-planifiées)
+        6.2.1. [Ajout d'une tâche personnalisée](#621-ajout-dune-tâche-personnalisée)
+        6.2.2. [Suppression d'une tâche](#622-suppression-dune-tâche)
+    6.3. [Mise à jour de WindowsOrchestrator](#63-mise-à-jour-de-windowsorchestrator)
+7. [Procédures de désinstallation](#7-procédures-de-désinstallation)
+    7.1. [Méthode A : Désinstallation propre (recommandée)](#71-méthode-a--désinstallation-propre-recommandée)
+        7.1.1. [Exécution du script Uninstall.bat](#711-exécution-du-script-uninstallbat)
+        7.1.2. [Périmètre de la restauration](#712-périmètre-de-la-restauration)
+            [Tâches planifiées](#tâches-planifiées)
+            [Windows Update](#windows-update)
+            [OneDrive](#onedrive)
+            [Démarrage rapide](#démarrage-rapide)
+        7.1.3. [Gestion du nettoyage Autologon](#713-gestion-du-nettoyage-autologon)
+    7.2. [Méthode B : Arrêt d'urgence manuel](#72-méthode-b--arrêt-durgence-manuel)
+        7.2.1. [Procédure via le Planificateur de tâches](#721-procédure-via-le-planificateur-de-tâches)
+        7.2.2. [Avertissement sur la persistance des modifications registre](#722-avertissement-sur-la-persistance-des-modifications-registre)
+        7.2.3. [Restauration manuelle des paramètres (avancé)](#723-restauration-manuelle-des-paramètres-avancé)
+            [Réactivation Windows Update](#réactivation-windows-update)
+            [Réactivation Fast Startup](#réactivation-fast-startup)
+            [Réactivation OneDrive](#réactivation-onedrive)
+            [Désactivation Autologon (via registre)](#désactivation-autologon-via-registre)
+8. [Dépannage et FAQ](#8-dépannage-et-faq)
+    8.1. [L'application ne démarre pas au démarrage](#81-lapplication-ne-démarre-pas-au-démarrage)
+        [Diagnostic](#diagnostic)
+        [Causes possibles](#causes-possibles)
+        [Solution](#solution)
+    8.2. [Le redémarrage planifié ne fonctionne pas](#82-le-redémarrage-planifié-ne-fonctionne-pas)
+        [Diagnostic](#diagnostic-1)
+        [Causes possibles](#causes-possibles-1)
+        [Solution](#solution-1)
+    8.3. [La sauvegarde échoue avec "Permissions insuffisantes"](#83-la-sauvegarde-échoue-avec-permissions-insuffisantes)
+        [Diagnostic](#diagnostic-2)
+        [Causes possibles](#causes-possibles-2)
+        [Solution](#solution-2)
+    8.4. [L'autologon ne fonctionne pas après installation](#84-lautologon-ne-fonctionne-pas-après-installation)
+        [Diagnostic](#diagnostic-3)
+        [Causes possibles](#causes-possibles-3)
+        [Vérification registre](#vérification-registre)
+        [Solution](#solution-3)
+    8.5. [Le mode silencieux ne masque pas les fenêtres](#85-le-mode-silencieux-ne-masque-pas-les-fenêtres)
+        [Diagnostic](#diagnostic-4)
+        [Causes possibles](#causes-possibles-4)
+        [Solution](#solution-4)
+    8.6. [Le Splash Screen reste bloqué indéfiniment](#86-le-splash-screen-reste-bloqué-indéfiniment)
+        [Diagnostic](#diagnostic-5)
+        [Causes possibles](#causes-possibles-5)
+        [Solution d'urgence](#solution-durgence)
+        [Solution permanente](#solution-permanente)
+9. [Annexes](#9-annexes)
+    9.1. [Structure complète du fichier config.ini](#91-structure-complète-du-fichier-configini)
+    9.2. [Codes de sortie des scripts](#92-codes-de-sortie-des-scripts)
+    9.3. [Emplacements des fichiers critiques](#93-emplacements-des-fichiers-critiques)
+    9.4. [Support et ressources](#94-support-et-ressources)
 
 ## Table des matières
 
@@ -366,7 +510,7 @@ Configurez les paramètres souhaités via l'interface graphique. Une fois la con
 
 ### 4.4. Configuration via l'assistant graphique
 
-L'assistant `firstconfig.ps1` permet de générer le fichier `config.ini` de manière intuitive. Il est organisé en deux onglets principaux.
+L'assistant `firstconfig.ps1` permet de générer le fichier `config.ini` de manière intuitive. L'assistant est désormais organisé en **4 sous-onglets** (Principal, Sauvegarde, Autre compte, Options) pour une clarté optimale.
 
 #### 4.4.1. Onglet "Basique" - Paramètres essentiels
 
@@ -400,7 +544,7 @@ Un menu déroulant propose trois choix.
 
 #### Indication de pré-configuration (Configuration figée)
 
-Lorsque l'option `ShowContextMessages` est active, un bandeau bleu apparaît en haut de la fenêtre. Il sert simplement à signaler que la configuration a déjà été définie en interne, afin d'éviter les mauvais réglages.
+Lorsque l'option `ShowContextMessages` est active, un bandeau bleu apparaît en haut de la fenêtre. Il sert simplement à signaler que la configuration a déjà été définie en interne, afin d'éviter les mauvais réglages. Le message d'optimisation (bandeau bleu) s'adapte dynamiquement au nom de l'application.
 
 ![Configuration Validée](../../assets/fr-FR/assistant-config-02-systeme-optimise.png)
 
@@ -542,6 +686,17 @@ Une fois WindowsOrchestrator installé, la machine entre dans un cycle de foncti
 
 #### 5.1.1. Chronologie type d'une journée
 
+##### Flux Domino : Enchaînement logique des tâches
+
+Contrairement à des tâches parallèles, WindowsOrchestrator v1.73 utilise un flux séquentiel "Effet Domino" où les horaires peuvent être calculés automatiquement par inférence.
+
+Si l'heure de sauvegarde ou de redémarrage n'est pas explicitement définie, le système les enchaîne intelligemment à la suite de la fermeture :
+- Fermeture de l'application (exemple : 02:50)
+- Sauvegarde des données (calculée : fermeture + 5 minutes)
+- Redémarrage planifié (calculé : sauvegarde + 2 minutes)
+
+Cela garantit un enchaînement logique sans chevauchement, éliminant les risques de corruption de données.
+
 ##### Phase 1 : Utilisation normale (00:00 → Heure de fermeture)
 
 Le système fonctionne normalement. L'application métier est active. Aucune intervention de l'orchestrateur.
@@ -552,7 +707,7 @@ La tâche `WindowsOrchestrator-User-CloseApp` s'exécute si configurée. L'actio
 
 ##### Phase 3 : Sauvegarde des données (exemple : 02:57)
 
-La tâche `WindowsOrchestrator-SystemBackup` s'exécute si activée. L'action consiste à copier les fichiers modifiés dans les dernières 24 heures vers le dossier de destination.
+La tâche `WindowsOrchestrator-SystemBackup` s'exécute si activée. Le système attend que l'application soit réellement fermée (via surveillance Watchdog) avant de lancer la copie pour éviter toute corruption.
 **Note importante :** Pour garantir l'intégrité des bases de données (ex: SQLite), si un fichier est détecté comme modifié, le script force également la sauvegarde de tous les fichiers portant le même nom (ex: `.db-wal`, `.db-shm`), même s'ils n'ont pas été modifiés récemment. Le résultat est consigné dans `Invoke-DatabaseBackup_log.txt`.
 
 ##### Phase 4 : Redémarrage planifié (exemple : 02:59)
@@ -586,6 +741,10 @@ Le script `config_systeme.ps1` s'exécute au démarrage de Windows, avant l'ouve
 Le script `config_utilisateur.ps1` s'exécute à l'ouverture de session de l'utilisateur configuré. Il tourne avec les droits de cet utilisateur. Il peut lancer des applications graphiques et accéder aux fichiers du profil utilisateur. Il ne peut pas modifier les paramètres système HKLM sans privilèges élevés.
 
 ### 5.2. Surveillance et vérification
+
+#### 5.2.1. Watchdog : Surveillance active de l'application
+
+Le système inclut désormais une surveillance Watchdog qui vérifie activement que l'application est fermée avant de lancer la sauvegarde. Le Watchdog utilise une boucle While avec un timeout configurable (`MonitorTimeout`, défaut 300 secondes) pour attendre la disparition du processus de la mémoire. Si l'application reste bloquée, le système peut forcer l'arrêt ou annuler la sauvegarde par sécurité pour éviter les corruptions de données.
 
 #### 5.2.1. Localisation et lecture des fichiers logs
 

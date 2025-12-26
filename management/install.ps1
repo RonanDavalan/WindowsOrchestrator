@@ -14,16 +14,17 @@ Add-Type -AssemblyName System.Windows.Forms
     Lance le script d'installation. Le script demandera automatiquement une élévation de privilèges si nécessaire.
 .NOTES
     Projet      : WindowsOrchestrator
-    Version     : 1.72
+    Version     : 1.73
     Licence     : GNU GPLv3
 
     --- CRÉDITS & RÔLES ---
     Ce projet est le fruit d'une collaboration hybride Humain-IA :
 
-    Architecte Principal & QA      : Ronan Davalan
-    Architecte IA & Planification  : Google Gemini
-    Développeur IA Principal       : Grok (xAI)
-    Consultant Technique IA        : Claude (Anthropic)
+    Direction Produit & Spécifications  : Christophe Lévêque
+    Architecte Principal & QA           : Ronan Davalan
+    Architecte IA & Planification       : Google Gemini
+    Développeur IA Principal            : Grok (xAI)
+    Consultant Technique IA             : Claude (Anthropic)
 #>
 
 # --- Internationalization (i18n) ---
@@ -336,19 +337,6 @@ finally {
                 Write-StyledHost ($lang.Install_SystemScriptError -f $_.Exception.Message) "ERROR"
                 Write-StyledHost ($lang.Install_Trace -f $_.ScriptStackTrace) "ERROR"
                 $errorOccurredInScript = $true
-            }
-
-            # Lancer config_utilisateur.ps1 via la tâche planifiée
-            if (-not $errorOccurredInScript) {
-                Write-StyledHost ($lang.Install_ExecutingUserScript -f $TargetUserForUserTask) "INFO"
-                try {
-                    Start-ScheduledTask -TaskName $TaskNameUser
-                    Write-StyledHost $lang.Install_UserConfigLaunched "SUCCESS"
-                } catch {
-                    Write-StyledHost ($lang.Install_UserScriptError -f $TargetUserForUserTask, $_.Exception.Message) "ERROR"
-                    Write-StyledHost ($lang.Install_Trace -f $_.ScriptStackTrace) "ERROR"
-                    $errorOccurredInScript = $true
-                }
             }
         }
     }
