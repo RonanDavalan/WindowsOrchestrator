@@ -27,409 +27,422 @@ Add-Type -AssemblyName System.Windows.Forms
     Consultant Technique IA             : Claude (Anthropic)
 #>
 
-# --- Internationalization (i18n) ---
+# --- 1. Initialisation de l'Environnement (I18N & Modules) ---
 $cultureName = (Get-Culture).Name
 $lang = @{}
-try {
-    # La détermination du chemin du script doit gérer plusieurs environnements d'exécution (console, ISE, etc.),
-    # d'où la nécessité de tester le type de commande pour trouver le chemin de manière fiable.
-    if ($MyInvocation.MyCommand.CommandType -eq 'ExternalScript') { $PSScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition }
-    else { try { $PSScriptRoot = Split-Path -Parent $script:MyInvocation.MyCommand.Path -ErrorAction Stop } catch { $PSScriptRoot = Get-Location } }
+$ErrorActionPreference = "Stop" # Arrêt immédiat en cas d'erreur
 
-    $modulePath = Join-Path $PSScriptRoot "modules\WindowsOrchestratorUtils\WindowsOrchestratorUtils.psm1"
+try {
+    # 1. Définition des Chemins (Nettoyage de la logique)
+    # $PSScriptRoot est le dossier où se trouve ce script (donc 'management')
+    $ScriptDir = $PSScriptRoot
+
+    # Le dossier racine du projet est juste au-dessus (..)
+    $ProjectRootDir = (Resolve-Path (Join-Path $ScriptDir "..\")).Path
+
+    # CORRECTION DES CHEMINS : On pointe directement les fichiers à côté de nous
+    $SystemScriptPath = Join-Path $ScriptDir "config_systeme.ps1"
+    $UserScriptPath   = Join-Path $ScriptDir "config_utilisateur.ps1"
+    $ConfigFile       = Join-Path $ProjectRootDir "config.ini"
+
+    # 2. Chargement du Module (La boîte à outils)
+    $modulePath = Join-Path $ScriptDir "modules\WindowsOrchestratorUtils\WindowsOrchestratorUtils.psm1"
+
+    # Vérification physique avant chargement
+    if (-not (Test-Path $modulePath)) {
+        throw "Le module est introuvable ici : $modulePath"
+    }
     Import-Module $modulePath -Force
 
-    $lang = Set-OrchestratorLanguage -ScriptRoot $PSScriptRoot
+    # 3. Chargement de la Langue (Via le module)
+    $lang = Set-OrchestratorLanguage -ScriptRoot $ScriptDir
 
-    # --- Vérification du Mode Silencieux pour l'UI d'attente ---
-    $ProjectRootDir = (Resolve-Path (Join-Path $PSScriptRoot "..\")).Path
-    $ConfigFile = Join-Path $ProjectRootDir "config.ini"
+    # 4. Vérification du Mode Silencieux (Pour l'affichage d'attente)
     $silentMode = $false
     if (Test-Path $ConfigFile) {
         $config = Get-IniContent -FilePath $ConfigFile
         $silentMode = Get-ConfigValue -Section "Installation" -Key "SilentMode" -Type ([bool]) -DefaultValue $false
     }
-    if ($silentMode) {
-        Start-WaitingUI -Message $lang.Install_SplashMessage
-    }
+
+    # Si silencieux, on lance la petite fenêtre d'attente
+    if ($silentMode) { Start-WaitingUI -Message $lang.Install_SplashMessage }
+
 } catch {
-    # Ce bloc s'exécute si une des étapes ci-dessus échoue
-    Write-Error "FATAL ERROR: Could not load language files. Details: $($_.Exception.Message)"
-    Read-Host "Press Enter to exit."
+    # --- FILET DE SÉCURITÉ ANTI-FLASH ---
+    # Si une erreur survient ci-dessus, on l'affiche en ROUGE et on ATTEND.
+    Write-Host "ERREUR FATALE D'INITIALISATION :" -ForegroundColor Red
+    Write-Host "$($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "Chemin détecté : $ScriptDir" -ForegroundColor Yellow
+
+    # C'est cette ligne qui empêche la fenêtre de se fermer tout de suite
+    Read-Host "Appuyez sur Entrée pour quitter..."
     exit 1
 }
 
 # --- Configuration et Vérifications Préliminaires ---
+# --- 2. Vérifications et Préparation ---
 $OriginalErrorActionPreference = $ErrorActionPreference
-    $ErrorActionPreference = "Stop"
-    $errorOccurredInScript = $false
+$errorOccurredInScript = $false
 
 try {
-    $ScriptDir = $PSScriptRoot
-    $ProjectRootDir = (Resolve-Path (Join-Path $PSScriptRoot "..\")).Path
-
-    if (-not (Test-Path (Join-Path $ProjectRootDir "config.ini"))) {
+    # A. Vérification critique des fichiers
+    # (On utilise les chemins sécurisés calculés au Bloc 1)
+    if (-not (Test-Path $ConfigFile)) {
         throw ($lang.Install_InvalidProjectRootError -f $ProjectRootDir)
     }
+    if (-not (Test-Path $SystemScriptPath)) {
+        throw ($lang.Install_MissingSystemFile -f $SystemScriptPath)
+    }
+    if (-not (Test-Path $UserScriptPath)) {
+        throw ($lang.Install_MissingUserFile -f $UserScriptPath)
+    }
 
-    $SystemScriptPath = Join-Path $ProjectRootDir "management\config_systeme.ps1"
-    $UserScriptPath   = Join-Path $ProjectRootDir "management\config_utilisateur.ps1"
-
+    # B. Définition des constantes
     $TaskNameSystem = "WindowsOrchestrator-SystemStartup"
     $TaskNameUser   = "WindowsOrchestrator-UserLogon"
 
     Write-StyledHost ($lang.Install_ProjectRootUsed -f $ProjectRootDir) "INFO"
-}
-catch {
-    Write-StyledHost ($lang.Install_PathDeterminationError -f $_.Exception.Message) "ERROR"
-    $ErrorActionPreference = "Continue"
-    Read-Host $lang.Install_PressEnterToExit
-    exit 1
-}
 
-$filesMissing = $false
-if (-not (Test-Path $SystemScriptPath)) { Write-StyledHost ($lang.Install_MissingSystemFile -f $SystemScriptPath) "ERROR"; $filesMissing = $true }
-if (-not (Test-Path $UserScriptPath))   { Write-StyledHost ($lang.Install_MissingUserFile -f $UserScriptPath) "ERROR"; $filesMissing = $true }
+    # C. Cible : Domaine\Utilisateur
+    $TargetUserForUserTask = "$($env:USERDOMAIN)\$($env:USERNAME)"
+    Write-StyledHost ($lang.Install_UserTaskTarget -f $TargetUserForUserTask) "INFO"
 
-if ($filesMissing) {
-    Read-Host ($lang.Install_MissingFilesAborted -f $ProjectRootDir)
-    exit 1
-}
-
-$TargetUserForUserTask = "$($env:USERDOMAIN)\$($env:USERNAME)"
-Write-StyledHost ($lang.Install_UserTaskTarget -f $TargetUserForUserTask) "INFO"
-
-# --- Consolidation de l'Utilisateur Cible dans config.ini ---
-$ConfigFile = Join-Path $ProjectRootDir "config.ini"
-try {
+    # D. Consolidation de l'Utilisateur dans config.ini
+    # Si l'utilisateur n'a rien mis dans 'AutoLoginUsername', on met l'utilisateur courant.
     $iniContent = Get-IniContent -FilePath $ConfigFile
     $currentConfigUser = if ($iniContent.SystemConfig.ContainsKey("AutoLoginUsername")) { $iniContent.SystemConfig.AutoLoginUsername } else { "" }
 
     if ([string]::IsNullOrWhiteSpace($currentConfigUser)) {
         Write-StyledHost $lang.Install_AutoLoginUserEmpty "INFO"
+
+        # On utilise la fonction du module pour écrire proprement dans le INI
         Set-IniValue -FilePath $ConfigFile -Section "SystemConfig" -Key "AutoLoginUsername" -Value $env:USERNAME
+
         Write-StyledHost ($lang.Install_AutoLoginUserUpdated -f $env:USERNAME) "SUCCESS"
     }
-}
-catch {
-    Write-StyledHost ($lang.Install_AutoLoginUserUpdateFailed -f $_.Exception.Message) "WARNING"
-}
-# --- Fin de la consolidation ---
+    # --- Fin de la consolidation ---
 
-# --- Lecture de la configuration pour la gestion de session ---
-$config = Get-IniContent -FilePath (Join-Path $ProjectRootDir "config.ini")
-$sessionMode = if ($config.ContainsKey("SystemConfig")) { $config["SystemConfig"]["SessionStartupMode"] } else { "Standard" }
-$targetUsernameForConfig = if ($config.ContainsKey("SystemConfig")) { $config["SystemConfig"]["AutoLoginUsername"] } else { $env:USERNAME }
-if ([string]::IsNullOrWhiteSpace($targetUsernameForConfig)) { $targetUsernameForConfig = $env:USERNAME }
+    # --- Lecture de la configuration pour la gestion de session ---
+    $config = Get-IniContent -FilePath (Join-Path $ProjectRootDir "config.ini")
+    $sessionMode = if ($config.ContainsKey("SystemConfig")) { $config["SystemConfig"]["SessionStartupMode"] } else { "Standard" }
+    $targetUsernameForConfig = if ($config.ContainsKey("SystemConfig")) { $config["SystemConfig"]["AutoLoginUsername"] } else { $env:USERNAME }
+    if ([string]::IsNullOrWhiteSpace($targetUsernameForConfig)) { $targetUsernameForConfig = $env:USERNAME }
 
-# --- Assistant d'installation Autologon (Automatique) ---
-if (($config['SystemConfig']['SessionStartupMode'] -eq 'Autologon') -and ($config['Installation']['UseAutologonAssistant'] -eq 'true')) {
-    $winlogonPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
-    $autoLogonStatus = (Get-ItemProperty -Path $winlogonPath -Name 'AutoAdminLogon' -ErrorAction SilentlyContinue).AutoAdminLogon
+    # --- Assistant d'installation Autologon (Automatique) ---
+    if (($config['SystemConfig']['SessionStartupMode'] -eq 'Autologon') -and ($config['Installation']['UseAutologonAssistant'] -eq 'true')) {
+        $winlogonPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
+        $autoLogonStatus = (Get-ItemProperty -Path $winlogonPath -Name 'AutoAdminLogon' -ErrorAction SilentlyContinue).AutoAdminLogon
 
-    # Lire la configuration pour savoir si on doit sauter l'EULA
-    $skipEula = Get-ConfigValue -Section "Installation" -Key "SkipEulaPrompt" -DefaultValue "false"
-    $skipEula = [System.Convert]::ToBoolean($skipEula)
+        # Lire la configuration pour savoir si on doit sauter l'EULA
+        $skipEula = Get-ConfigValue -Section "Installation" -Key "SkipEulaPrompt" -DefaultValue "false"
+        $skipEula = [System.Convert]::ToBoolean($skipEula)
 
-    if ($autoLogonStatus -eq '1') {
-        Write-StyledHost $lang.Install_AutologonAlreadyActive "INFO"
-    } else {
-        # Lit l'URL depuis config.ini, avec une valeur par défaut robuste en cas de clé manquante
-        $autologonUrl = Get-ConfigValue -Section "Installation" -Key "AutologonDownloadUrl" -DefaultValue "https://live.sysinternals.com/files/AutoLogon.zip"
-        $toolsDir = Join-Path -Path $ScriptDir -ChildPath "tools"
-        $targetDir = Join-Path -Path $toolsDir -ChildPath "Autologon"
-        $zipPath = Join-Path -Path $toolsDir -ChildPath "Autologon.zip"
+        if ($autoLogonStatus -eq '1') {
+            Write-StyledHost $lang.Install_AutologonAlreadyActive "INFO"
+        } else {
+            # Lit l'URL depuis config.ini, avec une valeur par défaut robuste en cas de clé manquante
+            $autologonUrl = Get-ConfigValue -Section "Installation" -Key "AutologonDownloadUrl" -DefaultValue "https://live.sysinternals.com/files/AutoLogon.zip"
+            $toolsDir = Join-Path -Path $ScriptDir -ChildPath "tools"
+            $targetDir = Join-Path -Path $toolsDir -ChildPath "Autologon"
+            $zipPath = Join-Path -Path $toolsDir -ChildPath "Autologon.zip"
 
-        # Détection de l'architecture pour choisir le bon exécutable
-        $exeName = switch ($env:PROCESSOR_ARCHITECTURE) {
-            'x86'   { 'Autologon.exe' }
-            'AMD64' { 'Autologon64.exe' }
-            'ARM64' { 'Autologon64a.exe' }
-            default { throw ($lang.Install_UnsupportedArchitectureError -f $env:PROCESSOR_ARCHITECTURE) }
-        }
-        $exePath = Join-Path -Path $targetDir -ChildPath $exeName
+            # Détection de l'architecture pour choisir le bon exécutable
+            $exeName = switch ($env:PROCESSOR_ARCHITECTURE) {
+                'x86'   { 'Autologon.exe' }
+                'AMD64' { 'Autologon64.exe' }
+                'ARM64' { 'Autologon64a.exe' }
+                default { throw ($lang.Install_UnsupportedArchitectureError -f $env:PROCESSOR_ARCHITECTURE) }
+            }
+            $exePath = Join-Path -Path $targetDir -ChildPath $exeName
 
-        $eulaPath = Join-Path -Path $targetDir -ChildPath "Eula.txt"
+            $eulaPath = Join-Path -Path $targetDir -ChildPath "Eula.txt"
 
-        $cleanExit = {
-            param($errorMessage)
-            Write-StyledHost $errorMessage "WARNING"
-            if (Test-Path $targetDir) { Remove-Item -Path $targetDir -Recurse -Force -ErrorAction SilentlyContinue }
-            if (Test-Path $zipPath) { Remove-Item -Path $zipPath -Force -ErrorAction SilentlyContinue }
-        }
-
-        try {
-            # Ne télécharger que si l'exécutable cible est manquant
-            if (-not (Test-Path -Path $exePath)) {
-                Write-StyledHost $lang.Install_DownloadingAutologon "INFO"
-                if (-not (Test-Path -Path $toolsDir)) { New-Item -Path $toolsDir -ItemType Directory | Out-Null }
-                Invoke-WebRequest -Uri $autologonUrl -OutFile $zipPath -UseBasicParsing -ErrorAction Stop
-
-                Write-StyledHost $lang.Install_ExtractingArchive "INFO"
-                Expand-Archive -Path $zipPath -DestinationPath $targetDir -Force -ErrorAction Stop
-                Remove-Item -Path $zipPath -Force -ErrorAction SilentlyContinue
+            $cleanExit = {
+                param($errorMessage)
+                Write-StyledHost $errorMessage "WARNING"
+                if (Test-Path $targetDir) { Remove-Item -Path $targetDir -Recurse -Force -ErrorAction SilentlyContinue }
+                if (Test-Path $zipPath) { Remove-Item -Path $zipPath -Force -ErrorAction SilentlyContinue }
             }
 
-            if (-not (Test-Path $exePath) -or -not (Test-Path $eulaPath)) {
-                throw ($lang.Install_AutologonFilesMissing -f $exeName)
-            }
+            try {
+                # Ne télécharger que si l'exécutable cible est manquant
+                if (-not (Test-Path -Path $exePath)) {
+                    Write-StyledHost $lang.Install_DownloadingAutologon "INFO"
+                    if (-not (Test-Path -Path $toolsDir)) { New-Item -Path $toolsDir -ItemType Directory | Out-Null }
+                    Invoke-WebRequest -Uri $autologonUrl -OutFile $zipPath -UseBasicParsing -ErrorAction Stop
 
-            # --- CORRECTIF UI : On ferme le Splash Screen pour laisser la place aux fenêtres interactives ---
-            if ($silentMode) { Stop-WaitingUI }
-
-            if (-not $skipEula) {
-                Write-StyledHost $lang.Install_PromptReviewEula "INFO"
-                Start-Process notepad.exe -ArgumentList $eulaPath -Wait
-
-                $consentMessage = $lang.Install_EulaConsentMessage
-                $consentCaption = $lang.Install_EulaConsentCaption
-                $consentResult = [System.Windows.Forms.MessageBox]::Show($consentMessage, $consentCaption, 'YesNo', 'Question')
-
-                if ($consentResult -ne 'Yes') {
-                    # Si refus, on relance l'UI avant de lancer l'exception pour la cohérence visuelle
-                    if ($silentMode) { Start-WaitingUI -Message $lang.Install_SplashMessage }
-                    throw ($lang.Install_EulaConsentRefused)
+                    Write-StyledHost $lang.Install_ExtractingArchive "INFO"
+                    Expand-Archive -Path $zipPath -DestinationPath $targetDir -Force -ErrorAction Stop
+                    Remove-Item -Path $zipPath -Force -ErrorAction SilentlyContinue
                 }
-            }
 
-            Write-StyledHost $lang.Install_PromptUseAutologonTool "INFO"
-
-            # Lancement de l'outil (qui sera maintenant au premier plan car WaitingUI est stoppé)
-            Start-Process -FilePath $exePath -ArgumentList '-accepteula' -Wait
-
-            # --- CORRECTIF UI : On relance le Splash Screen pour la fin de l'installation ---
-            if ($silentMode) { Start-WaitingUI -Message $lang.Install_SplashMessage }
-
-        } catch {
-            # CAS 1: L'utilisateur a explicitement refusé la licence.
-            if ($_.Exception.Message -eq $lang.Install_EulaConsentRefused) {
-                Write-StyledHost $_.Exception.Message "WARNING"
-                # L'installation continue sans configurer Autologon
-                & $cleanExit -errorMessage "Installation continues without Autologon configuration."
-            }
-            # CAS 2: Une autre erreur technique est survenue (téléchargement, extraction...).
-            else {
-                Write-StyledHost ($lang.Install_AutologonDownloadFailed + " " + $_.Exception.Message) "ERROR"
-
-                $continueResult = [System.Windows.Forms.MessageBox]::Show($lang.Install_ConfirmContinueWithoutAutologon, $lang.Install_AutologonDownloadFailedCaption, 'YesNo', 'Warning')
-
-                if ($continueResult -eq 'No') {
-                    & $cleanExit -errorMessage "Installation aborted by user."
-                    exit 1
+                if (-not (Test-Path $exePath) -or -not (Test-Path $eulaPath)) {
+                    throw ($lang.Install_AutologonFilesMissing -f $exeName)
                 }
-                & $cleanExit -errorMessage "Installation continues without Autologon configuration."
+
+                # --- CORRECTIF UI : On ferme le Splash Screen pour laisser la place aux fenêtres interactives ---
+                if ($silentMode) { Stop-WaitingUI }
+
+                if (-not $skipEula) {
+                    Write-StyledHost $lang.Install_PromptReviewEula "INFO"
+                    Start-Process notepad.exe -ArgumentList $eulaPath -Wait
+
+                    $consentMessage = $lang.Install_EulaConsentMessage
+                    $consentCaption = $lang.Install_EulaConsentCaption
+                    $consentResult = [System.Windows.Forms.MessageBox]::Show($consentMessage, $consentCaption, 'YesNo', 'Question')
+
+                    if ($consentResult -ne 'Yes') {
+                        # Si refus, on relance l'UI avant de lancer l'exception pour la cohérence visuelle
+                        if ($silentMode) { Start-WaitingUI -Message $lang.Install_SplashMessage }
+                        throw ($lang.Install_EulaConsentRefused)
+                    }
+                }
+
+                Write-StyledHost $lang.Install_PromptUseAutologonTool "INFO"
+
+                # Lancement de l'outil (qui sera maintenant au premier plan car WaitingUI est stoppé)
+                Start-Process -FilePath $exePath -ArgumentList '-accepteula' -Wait
+
+                # --- CORRECTIF UI : On relance le Splash Screen pour la fin de l'installation ---
+                if ($silentMode) { Start-WaitingUI -Message $lang.Install_SplashMessage }
+
+            } catch {
+                # CAS 1: L'utilisateur a explicitement refusé la licence.
+                if ($_.Exception.Message -eq $lang.Install_EulaConsentRefused) {
+                    Write-StyledHost $_.Exception.Message "WARNING"
+                    # L'installation continue sans configurer Autologon
+                    & $cleanExit -errorMessage "Installation continues without Autologon configuration."
+                }
+                # CAS 2: Une autre erreur technique est survenue (téléchargement, extraction...).
+                else {
+                    Write-StyledHost ($lang.Install_AutologonDownloadFailed + " " + $_.Exception.Message) "ERROR"
+
+                    $continueResult = [System.Windows.Forms.MessageBox]::Show($lang.Install_ConfirmContinueWithoutAutologon, $lang.Install_AutologonDownloadFailedCaption, 'YesNo', 'Warning')
+
+                    if ($continueResult -eq 'No') {
+                        & $cleanExit -errorMessage "Installation aborted by user."
+                        exit 1
+                    }
+                    & $cleanExit -errorMessage "Installation continues without Autologon configuration."
+                }
             }
         }
     }
-}
 
-# --- Début de l'Installation ---
-Write-StyledHost $lang.Install_StartConfiguringTasks "INFO"
-try {
+    # --- 3. Assistant Autologon (Si requis) ---
 
-$finalArgumentSystem = "-NoProfile -ExecutionPolicy Bypass -File `"$SystemScriptPath`""
-$finalArgumentUser   = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$UserScriptPath`""
+    # Lecture sécurisée de la configuration
+    $sessionMode = Get-ConfigValue -Section "SystemConfig" -Key "SessionStartupMode" -DefaultValue "Standard"
+    $useAssistant = Get-ConfigValue -Section "Installation" -Key "UseAutologonAssistant" -Type ([bool]) -DefaultValue $true
 
-    # --- Tâche 1: Script Système (ne change pas et ne nécessite pas de mot de passe) ---
-    $ActionSystem = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $finalArgumentSystem -WorkingDirectory $ProjectRootDir
+    if (($sessionMode -eq 'Autologon') -and $useAssistant) {
+
+        $winlogonKey = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
+        $autoLogonStatus = (Get-ItemProperty -Path $winlogonKey -Name 'AutoAdminLogon' -ErrorAction SilentlyContinue).AutoAdminLogon
+
+        # A. Vérification si déjà actif
+        if ($autoLogonStatus -eq '1') {
+            Write-StyledHost $lang.Install_AutologonAlreadyActive "INFO"
+        } else {
+            # B. Préparation du téléchargement
+            $autologonUrl = Get-ConfigValue -Section "Installation" -Key "AutologonDownloadUrl" -DefaultValue "https://live.sysinternals.com/files/AutoLogon.zip"
+            $toolsDir = Join-Path $ScriptDir "tools"
+            $targetDir = Join-Path $toolsDir "Autologon"
+            $zipPath = Join-Path $toolsDir "Autologon.zip"
+
+            # C. Détection Architecture
+            $exeName = switch ($env:PROCESSOR_ARCHITECTURE) {
+                'x86'   { 'Autologon.exe' }
+                'AMD64' { 'Autologon64.exe' }
+                'ARM64' { 'Autologon64a.exe' }
+                default { throw ($lang.Install_UnsupportedArchitectureError -f $env:PROCESSOR_ARCHITECTURE) }
+            }
+            $exePath = Join-Path $targetDir $exeName
+            $eulaPath = Join-Path $targetDir "Eula.txt"
+
+            # Fonction de nettoyage en cas d'échec
+            $cleanExit = {
+                if (Test-Path $targetDir) { Remove-Item -Path $targetDir -Recurse -Force -ErrorAction SilentlyContinue }
+                if (Test-Path $zipPath) { Remove-Item -Path $zipPath -Force -ErrorAction SilentlyContinue }
+            }
+
+            try {
+                # D. Téléchargement (si absent)
+                if (-not (Test-Path $exePath)) {
+                    Write-StyledHost $lang.Install_DownloadingAutologon "INFO"
+                    if (-not (Test-Path $toolsDir)) { New-Item -Path $toolsDir -ItemType Directory | Out-Null }
+
+                    # Téléchargement
+                    Invoke-WebRequest -Uri $autologonUrl -OutFile $zipPath -UseBasicParsing -ErrorAction Stop
+
+                    # Extraction
+                    Write-StyledHost $lang.Install_ExtractingArchive "INFO"
+                    Expand-Archive -Path $zipPath -DestinationPath $targetDir -Force -ErrorAction Stop
+                    Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
+                }
+
+                if (-not (Test-Path $exePath)) { throw ($lang.Install_AutologonFilesMissing -f $exeName) }
+
+                # E. Interactions Utilisateur (Gestion du Splash Screen)
+                $skipEula = Get-ConfigValue -Section "Installation" -Key "SkipEulaPrompt" -Type ([bool]) -DefaultValue $false
+
+                # --- PAUSE UI : On doit montrer des fenêtres ---
+                if ($silentMode) { Stop-WaitingUI }
+
+                # 1. EULA (Licence)
+                if (-not $skipEula) {
+                    Write-StyledHost $lang.Install_PromptReviewEula "INFO"
+                    Start-Process notepad.exe -ArgumentList $eulaPath -Wait
+
+                    $consent = [System.Windows.Forms.MessageBox]::Show($lang.Install_EulaConsentMessage, $lang.Install_EulaConsentCaption, 'YesNo', 'Question')
+
+                    if ($consent -ne 'Yes') {
+                        # Si refus, on relance l'UI pour quitter proprement
+                        if ($silentMode) { Start-WaitingUI -Message $lang.Install_SplashMessage }
+                        throw $lang.Install_EulaConsentRefused
+                    }
+                }
+
+                # 2. Lancement de l'outil
+                Write-StyledHost $lang.Install_PromptUseAutologonTool "INFO"
+
+                # On lance l'outil et ON ATTEND qu'il soit fermé
+                Start-Process -FilePath $exePath -ArgumentList '-accepteula' -Wait
+
+                # --- REPRISE UI : Fin des interactions ---
+                if ($silentMode) { Start-WaitingUI -Message $lang.Install_SplashMessage }
+
+                Write-StyledHost $lang.Install_AutologonSuccess "SUCCESS"
+
+            } catch {
+                # Gestion des erreurs Autologon
+                # Si c'est un refus de licence, on log en Warning. Sinon en Error.
+                if ($_.Exception.Message -eq $lang.Install_EulaConsentRefused) {
+                    Write-StyledHost $_.Exception.Message "WARNING"
+                } else {
+                    Write-StyledHost ($lang.Install_AutologonDownloadFailed + " " + $_.Exception.Message) "ERROR"
+
+                    # Proposition de secours manuelle
+                    $resp = [System.Windows.Forms.MessageBox]::Show($lang.Install_ConfirmContinueWithoutAutologon, "Autologon Error", 'YesNo', 'Warning')
+                    if ($resp -eq 'No') {
+                        & $cleanExit
+                        exit 1 # Arrêt complet demandé par l'utilisateur
+                    }
+                }
+                & $cleanExit # Nettoyage des fichiers temporaires
+                # On continue l'installation sans Autologon
+            }
+        }
+    }
+
+
+    # --- 4. Installation des Tâches Planifiées ---
+    Write-StyledHost $lang.Install_StartConfiguringTasks "INFO"
+
+    # Préparation des arguments pour PowerShell
+    # Note : On utilise les chemins absolus calculés au Bloc 1 pour éviter toute ambiguïté
+    $finalArgumentSystem = "-NoProfile -ExecutionPolicy Bypass -File `"$SystemScriptPath`""
+    $finalArgumentUser   = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$UserScriptPath`""
+
+    # A. Tâche Système (Au démarrage de l'ordi)
+    $ActionSystem = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $finalArgumentSystem -WorkingDirectory $ScriptDir
     $TriggerSystem = New-ScheduledTaskTrigger -AtStartup
     $PrincipalSystem = New-ScheduledTaskPrincipal -UserId "NT AUTHORITY\SYSTEM" -RunLevel Highest
     $SettingsSystem = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 2)
+
     Register-ScheduledTask -TaskName $TaskNameSystem -Action $ActionSystem -Trigger $TriggerSystem -Principal $PrincipalSystem -Settings $SettingsSystem -Description $lang.Install_SystemTaskDescription -Force -ErrorAction Stop
     Write-StyledHost ($lang.Install_SystemTaskConfiguredSuccess -f $TaskNameSystem) "SUCCESS"
 
-    # --- Tâche 2: Script Utilisateur (la logique dépend maintenant du mode de session) ---
-    $ActionUser = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $finalArgumentUser -WorkingDirectory $ProjectRootDir
+
+    $ActionUser = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $finalArgumentUser -WorkingDirectory $ScriptDir
     $TriggerUser = New-ScheduledTaskTrigger -AtLogOn -User $TargetUserForUserTask
     $SettingsUser = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 1)
 
-    # CAS A : Le mode de session standard est utilisé (PAS de mot de passe requis)
-    if ($sessionMode -eq "Standard") {
+    # Création de la tâche utilisateur (Toujours en interactif pour l'UI)
+    try {
         $PrincipalUser = New-ScheduledTaskPrincipal -UserId $TargetUserForUserTask -LogonType Interactive
         Register-ScheduledTask -TaskName $TaskNameUser -Action $ActionUser -Trigger $TriggerUser -Principal $PrincipalUser -Settings $SettingsUser -Description $lang.Install_UserTaskDescription -Force -ErrorAction Stop
+        Write-StyledHost ($lang.Install_SystemTaskConfiguredSuccess -f $TaskNameUser) "SUCCESS"
+    } catch {
+        throw ($lang.Install_CriticalErrorDuringInstallation -f $_.Exception.Message)
     }
-    # CAS B : Un mode de session automatique est utilisé (lancement au logon, PAS de mot de passe requis)
-    else {
-        try {
-            # Pour une tâche qui se lance "-AtLogOn", le LogonType "Interactive" est la méthode correcte.
-            # Elle utilise la session interactive déjà existante de l'utilisateur.
-            # Cela ne requiert pas de mot de passe et ne déclenche pas la validation du privilège "SeBatchLogonRight".
-            $PrincipalUser = New-ScheduledTaskPrincipal -UserId $TargetUserForUserTask -LogonType Interactive
-            Register-ScheduledTask -TaskName $TaskNameUser -Action $ActionUser -Trigger $TriggerUser -Principal $PrincipalUser -Settings $SettingsUser -Description $lang.Install_UserTaskDescription -Force -ErrorAction Stop
-        }
-        catch {
-            # Gère toute erreur potentielle lors de la création de la tâche
-            throw ($lang.Install_CriticalErrorDuringInstallation -f $_.Exception.Message)
-        }
-    }
-
-    Write-StyledHost ($lang.Install_SystemTaskConfiguredSuccess -f $TaskNameUser) "SUCCESS"
 
     Write-Host "`n"
     Write-StyledHost $lang.Install_MainTasksConfigured "INFO"
-    Write-StyledHost ($lang.Install_DailyRebootTasksNote -f 'config_systeme.ps1') "INFO"
 
-    # --- Lancement initial des scripts de configuration ---
-    Write-Host "`n"
+    # --- 5. Exécution Initiale et Lancement ---
     Write-StyledHost $lang.Install_AttemptingInitialLaunch "INFO"
 
-    # --- Préparation de l'environnement de journalisation ---
-    try {
-        $logDirectory = Join-Path $ProjectRootDir "Logs"
-        if (-not (Test-Path $logDirectory)) {
-            New-Item -Path $logDirectory -ItemType Directory -Force | Out-Null
-        }
+    # Création du dossier de logs s'il n'existe pas
+    $logDirectory = Join-Path $ProjectRootDir "Logs"
+    if (-not (Test-Path $logDirectory)) { New-Item -Path $logDirectory -ItemType Directory -Force | Out-Null }
 
-        # Applique des permissions permissives pour éviter les conflits entre les contextes Admin et Utilisateur
-        $acl = Get-Acl $logDirectory
-        $sid = New-Object System.Security.Principal.SecurityIdentifier([System.Security.Principal.WellKnownSidType]::AuthenticatedUserSid, $null)
-        $accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($sid, "Modify", "ContainerInherit, ObjectInherit", "None", "Allow")
-        $acl.SetAccessRule($accessRule)
-        Set-Acl -Path $logDirectory -AclObject $acl
-    } catch {
-        Write-StyledHost ($lang.Install_LogPermissionsWarning -f $_.Exception.Message) "WARNING"
-    }
+    # A. Lancement du Script Système (Bloquant)
+    if (-not $errorOccurredInScript) {
+        Write-StyledHost $lang.Install_ExecutingSystemScript "INFO"
 
-    Write-Host "`n"
-}
-catch {
-    Write-StyledHost ($lang.Install_CriticalErrorDuringInstallation -f $_.Exception.Message) "ERROR"
-    Write-StyledHost ($lang.Install_Trace -f $_.ScriptStackTrace) "ERROR"
-    $errorOccurredInScript = $true
-}
-finally {
-    $ErrorActionPreference = $OriginalErrorActionPreference
-    Write-Host "`n"
+        # On lance le script système et on attend qu'il finisse
+        $proc = Start-Process -FilePath "powershell.exe" -ArgumentList $finalArgumentSystem -WorkingDirectory $ScriptDir -Wait -PassThru -ErrorAction Stop
 
-    # --- Logique de sortie conditionnelle ---
-    $config = Get-IniContent -FilePath (Join-Path $ProjectRootDir "config.ini")
-    $rebootOnCompletion = $false
-    if ($config -and $config.ContainsKey('Installation') -and $config['Installation']['RebootOnCompletion'] -eq 'true') {
-        $rebootOnCompletion = $true
-    }
-
-    # --- Lancement initial des scripts (uniquement si aucun redémarrage n'est prévu) ---
-    if (-not $rebootOnCompletion) {
-        if (-not $errorOccurredInScript) {
-            # Lancer config_systeme.ps1
-            try {
-                Write-StyledHost $lang.Install_ExecutingSystemScript "INFO"
-                $startProcessParams = @{
-                    FilePath = "powershell.exe"
-                    ArgumentList = "-NoProfile -ExecutionPolicy Bypass -File `"$SystemScriptPath`""
-                    WorkingDirectory = $ProjectRootDir
-                    Wait = $true
-                    PassThru = $true
-                    ErrorAction = "Stop"
-                }
-                $silentMode = Get-ConfigValue -Section "Installation" -Key "SilentMode" -Type ([bool]) -DefaultValue $false
-                if ($silentMode) {
-                    $startProcessParams.WindowStyle = "Hidden"
-                }
-                $processSystem = Start-Process @startProcessParams
-                if ($processSystem.ExitCode -eq 0) {
-                    Write-StyledHost $lang.Install_SystemScriptSuccess "SUCCESS"
-                } else {
-                    Write-StyledHost ($lang.Install_SystemScriptWarning -f $processSystem.ExitCode, $ProjectRootDir) "WARNING"
-                    $errorOccurredInScript = $true
-                }
-            } catch {
-                Write-StyledHost ($lang.Install_SystemScriptError -f $_.Exception.Message) "ERROR"
-                Write-StyledHost ($lang.Install_Trace -f $_.ScriptStackTrace) "ERROR"
-                $errorOccurredInScript = $true
-            }
+        if ($proc.ExitCode -eq 0) {
+            Write-StyledHost $lang.Install_SystemScriptSuccess "SUCCESS"
+        } else {
+            Write-StyledHost ($lang.Install_SystemScriptWarning -f $proc.ExitCode, $ProjectRootDir) "WARNING"
+            $errorOccurredInScript = $true
         }
     }
 
-    # --- Affichage du statut final ---
+    # =========================================================================
+    # CORRECTIF V1.73 : LANCEMENT DE LA SÉQUENCE UTILISATEUR (Retour Logique v1.72)
+    # =========================================================================
+    # Si on ne redémarre pas, on déclenche la tâche utilisateur pour lancer l'appli maintenant.
+    $rebootConfig = Get-ConfigValue -Section "Installation" -Key "RebootOnCompletion" -Type ([bool]) -DefaultValue $false
+
+    if ((-not $rebootConfig) -and (-not $errorOccurredInScript)) {
+        Write-StyledHost "Déclenchement immédiat de la configuration utilisateur..." "INFO"
+        try {
+            # C'est ici la magie : on dit à Windows "Fais comme si l'utilisateur venait de se connecter"
+            Start-ScheduledTask -TaskName $TaskNameUser -ErrorAction Stop
+            Write-StyledHost $lang.Install_UserConfigLaunched "SUCCESS"
+        } catch {
+            Write-StyledHost "Attention : Impossible de lancer la tâche utilisateur automatiquement ($($_.Exception.Message))" "WARNING"
+        }
+    }
+
     if (-not $errorOccurredInScript) {
         Write-StyledHost $lang.Install_InstallationCompleteSuccess "SUCCESS"
-    } else {
-        Write-StyledHost $lang.Install_InstallationCompleteWithErrors "WARNING"
     }
 
-    # --- Arrêt de l'UI d'attente ---
+} catch {
+    # --- GESTION D'ERREUR GLOBALE (Anti-Flash) ---
+    $errorOccurredInScript = $true
+    Write-Host "`n===================================================" -ForegroundColor Red
+    Write-Host " UNE ERREUR CRITIQUE EST SURVENUE" -ForegroundColor Red
+    Write-Host "===================================================" -ForegroundColor Red
+    Write-StyledHost ($lang.Install_CriticalErrorDuringInstallation -f $_.Exception.Message) "ERROR"
+    Write-Host "Trace : $($_.ScriptStackTrace)" -ForegroundColor DarkGray
+
+    # PAUSE OBLIGATOIRE si on n'est pas en mode silencieux
+    if (-not $silentMode) {
+        Write-Host "`n"
+        Read-Host "Appuyez sur ENTRÉE pour fermer la fenêtre..."
+    }
+
+} finally {
+    # Nettoyage de l'interface d'attente
     Stop-WaitingUI
 
-    # --- P-Invoke pour forcer le MessageBox au premier plan ---
-    # Ce correctif s'applique uniquement à l'affichage du MessageBox final et non au Splash Screen.
-    Add-Type @"
-        using System; 
-        using System.Runtime.InteropServices; 
-        public class MessageBoxFixer { 
-            [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd); 
-            [DllImport("user32.dll")] public static extern IntPtr GetLastActivePopup(IntPtr hWnd); 
-            [DllImport("user32.dll", SetLastError = true)] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId); 
-            [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow); 
-            [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow(); 
-            [DllImport("user32.dll")] public static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach); 
-            [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId(); 
-            public const int SW_RESTORE = 9; 
-            public const int SW_SHOW = 5;
-
-            public static void ForceForeground() { 
-                uint currentThread = GetCurrentThreadId(); 
-                uint lpdwProcessId = 0; // Nouvelle variable pour la compatibilité
-                uint foregroundThread = GetWindowThreadProcessId(GetForegroundWindow(), out lpdwProcessId); // Appel corrigé
-                IntPtr targetHwnd = GetForegroundWindow(); 
-
-                if (targetHwnd != IntPtr.Zero && currentThread != foregroundThread) { 
-                    AttachThreadInput(currentThread, foregroundThread, true); 
-                    ShowWindow(targetHwnd, SW_RESTORE); 
-                    SetForegroundWindow(targetHwnd); 
-                    AttachThreadInput(currentThread, foregroundThread, false); 
-                } else if (targetHwnd == IntPtr.Zero) { 
-                    // Dans le contexte Admin/SYSTEM, la fenêtre peut ne pas être active 
-                } 
-            } 
-        } 
-"@
-
-    # Appel au correctif juste avant le MessageBox (n'a un effet que sur la prochaine fenêtre)
-    [MessageBoxFixer]::ForceForeground()
-
-    # --- Notification Mode Silencieux ---
-    $silentMode = Get-ConfigValue -Section "Installation" -Key "SilentMode" -Type ([bool]) -DefaultValue $false
-
-    # =========================================================================
-    # NOTIFICATION FINALE EN MODE SILENCIEUX (Correction Freeze)
-    # =========================================================================
+    # Notification finale en Mode Silencieux (MessageBox)
     if ($silentMode) {
         Add-Type -AssemblyName System.Windows.Forms
-        Add-Type -AssemblyName System.Drawing
 
-        # Technique du Parent Fantôme :
-        # On crée une fenêtre invisible qui force le focus et le TopMost
-        $ghostParent = New-Object System.Windows.Forms.Form
-        $ghostParent.TopMost = $true
-        $ghostParent.TopLevel = $true
-        $ghostParent.ShowInTaskbar = $false
-        $ghostParent.Opacity = 0 # Totalement transparent
-        $ghostParent.StartPosition = "CenterScreen"
-        $ghostParent.Size = New-Object System.Drawing.Size(1, 1)
-        
-        # On affiche le parent pour qu'il prenne le focus Windows
-        $ghostParent.Show()
-        $ghostParent.Activate()
-
-        $btn = [System.Windows.Forms.MessageBoxButtons]::OK
-        
         if ($errorOccurredInScript) {
-            $icon = [System.Windows.Forms.MessageBoxIcon]::Warning
-            $msg = ($lang.Install_SilentMode_CompletedWithErrors).Replace('\n', "`n")
-            # La MessageBox est "enfant" du ghostParent
-            [System.Windows.Forms.MessageBox]::Show($ghostParent, $msg, "WindowsOrchestrator - Installation", $btn, $icon) | Out-Null
+            [System.Windows.Forms.MessageBox]::Show($lang.Install_SilentMode_CompletedWithErrors, "Installation", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning) | Out-Null
         } else {
-            $icon = [System.Windows.Forms.MessageBoxIcon]::Information
-            $msg = ($lang.Install_SilentMode_CompletedSuccessfully).Replace('\n', "`n")
-            # La MessageBox est "enfant" du ghostParent
-            [System.Windows.Forms.MessageBox]::Show($ghostParent, $msg, "WindowsOrchestrator - Installation", $btn, $icon) | Out-Null
+            [System.Windows.Forms.MessageBox]::Show($lang.Install_SilentMode_CompletedSuccessfully, "Installation", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information) | Out-Null
         }
-
-        $ghostParent.Close()
-        $ghostParent.Dispose()
     }
 
-    # --- Logique de Sortie Unifiée ---
+    # Gestion de la sortie (Redémarrage ou Fermeture)
     Invoke-ExitLogic -Config $config -Lang $lang
 }

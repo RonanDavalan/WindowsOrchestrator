@@ -233,10 +233,10 @@ $defaultValues = @{
     DisableScreenSleep = $false; DisableWindowsUpdate = $true
     DisableAutoReboot = $true; ScheduledCloseTime = "02:55"; ScheduledCloseCommand = ""
     ScheduledCloseArguments = ""
-    ScheduledRebootTime = "03:00"; EnableScheduledClose = $true; EnableScheduledReboot = $true; OneDriveManagementMode = "Block";     ProcessToLaunch = "LaunchApp.bat"
+    ScheduledRebootTime = ""; EnableScheduledClose = $true; EnableScheduledReboot = $true; OneDriveManagementMode = "Block";     ProcessToLaunch = "management\LaunchApp.bat"
     ProcessArguments = ""
     ProcessToMonitor = ""; StartProcessMinimized = $false; SessionStartupMode = "Standard"
-    EnableBackup = $false; DatabaseSourcePath = "..\..\AllUser"; DatabaseDestinationPath = "C:\Backup\AllSys"; DatabaseKeepDays = 30; ScheduledBackupTime = "02:59"
+    EnableBackup = $true; DatabaseSourcePath = "..\..\AllUser"; DatabaseDestinationPath = "C:\Backup\AllSys"; DatabaseKeepDays = 30; ScheduledBackupTime = ""
     UseAutologonAssistant = $true; SilentMode = $false; ShowContextMessages = $true
 }
 $currentValues = @{}

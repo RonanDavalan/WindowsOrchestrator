@@ -135,7 +135,7 @@ if ($sessionMode -in ("Standard", "Autologon")) {
             Start-OrchestratorProcess -ProcessToLaunch $processToLaunch `
                                       -ProcessArguments $processArguments `
                                       -ProcessToMonitor $processToMonitor `
-                                      -ScriptDir $ScriptDir `
+                                      -ScriptDir $ProjectRootDir `
                                       -Context "User"
         }
     }
