@@ -15,6 +15,8 @@
 
 **WindowsOrchestrator** is a PowerShell automation solution designed to transform a standard Windows workstation into an autonomous system ("Kiosk" or "Appliance").
 
+🌐 **Official Website**: [wo.davalan.fr](https://wo.davalan.fr)
+
 It allows configuring, securing, and orchestrating the operating system's lifecycle. Once configured, it ensures the workstation starts up, opens a session, and launches a business application without any human intervention, while managing daily maintenance (backup, reboot).
 
 ## Use Cases and Target Audience
