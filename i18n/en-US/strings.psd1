@@ -194,7 +194,7 @@
 
     # --- v1.73 New Messages (Inference) ---
     Log_System_BackupSynced = "- Backup time synced with closure time ({0}). Watchdog mode activated."
-    Log_System_RebootTaskSkipped = "- Reboot enabled without fixed time. Scheduled task removed (will be handled by chaining)."
+    Log_System_RebootTaskSkipped = "- Chained Mode active: Reboot will be triggered automatically after backup."
     Error_System_BackupNoTime = "Backup enabled but no time defined nor reference closure time. Task skipped."
 
     # System Process Management (Background Task)

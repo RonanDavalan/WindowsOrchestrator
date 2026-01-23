@@ -193,7 +193,7 @@
 
     # --- v1.73 Neue Systemnachrichten (Inferenz) ---
     Log_System_BackupSynced = "- Sicherungszeit mit Beendigungszeit synchronisiert ({0}). Watchdog-Modus aktiviert."
-    Log_System_RebootTaskSkipped = "- Neustart ohne feste Zeit aktiviert. Geplante Aufgabe entfernt (wird durch Verkettung gesteuert)."
+    Log_System_RebootTaskSkipped = "- Kettenmodus aktiv : Der Neustart wird nach der Sicherung automatisch ausgelöst."
     Error_System_BackupNoTime = "Sicherung aktiviert, aber keine Zeit oder Referenz-Beendigungszeit definiert. Aufgabe übersprungen."
 
     # Systemprozess-Verwaltung (Hintergrundaufgabe)

@@ -195,7 +195,7 @@
 
     # --- NOUVEAUX MESSAGES SYSTÈME V1.73 (Inférence) ---
     Log_System_BackupSynced = "- Heure de sauvegarde synchronisée avec la fermeture ({0}). Mode Watchdog activé."
-    Log_System_RebootTaskSkipped = "- Redémarrage activé sans heure fixe. Tâche planifiée supprimée (sera géré par l'enchaînement)."
+    Log_System_RebootTaskSkipped = "- Mode enchaînement actif : le redémarrage sera déclenché automatiquement après la sauvegarde."
     Error_System_BackupNoTime = "Sauvegarde activée mais aucune heure définie ni heure de fermeture de référence. Tâche ignorée."
 
     # Gestion Processus Système (Tâche de fond)

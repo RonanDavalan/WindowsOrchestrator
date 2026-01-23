@@ -193,7 +193,7 @@
 
     # --- Mensajes de sistema v1.73 (Inferencia) ---
     Log_System_BackupSynced = "- Hora de copia de seguridad sincronizada con el cierre ({0}). Modo Watchdog activado."
-    Log_System_RebootTaskSkipped = "- Reinicio activado sin hora fija. Tarea programada eliminada (se gestionará por encadenamiento)."
+    Log_System_RebootTaskSkipped = "- Modo Cadena activo : El reinicio se activará automáticamente después de la copia de seguridad."
     Error_System_BackupNoTime = "Copia de seguridad activada pero no hay hora definida ni hora de cierre de referencia. Tarea omitida."
 
     # Gestión de procesos de sistema (Tarea en segundo plano)
