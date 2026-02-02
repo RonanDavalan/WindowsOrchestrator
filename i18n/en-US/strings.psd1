@@ -65,6 +65,13 @@
     ConfigForm_BackupTimeLabel = "Backup time (HH:MM):"
     ConfigForm_BackupKeepDaysLabel = "Backup retention period (in days):"
 
+    # Log Maintenance (v1.74)
+    ConfigForm_LogMaintenanceGroup = "Log Maintenance"
+    ConfigForm_EnableLogReduct = "Enable log reduction script (reducelog.ps1)"
+    ConfigForm_LogBaseDir = "Log folder (BaseDir):"
+    ConfigForm_LogFiles = "Files to process:"
+    ConfigForm_LogLines = "Lines to retain:"
+
     # Installation Options & Target Account Group
     ConfigForm_InstallOptionsGroup = "Installation Options"
     ConfigForm_SilentModeCheckbox = "Hide console windows during installation/uninstallation"
@@ -85,7 +92,7 @@
     ConfigForm_ModelFileNotFoundCaption = "Missing Model File"
     ConfigForm_CopyError = "Unable to create 'config.ini' file from model. Error: '{0}'."
     ConfigForm_CopyErrorCaption = "Copy Error"
-    ConfigForm_OverwritePrompt = "A 'config.ini' configuration file already exists.\n\nDo you want to replace it with the default model?\n\nWARNING: Your current settings will be lost."
+    ConfigForm_OverwritePrompt = "A 'config.ini' configuration file already exists.`n`nDo you want to replace it with the default model?`n`nWARNING: Your current settings will be lost."
     ConfigForm_OverwriteCaption = "Replace existing configuration?"
     ConfigForm_ResetSuccess = "The 'config.ini' file has been reset to default values."
     ConfigForm_ResetSuccessCaption = "Reset Performed"
@@ -111,7 +118,7 @@
     Log_ScriptFinished = "'{0}' ('{1}') finished."
     Log_ErrorsOccurred = "Errors occurred during execution."
     Log_CapturedError = "CAPTURED ERROR: '{0}'"
-    Error_FatalScriptError = "SCRIPT FATAL ERROR (main block): '{0}' \n'{1}'"
+    Error_FatalScriptError = "SCRIPT FATAL ERROR (main block): '{0}' `n'{1}'"
     System_ConfigCriticalError = "Critical failure: config.ini."
 
     # Target User Management
@@ -241,7 +248,7 @@
     Error_User_InterpreterNotFound = "Interpreter '{0}' not found for method '{1}'."
     Error_User_ProcessManagementFailed = "Failed to manage process '{0}' (Method: '{1}', Path: '{2}', Args: '{3}'): '{4}'. StackTrace: '{5}'"
     Error_User_ExeNotFound = "Executable file for process '{0}' (direct mode) NOT FOUND."
-    Error_User_FatalScriptError = "USER SCRIPT FATAL ERROR '{0}': '{1}' \n'{2}'"
+    Error_User_FatalScriptError = "USER SCRIPT FATAL ERROR '{0}': '{1}' `n'{2}'"
     Error_User_VarExpansionFailed = "Error during variable expansion for process '{0}': '{1}'"
 
     Action_User_CloseTaskConfigured = "- Application closure scheduled at {1}."
@@ -321,7 +328,7 @@
     Install_ExtractingArchive = "Extracting archive..."
     Install_AutologonFilesMissing = "Required files ('{0}', Eula.txt) not found after extraction."
     Install_AutologonExtractionFailed = "WARNING: Failed to prepare Autologon tool. Downloaded archive might be corrupted."
-    Install_AutologonDownloadFailedPrompt = "Download failed. Do you want to locate Autologon.zip manually?\n\nOfficial page: https://learn.microsoft.com/sysinternals/downloads/autologon"
+    Install_AutologonDownloadFailedPrompt = "Download failed. Do you want to locate Autologon.zip manually?`n`nOfficial page: https://learn.microsoft.com/sysinternals/downloads/autologon"
     Install_AutologonUnsupportedArchitecture = "ERROR: Unsupported processor architecture ('{0}'). Unable to configure Autologon."
     Install_EulaConsentMessage = "Do you accept the license terms of the Sysinternals Autologon tool?"
     Install_EulaConsentCaption = "EULA Consent Required"
@@ -383,8 +390,8 @@ Do you want to continue the installation now without configuring Autologon?
     Install_InstallationCompleteSuccess = "Installation and initial launch completed!"
     Install_InstallationCompleteWithErrors = "Installation completed with errors during initial script launch. Check messages above."
     Install_CriticalErrorDuringInstallation = "A critical error occurred during installation: '{0}'"
-    Install_SilentMode_CompletedSuccessfully = "WindowsOrchestrator installation completed successfully!\n\nAll logs have been saved in the Logs folder."
-    Install_SilentMode_CompletedWithErrors = "WindowsOrchestrator installation completed with errors.\n\nPlease check the log files in the Logs folder for more details."
+    Install_SilentMode_CompletedSuccessfully = "WindowsOrchestrator installation completed successfully!`n`nAll logs have been saved in the Logs folder."
+    Install_SilentMode_CompletedWithErrors = "WindowsOrchestrator installation completed with errors.`n`nPlease check the log files in the Logs folder for more details."
 
     # Uninstall
     Uninstall_StartMessage = "Starting complete uninstallation of WindowsOrchestrator..."
@@ -415,8 +422,8 @@ Do you want to continue the installation now without configuring Autologon?
     Uninstall_AutologonToolNotFound_Interactive = "[WARNING] Autologon.exe tool not found. Automatic disabling cannot be performed. If you want to disable automatic session opening, please do it manually."
     Uninstall_AutologonDisablePrompt = "Please click 'Disable' in the Autologon tool window that will open to finalize the cleanup."
     Uninstall_AutologonNotActive = "INFO: Automatic session opening is not active. No cleanup necessary."
-    Uninstall_SilentMode_CompletedSuccessfully = "WindowsOrchestrator uninstallation completed successfully!\n\nAll logs have been saved in the Logs folder."
-    Uninstall_SilentMode_CompletedWithErrors = "WindowsOrchestrator uninstallation completed with errors.\n\nPlease check the log files in the Logs folder for more details."
+    Uninstall_SilentMode_CompletedSuccessfully = "WindowsOrchestrator uninstallation completed successfully!`n`nAll logs have been saved in the Logs folder."
+    Uninstall_SilentMode_CompletedWithErrors = "WindowsOrchestrator uninstallation completed with errors.`n`nPlease check the log files in the Logs folder for more details."
 
     # ------------------------------------------------------------------------------
     # 6. NOTIFICATIONS (Gotify) & COMMONS

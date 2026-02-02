@@ -1,4 +1,4 @@
-# DEVELOPER GUIDE - WindowsOrchestrator 1.73
+# DEVELOPER GUIDE - WindowsOrchestrator 1.74
 
 ---
 
@@ -43,6 +43,7 @@ Contains step-by-step procedures, wizard screenshots, and troubleshooting guides
         3.3.1. [EnableBackup: The Kill Switch](#331-enablebackup-the-kill-switch)
         3.3.2. [DatabaseKeepDays: Date-Based Purge Algorithm](#332-databasekeepdays-date-based-purge-algorithm)
         3.3.3. [Temporal Differential Logic](#333-temporal-differential-logic)
+        3.3.4. [Log maintenance logic (Log Trimming)](#334-log-maintenance-logic-log-trimming)
     3.4. [Section [Installation]: Deployment and Resilience](#34-section-installation-deployment-and-resilience)
         3.4.1. [SilentMode: Impact Chain](#341-silentmode-impact-chain)
         3.4.2. [AutologonDownloadUrl: Link Rot Resilience](#342-autologondownloadurl-link-rot-resilience)
@@ -86,6 +87,7 @@ Contains step-by-step procedures, wizard screenshots, and troubleshooting guides
         4.6.2. [Close-AppByTitle.ps1: Clean Closure via API](#462-close-appbytitleps1-clean-closure-via-api)
             [C# P/Invoke Injection: Complete Code](#c-pinvoke-injection-complete-code)
             [Retry Logic with Timeout](#retry-logic-with-timeout)
+        4.6.3. [reducelog.ps1: Log reduction module](#463-reducelogps1--log-reduction-module)
 5. [External Dependencies Management and Security](#5-external-dependencies-management-and-security)
     5.1. [Microsoft Sysinternals Autologon Tool](#51-microsoft-sysinternals-autologon-tool)
         5.1.1. [Download and Architecture Selection Mechanism](#511-download-and-architecture-selection-mechanism)
@@ -557,6 +559,14 @@ To avoid saturating the disk and network with unnecessary copies (especially for
     *   **Consequence**: The orchestrator performs a **daily differential backup** based on time. It does not compare hashes (MD5/SHA) for performance reasons.
 *   **SQLite Pairs Integrity**: An exception to this rule exists for `.db` files. If a `.db` file is qualified for backup, the script forces the inclusion of its companion `.db-wal` and `.db-shm` files (even if older), guaranteeing transactional copy integrity.
 
+#### 3.3.4. Log maintenance logic (Log Trimming)
+
+Although located in the `[DatabaseBackup]` section, this feature is technically distinct from file copying.
+*   **`EnableLogReduction`**: Enables the maintenance subprocess.
+*   **`LogReductionBaseDir`**: Defines the relative root directory. The orchestrator resolves this path (`Join-Path`) relative to its own root to ensure portability.
+*   **`LogReductionFiles`**: CSV list (comma-separated). Supports PowerShell wildcards (e.g. `Error_*.log`), allowing you to target files with names that change (native rotation) for trimming.
+*   **`LogReductionLines`**: Integer passed to the `-Tail` parameter of `Get-Content`.
+
 ### 3.4. Section `[Installation]`: Deployment and Resilience
 
 These parameters exclusively influence the behavior of the scripts `install.ps1`, `uninstall.ps1` and their launchers.
@@ -599,6 +609,7 @@ The folder structure has been thought to clearly separate responsibilities: what
 ├── config.ini                     # [GENERATED] Master configuration file (created post-install).
 ├── Install.bat                    # [USER] Installation entry point (Launcher).
 ├── Uninstall.bat                  # [USER] Uninstallation entry point (Launcher).
+├── reducelog.ps1                  # [MODULE] Log maintenance script (v1.74).
 │
 ├── management/                    # [CORE] Technical core (Business Logic). Do not modify.
 │   ├── modules/
@@ -1010,7 +1021,7 @@ These scripts execute specific and critical tasks: data backup and clean applica
 
 #### 4.6.1. `Invoke-DatabaseBackup.ps1`: Autonomous Backup
 
-This script is designed to be robust against crashes and efficient on large data volumes.
+**Maintenance cycle (v1.74)**: The script now executes a **Log Maintenance** phase after the application closes (Watchdog) and before the backup copy. It calls the external script `reducelog.ps1` if `EnableLogReduction=true`.
 
 ##### A. Lock Mechanism (Lock File)
 To avoid two backups launching simultaneously (e.g.: if the previous one is very slow or stuck), the script implements a file semaphore mechanism.
@@ -1135,6 +1146,17 @@ if ($script:foundWindowHandle -ne [System.IntPtr]::Zero) {
     [System.Windows.Forms.SendKeys]::SendWait("x{ENTER}")
 }
 ```
+
+#### 4.6.3. `reducelog.ps1`: Log reduction module
+
+This script is a "silent" utility designed to be called by the backup engine, but can also be used standalone.
+
+*   **Single Responsibility**: Truncate overly large text files to avoid disk saturation (`Get-Content -Tail N | Set-Content`).
+*   **Robustness**:
+    *   Uses `-LiteralPath` to handle filenames with special characters (brackets).
+    *   Handles wildcards (`*`) to process groups of files.
+    *   Captures file access errors (locking) without blocking the overall process.
+*   **Encoding**: Forces rewriting in **UTF-8** to standardize heterogeneous logs.
 
 ---
 
@@ -1481,13 +1503,13 @@ All future development on this project must imperatively respect the following r
 
 ### 8.4. Credits
 
-This project (v1.73) is the result of a hybrid Human-AI collaboration:
+This project (v1.74) is the result of a hybrid Human-AI collaboration:
 
-*   **Christophe Lévêque**: Product direction and business specifications.
-*   **Ronan Davalan**: Project manager, lead architect, quality assurance (QA).
-*   **Google Gemini**: AI architect, planner, technical writer.
-*   **Grok (xAI)**: Lead AI developer (implementation).
-*   **Claude (Anthropic)**: AI technical consultant (code review and P/Invoke solutions).
+*   **Product Management & Specifications**: Ronan Davalan
+*   **Principal Architect & QA**: Ronan Davalan
+*   **AI Architect & Planning**: Google Gemini
+*   **Principal AI Developer**: Grok (xAI)
+*   **Technical AI Consultant**: Claude (Anthropic)
 
 ### 8.5. Quick Diagnostic PowerShell Commands
 

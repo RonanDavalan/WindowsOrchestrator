@@ -1,4 +1,4 @@
-# BENUTZERHANDBUCH - WindowsOrchestrator 1.73
+# BENUTZERHANDBUCH - WindowsOrchestrator 1.74
 
 📘 **[ENTWICKLERHANDBUCH](ENTWICKLER_LEITFADEN.md)**
 *Zielgruppe: Systemadministratoren.*
@@ -52,6 +52,7 @@
             [GroupBox: Hauptanwendung und täglicher Zyklus](#groupbox-hauptanwendung-und-täglicher-zyklus)
         4.4.3. [Registerkarte "Erweitert" - Unterregisterkarte "Sicherung"](#443-registerkarte-erweitert---unterregisterkarte-sicherung)
             [GroupBox: Datenbanksicherung (Optional)](#groupbox-datenbanksicherung-optional)
+            [Log-Wartung (Neu in v1.74)](#log-wartung-neu-in-v174)
         4.4.4. [Registerkarte "Erweitert" - Unterregisterkarte "Optionen & Konto"](#444-registerkarte-erweitert---unterregisterkarte-optionen--konto)
             [GroupBox: Für einen anderen Benutzer anpassen](#groupbox-für-einen-anderen-benutzer-anpassen)
             [GroupBox: Installationsoptionen](#groupbox-installationsoptionen)
@@ -73,6 +74,7 @@
         5.1.1. [Typische Tageschronologie](#511-typische-tageschronologie)
             [Phase 1: Normale Nutzung (00:00 → Beendigungszeit)](#phase-1-normale-nutzung-0000--beendigungszeit)
             [Phase 2: Anwendungsbeendigung (Beispiel: 02:50)](#phase-2-anwendungsbeendigung-beispiel-0250)
+            [Phase 2 bis: Log-Wartung (Optional - v1.74)](#phase-2-bis--log-wartung-optional-v174)
             [Phase 3: Datensicherung (Beispiel: 02:57)](#phase-3-datensicherung-beispiel-0257)
             [Phase 4: Geplanter Neustart (Beispiel: 02:59)](#phase-4-geplanter-neustart-beispiel-0259)
             [Phase 5: Kaltstart (00:00+)](#phase-5-kaltstart-0000)
@@ -448,6 +450,18 @@ Die folgenden Felder sind ausgegraut, solange das Kontrollkästchen nicht aktivi
 
 "Aufbewahrungsdauer der Sicherungen (in Tagen)" gibt an, wie viele Tage Sicherungen aufbewahrt werden. Ältere Sicherungen werden automatisch gelöscht. Beispiel: `10`.
 
+##### GroupBox: Log-Wartung (Neu in v1.74)
+
+Dieser Abschnitt ermöglicht die Verwaltung der Größe der Protokolldateien Ihrer Anwendung, um eine Überlastung der Festplatte zu vermeiden.
+
+Das Kontrollkästchen "Log-Reduktionsskript aktivieren" aktiviert das Bereinigungsmodul (`reducelog.ps1`), das unmittelbar vor dem Sichern ausgeführt wird, nachdem die Anwendung geschlossen wurde.
+
+"Protokollverzeichnis (BaseDir)" definiert das Stammverzeichnis, in dem nach den Dateien gesucht wird. Dies ist ein relativer Pfad vom Verzeichnis des Orchestrators. Beispiel: `..\..`, um zwei Verzeichnisse nach oben zu navigieren.
+
+"Zu verarbeitende Dateien" ist eine Liste von Dateinamen oder Mustern (Wildcards), die durch Kommas getrennt sind. Beispiel: `AllMqtt.log, error_*.txt`.
+
+"Zu behaltende Zeilen" definiert die maximale Größe der Datei. Das Skript behält nur die N letzten Zeilen (die neuesten) und löscht den Anfang der Datei. Beispiel: `1000`.
+
 #### 4.4.4. Registerkarte "Erweitert" - Unterregisterkarte "Optionen & Konto"
 
 ![Installationsoptionen](../../assets/de-DE/konfig-assistent-05-install-optionen.png)
@@ -560,6 +574,10 @@ Das System funktioniert normal. Die Geschäftsanwendung ist aktiv. Kein Eingriff
 ##### Phase 2: Anwendungsbeendigung (Beispiel: 02:50)
 
 Die Aufgabe `WindowsOrchestrator-User-CloseApp` führt aus, wenn konfiguriert. Die Standardaktion besteht darin, das "MyApp"-Fenster zu suchen und ihm die Tastensequenz `{ESC}{ESC}x{ENTER}` (Escape x2, x, Enter) zu senden. Die maximale Wartezeit beträgt 60 Sekunden mit Versuchen alle 5 Sekunden. Das Ergebnis wird in `config_utilisateur_ps.txt` protokolliert.
+
+##### Phase 2 bis: Log-Wartung (Optional - v1.74)
+
+Wenn die Log-Reduzierung aktiviert ist, führt das System das Skript `reducelog.ps1` unmittelbar nach dem Schließen der Anwendung und vor dem Speichern aus. Es kürzt die Ziel-Logdateien, um nur die letzten Zeilen zu behalten, wodurch Speicherplatz auf der Festplatte freigegeben wird.
 
 ##### Phase 3: Datensicherung (Beispiel: 02:57)
 

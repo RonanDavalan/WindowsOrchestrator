@@ -1,7 +1,7 @@
-# WindowsOrchestrator 1.73
+# WindowsOrchestrator 1.74
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-v1.73-2ea44f" alt="Version">
+  <img src="https://img.shields.io/badge/Version-v1.74-2ea44f" alt="Version">
   <img src="https://img.shields.io/badge/Licence-GPLv3-blue.svg" alt="Licence">
   <img src="https://img.shields.io/badge/Plateforme-Windows_10_|_11-0078D6" alt="OS Supportés">
   <img src="https://img.shields.io/badge/Architecture-x86_|_x64_|_ARM64-blueviolet" alt="Architecture CPU">
@@ -67,6 +67,12 @@ Der Orchestrator priorisiert Stabilität und die Verwendung nativer Windows-Mech
 * **Differenzielle Logik**: Kopiert nur Dateien, die in den letzten 24 Stunden modifiziert wurden.
 * **Unterstützung gepaarter Dateien**: Ideal für Datenbanken (z.B. gleichzeitige Kopie von `.db`, `.db-wal`, `.db-shm`).
 * **Aufbewahrungs-Politik**: Automatische Löschung von Archiven, die ein definiertes Alter überschreiten (Standard: 30 Tage).
+
+#### Log-Wartung (Log-Trimming)
+*   **Reduktionsmodul** : Eigenständiges Skript (`reducelog.ps1`) zur Vermeidung von Festplattensättigung durch umfangreiche Anwendungsprotokolle.
+*   **Intelligentes Trimmen** : Kürzt Zieldateien, sodass nur die letzten N Zeilen (konfigurierbar) erhalten bleiben.
+*   **Wildcard-Unterstützung** : Akzeptiert generische Muster (z. B. `*.log`, `error_*.txt`) zur dynamischen Zielauswahl mehrerer Dateien.
+*   **Sichere Integration** : Wird während des Wartungsfensters ausgeführt, wenn die Anwendung geschlossen ist und vor der Sicherung.
 
 ### Umgebungs-Management des Systems
 * **Windows Update**: Blockierung des Dienstes und Deaktivierung des erzwungenen Neustarts nach Update.

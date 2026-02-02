@@ -20,13 +20,13 @@ param(
     Lance l'assistant de configuration graphique.
 .NOTES
     Projet      : WindowsOrchestrator
-    Version     : 1.73
+    Version     : 1.74
     Licence     : GNU GPLv3
 
     --- CRÉDITS & RÔLES ---
     Ce projet est le fruit d'une collaboration hybride Humain-IA :
 
-    Direction Produit & Spécifications  : Christophe Lévêque
+    Direction Produit & Spécifications  : Ronan Davalan
     Architecte Principal & QA           : Ronan Davalan
     Architecte IA & Planification       : Google Gemini
     Développeur IA Principal            : Grok (xAI)
@@ -150,9 +150,9 @@ if (-not (Test-Path $DefaultConfigPath -PathType Leaf)) {
     if (-not (Test-Path $ConfigFile -PathType Leaf)) {
         # Ni le modèle ni config.ini n'existent - ERREUR FATALE
         [System.Windows.Forms.MessageBox]::Show(
-            $lang.ConfigForm_ModelFileNotFoundError, 
-            $lang.ConfigForm_ModelFileNotFoundCaption, 
-            "OK", 
+            $lang.ConfigForm_ModelFileNotFoundError,
+            $lang.ConfigForm_ModelFileNotFoundCaption,
+            "OK",
             "Error"
         )
         exit 1
@@ -165,15 +165,15 @@ if (-not (Test-Path $DefaultConfigPath -PathType Leaf)) {
         try {
             Copy-Item -Path $DefaultConfigPath -Destination $ConfigFile -Force -ErrorAction Stop
             $configWasCreated = $true  # MARQUE que le fichier a été créé
-            
+
             # MODIFICATION v1.73 : Suppression de la notification au démarrage.
             # La création initiale doit être silencieuse pour l'utilisateur.
             # [System.Windows.Forms.MessageBox]::Show(...) est supprimé ici.
         } catch {
             [System.Windows.Forms.MessageBox]::Show(
-                ($lang.ConfigForm_CopyError -f $_.Exception.Message), 
-                $lang.ConfigForm_CopyErrorCaption, 
-                "OK", 
+                ($lang.ConfigForm_CopyError -f $_.Exception.Message),
+                $lang.ConfigForm_CopyErrorCaption,
+                "OK",
                 "Error"
             )
             exit 1
@@ -183,27 +183,27 @@ if (-not (Test-Path $DefaultConfigPath -PathType Leaf)) {
         $message = $lang.ConfigForm_OverwritePrompt.Replace('\n', "`n")
         $caption = $lang.ConfigForm_OverwriteCaption
         $result = [System.Windows.Forms.MessageBox]::Show(
-            $message, 
-            $caption, 
-            [System.Windows.Forms.MessageBoxButtons]::YesNo, 
-            [System.Windows.Forms.MessageBoxIcon]::Warning, 
+            $message,
+            $caption,
+            [System.Windows.Forms.MessageBoxButtons]::YesNo,
+            [System.Windows.Forms.MessageBoxIcon]::Warning,
             [System.Windows.Forms.MessageBoxDefaultButton]::Button2
         )
-        
+
         if ($result -eq [System.Windows.Forms.DialogResult]::Yes) {
             try {
                 Copy-Item -Path $DefaultConfigPath -Destination $ConfigFile -Force -ErrorAction Stop
                 [System.Windows.Forms.MessageBox]::Show(
-                    $lang.ConfigForm_ResetSuccess, 
-                    $lang.ConfigForm_ResetSuccessCaption, 
-                    "OK", 
+                    $lang.ConfigForm_ResetSuccess,
+                    $lang.ConfigForm_ResetSuccessCaption,
+                    "OK",
                     "Information"
                 )
             } catch {
                 [System.Windows.Forms.MessageBox]::Show(
-                    ($lang.ConfigForm_OverwriteError -f $_.Exception.Message), 
-                    $lang.ConfigForm_OverwriteErrorCaption, 
-                    "OK", 
+                    ($lang.ConfigForm_OverwriteError -f $_.Exception.Message),
+                    $lang.ConfigForm_OverwriteErrorCaption,
+                    "OK",
                     "Error"
                 )
                 exit 1
@@ -233,11 +233,12 @@ $defaultValues = @{
     DisableScreenSleep = $false; DisableWindowsUpdate = $true
     DisableAutoReboot = $true; ScheduledCloseTime = "02:55"; ScheduledCloseCommand = ""
     ScheduledCloseArguments = ""
-    ScheduledRebootTime = ""; EnableScheduledClose = $true; EnableScheduledReboot = $true; OneDriveManagementMode = "Block";     ProcessToLaunch = "management\LaunchApp.bat"
+    ScheduledRebootTime = "03:00"; EnableScheduledClose = $true; EnableScheduledReboot = $true; OneDriveManagementMode = "Block";     ProcessToLaunch = "LaunchApp.bat"
     ProcessArguments = ""
     ProcessToMonitor = ""; StartProcessMinimized = $false; SessionStartupMode = "Standard"
-    EnableBackup = $true; DatabaseSourcePath = "..\..\AllUser"; DatabaseDestinationPath = "C:\Backup\AllSys"; DatabaseKeepDays = 30; ScheduledBackupTime = ""
-    UseAutologonAssistant = $true; SilentMode = $false; ShowContextMessages = $true
+    EnableBackup = $false; DatabaseSourcePath = "..\..\AllUser"; DatabaseDestinationPath = "C:\Backup\AllSys"; DatabaseKeepDays = 30; ScheduledBackupTime = "02:59"
+    UseAutologonAssistant = $true; SilentMode = $false; ShowContextMessages = $true;
+    EnableLogReduction = $false; LogReductionBaseDir = "..\.."; LogReductionFiles = "AllMqtt.log, AllServ.log"; LogReductionLines = 1000
 }
 $currentValues = @{}
 foreach ($key in $defaultValues.Keys) {
@@ -245,6 +246,7 @@ foreach ($key in $defaultValues.Keys) {
     if ($key -in ("ScheduledCloseTime", "ScheduledCloseCommand", "ScheduledCloseArguments", "ScheduledRebootTime", "ProcessToLaunch", "ProcessArguments", "ProcessToMonitor", "StartProcessMinimized", "EnableScheduledClose", "EnableScheduledReboot")) { $section = "Process" }
     if ($key -in ("EnableLogRotation", "MaxSystemLogsToKeep", "MaxUserLogsToKeep")) { $section = "Logging" }
     if ($key -in ("EnableBackup", "DatabaseSourcePath", "DatabaseDestinationPath", "DatabaseKeepDays", "ScheduledBackupTime")) { $section = "DatabaseBackup" }
+    if ($key -in ("EnableLogReduction", "LogReductionBaseDir", "LogReductionFiles", "LogReductionLines")) { $section = "DatabaseBackup" }
     if ($key -in ("UseAutologonAssistant", "RebootOnCompletion", "RebootGracePeriod", "PowerShellExitMode", "PowerShellExitDelay", "SilentMode", "ShowContextMessages")) { $section = "Installation" }
 
     $rawValue = Get-ConfigValue -Section $section -Key $key -DefaultValue $defaultValues[$key]
@@ -349,7 +351,7 @@ if ($currentValues.ShowContextMessages) {
     $processName = if (-not [string]::IsNullOrWhiteSpace($currentValues.ProcessToMonitor)) { $currentValues.ProcessToMonitor } else { "Application" }
     # Injection dans le placeholder {0}
     $lblAllSys.Text = ($lang.ConfigForm_AllSysOptimizedNote -f $processName)
-    
+
     $lblAllSys.ForeColor = [System.Drawing.Color]::FromArgb(0, 102, 204)
     $lblAllSys.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
     $lblAllSys.Size = New-Object System.Drawing.Size(510, 60)
@@ -562,7 +564,7 @@ $ySauvegarde = 20
 $gbDatabaseBackup = New-Object System.Windows.Forms.GroupBox
 $gbDatabaseBackup.Text = $lang.ConfigForm_DatabaseBackupGroupTitle
 $gbDatabaseBackup.Location = New-Object System.Drawing.Point($xPadding, $ySauvegarde)
-$gbDatabaseBackup.Size = New-Object System.Drawing.Size(530, 210)
+$gbDatabaseBackup.Size = New-Object System.Drawing.Size(530, 160)
 $subTabSauvegarde.Controls.Add($gbDatabaseBackup)
 
 $gbDbY = 25 # Y de départ à l'intérieur de ce GroupBox
@@ -604,7 +606,7 @@ $gbDbY += $itemTotalHeight
 
 # Label et TextBox pour la durée de conservation
 $lblBackupKeepDays = New-Object System.Windows.Forms.Label; $lblBackupKeepDays.Text = $lang.ConfigForm_BackupKeepDaysLabel; $lblBackupKeepDays.Location = New-Object System.Drawing.Point(10, $gbDbY); $lblBackupKeepDays.Size = New-Object System.Drawing.Size(280, $ctrlHeight); $gbDatabaseBackup.Controls.Add($lblBackupKeepDays)
-$txtBackupKeepDays = New-Object System.Windows.Forms.TextBox; $txtBackupKeepDays.Name = "txtBackupKeepDays"; $txtBackupKeepDays.Text = $currentValues.DatabaseKeepDays; $txtBackupKeepDays.Location = New-Object System.Drawing.Point(300, $gbDbY); $txtBackupKeepDays.Size = New-Object System.Drawing.Size(100, $ctrlHeight); $gbDatabaseBackup.Controls.Add($txtBackupKeepDays)
+$txtBackupKeepDays = New-Object System.Windows.Forms.TextBox; $txtBackupKeepDays.Name = "txtBackupKeepDays"; $txtBackupKeepDays.Text = $currentValues.DatabaseKeepDays; $txtBackupKeepDays.Location = New-Object System.Drawing.Point(300, $gbDbY); $txtBackupKeepDays.Size = New-Object System.Drawing.Size(215, $ctrlHeight); $gbDatabaseBackup.Controls.Add($txtBackupKeepDays)
 
 # Définition de l'état initial des TextBox (avant d'attacher l'événement)
 $txtBackupSource.Enabled = $cbEnableBackup.Checked
@@ -632,6 +634,53 @@ $cbEnableBackup.Add_CheckedChanged({
     $timeTextBox.Enabled = $isChecked
     $keepDaysTextBox.Enabled = $isChecked
 })
+
+# --- GroupBox : Maintenance des Logs (v1.74) ---
+$logGroupY = $gbDatabaseBackup.Location.Y + $gbDatabaseBackup.Height + 10
+
+$gbLogMaintenance = New-Object System.Windows.Forms.GroupBox
+$gbLogMaintenance.Text = $lang.ConfigForm_LogMaintenanceGroup
+$gbLogMaintenance.Location = New-Object System.Drawing.Point($xPadding, $logGroupY)
+$gbLogMaintenance.Size = New-Object System.Drawing.Size(530, 130)
+$subTabSauvegarde.Controls.Add($gbLogMaintenance)
+
+$gbLogY = 25
+
+# Checkbox Activation
+$cbEnableLogReduction = New-Object System.Windows.Forms.CheckBox
+$cbEnableLogReduction.Name = "cbEnableLogReduction"
+$cbEnableLogReduction.Text = $lang.ConfigForm_EnableLogReduct
+$cbEnableLogReduction.Checked = [bool]$currentValues.EnableLogReduction
+$cbEnableLogReduction.Location = New-Object System.Drawing.Point(10, $gbLogY)
+$cbEnableLogReduction.Size = New-Object System.Drawing.Size(500, 20)
+$cbEnableLogReduction.AutoSize = $true
+$gbLogMaintenance.Controls.Add($cbEnableLogReduction)
+$gbLogY += 25
+
+# Champ BaseDir
+$lblLogBaseDir = New-Object System.Windows.Forms.Label; $lblLogBaseDir.Text = $lang.ConfigForm_LogBaseDir; $lblLogBaseDir.Location = New-Object System.Drawing.Point(10, $gbLogY); $lblLogBaseDir.Size = New-Object System.Drawing.Size($lblWidth, 20); $gbLogMaintenance.Controls.Add($lblLogBaseDir)
+$txtLogBaseDir = New-Object System.Windows.Forms.TextBox; $txtLogBaseDir.Name = "txtLogBaseDir"; $txtLogBaseDir.Text = $currentValues.LogReductionBaseDir; $txtLogBaseDir.Location = New-Object System.Drawing.Point((10 + $lblWidth + 8), $gbLogY); $txtLogBaseDir.Size = New-Object System.Drawing.Size($ctrlWidth, 20); $gbLogMaintenance.Controls.Add($txtLogBaseDir)
+$gbLogY += 28
+
+# Champ Fichiers
+$lblLogFiles = New-Object System.Windows.Forms.Label; $lblLogFiles.Text = $lang.ConfigForm_LogFiles; $lblLogFiles.Location = New-Object System.Drawing.Point(10, $gbLogY); $lblLogFiles.Size = New-Object System.Drawing.Size($lblWidth, 20); $gbLogMaintenance.Controls.Add($lblLogFiles)
+$txtLogFiles = New-Object System.Windows.Forms.TextBox; $txtLogFiles.Name = "txtLogFiles"; $txtLogFiles.Text = $currentValues.LogReductionFiles; $txtLogFiles.Location = New-Object System.Drawing.Point((10 + $lblWidth + 8), $gbLogY); $txtLogFiles.Size = New-Object System.Drawing.Size($ctrlWidth, 20); $gbLogMaintenance.Controls.Add($txtLogFiles)
+$gbLogY += 28
+
+# Champ Lignes
+$lblLogLines = New-Object System.Windows.Forms.Label; $lblLogLines.Text = $lang.ConfigForm_LogLines; $lblLogLines.Location = New-Object System.Drawing.Point(10, $gbLogY); $lblLogLines.Size = New-Object System.Drawing.Size($lblWidth, 20); $gbLogMaintenance.Controls.Add($lblLogLines)
+$txtLogLines = New-Object System.Windows.Forms.TextBox; $txtLogLines.Name = "txtLogLines"; $txtLogLines.Text = $currentValues.LogReductionLines; $txtLogLines.Location = New-Object System.Drawing.Point((10 + $lblWidth + 8), $gbLogY); $txtLogLines.Size = New-Object System.Drawing.Size($ctrlWidth, 20); $gbLogMaintenance.Controls.Add($txtLogLines)
+
+# Logique d'activation visuelle
+$cbEnableLogReduction.Add_CheckedChanged({
+    $isChecked = $cbEnableLogReduction.Checked
+    $txtLogBaseDir.Enabled = $isChecked
+    $txtLogFiles.Enabled = $isChecked
+    $txtLogLines.Enabled = $isChecked
+})
+$txtLogBaseDir.Enabled = $cbEnableLogReduction.Checked
+$txtLogFiles.Enabled = $cbEnableLogReduction.Checked
+$txtLogLines.Enabled = $cbEnableLogReduction.Checked
 
 $yPrincipal += $gbDatabaseBackup.Height + $itemSpacing
 #region Création des Boutons
@@ -733,6 +782,12 @@ $btnSave.Add_Click({
     Set-IniValue $ConfigFile "Installation" "SilentMode" $cbSilentMode.Checked.ToString().ToLower()
     # Sauvegarde du code de langue chargé au démarrage
     Set-IniValue $ConfigFile "Installation" "SelectedLanguage" $loadedLanguageCode
+
+    # v1.74 - Sauvegarde des paramètres de maintenance des logs
+    Set-IniValue $ConfigFile "DatabaseBackup" "EnableLogReduction" $cbEnableLogReduction.Checked.ToString().ToLower()
+    Set-IniValue $ConfigFile "DatabaseBackup" "LogReductionBaseDir" $txtLogBaseDir.Text
+    Set-IniValue $ConfigFile "DatabaseBackup" "LogReductionFiles" $txtLogFiles.Text
+    Set-IniValue $ConfigFile "DatabaseBackup" "LogReductionLines" $txtLogLines.Text
 
     [System.Windows.Forms.MessageBox]::Show(($lang.ConfigForm_SaveSuccessMessage -f $ConfigFile), $lang.ConfigForm_SaveSuccessCaption, "OK", "Information")
 })

@@ -1,7 +1,7 @@
-# WindowsOrchestrator 1.73
+# WindowsOrchestrator 1.74
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-v1.73-2ea44f" alt="Version">
+  <img src="https://img.shields.io/badge/Version-v1.74-2ea44f" alt="Version">
   <img src="https://img.shields.io/badge/Licence-GPLv3-blue.svg" alt="Licence">
   <img src="https://img.shields.io/badge/Plateforme-Windows_10_|_11-0078D6" alt="OS supportés">
   <img src="https://img.shields.io/badge/Architecture-x86_|_x64_|_ARM64-blueviolet" alt="Architecture CPU">
@@ -69,6 +69,12 @@ L'orchestrateur privilégie la stabilité et l'utilisation des mécanismes natif
 *   **Support des fichiers appairés** : idéal pour les bases de données (ex : copie simultanée de `.db`, `.db-wal`, `.db-shm`).
 *   **Politique de rétention** : purge automatique des archives dépassant une ancienneté définie (défaut : 30 jours).
 *   **Surveillance Watchdog** : Vérifie activement que l'application est fermée avant de lancer la copie pour éviter toute corruption.
+
+### Maintenance des logs (Log Trimming)
+*   **Module de réduction** : Script autonome (`reducelog.ps1`) pour prévenir la saturation disque causée par des journaux applicatifs volumineux.
+*   **Trimming intelligent** : Tronque les fichiers cibles pour ne conserver que les N dernières lignes (configurable).
+*   **Support des Wildcards** : Accepte les motifs génériques (ex: `*.log`, `error_*.txt`) pour cibler dynamiquement plusieurs fichiers.
+*   **Intégration sécurisée** : S'exécute pendant la fenêtre de maintenance, application fermée, avant la sauvegarde.
 
 ### Gestion de l'environnement système
 *   **Windows Update** : blocage du service et désactivation du redémarrage forcé post-mise à jour.

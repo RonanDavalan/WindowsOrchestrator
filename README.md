@@ -1,7 +1,7 @@
-# WindowsOrchestrator 1.73
+# WindowsOrchestrator 1.74
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-v1.73-2ea44f" alt="Version">
+  <img src="https://img.shields.io/badge/Version-v1.74-2ea44f" alt="Version">
   <img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License">
   <img src="https://img.shields.io/badge/Platform-Windows_10_|_11-0078D6" alt="Supported OS">
   <img src="https://img.shields.io/badge/Architecture-x86_|_x64_|_ARM64-blueviolet" alt="CPU Architecture">
@@ -67,6 +67,12 @@ The orchestrator prioritizes stability and use of native Windows mechanisms to g
 * **Differential Logic**: Copies only files modified in last 24 hours.
 * **Paired Files Support**: Ideal for databases (e.g.: simultaneous copy of `.db`, `.db-wal`, `.db-shm`).
 * **Retention Policy**: Automatic old archive purge (default: 30 days).
+
+#### Log Maintenance (Log Trimming)
+*   **Reduction Module** : Standalone script (`reducelog.ps1`) to prevent disk saturation caused by large application logs.
+*   **Smart Trimming** : Truncates target files to retain only the last N lines (configurable).
+*   **Wildcard Support** : Accepts generic patterns (e.g., `*.log`, `error_*.txt`) to dynamically target multiple files.
+*   **Secure Integration** : Runs during the maintenance window, with the application closed, before backup.
 
 ### System Environment Management
 * **Windows Update**: Service blocking and automatic reboot prevention post-update.

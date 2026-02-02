@@ -66,6 +66,13 @@
     ConfigForm_BackupTimeLabel = "Heure de la sauvegarde (HH:MM) :"
     ConfigForm_BackupKeepDaysLabel = "Durée de conservation des sauvegardes (en jours) :"
 
+    # Maintenance des Logs (v1.74)
+    ConfigForm_LogMaintenanceGroup = "Maintenance des Logsz"
+    ConfigForm_EnableLogReduct = "Activer le script de réduction de logs (reducelog.ps1)"
+    ConfigForm_LogBaseDir = "Dossier des logs (BaseDir) :"
+    ConfigForm_LogFiles = "Fichiers à traiter :"
+    ConfigForm_LogLines = "Lignes à conserver :"
+
     # Groupe : Options Installation & Compte Cible
     ConfigForm_InstallOptionsGroup = "Options d'Installation"
     ConfigForm_SilentModeCheckbox = "Masquer les fenêtres de console pendant l'installation/désinstallation"
@@ -86,7 +93,7 @@
     ConfigForm_ModelFileNotFoundCaption = "Fichier Modèle Manquant"
     ConfigForm_CopyError = "Impossible de créer le fichier 'config.ini' à partir du modèle. Erreur: '{0}'."
     ConfigForm_CopyErrorCaption = "Erreur de copie"
-    ConfigForm_OverwritePrompt = "Un fichier de configuration 'config.ini' existe déjà.\n\nVoulez-vous le remplacer par le modèle par défaut ?\n\nATTENTION : Vos réglages actuels seront perdus."
+    ConfigForm_OverwritePrompt = "Un fichier de configuration 'config.ini' existe déjà.`n`nVoulez-vous le remplacer par le modèle par défaut ?`n`nATTENTION : Vos réglages actuels seront perdus."
     ConfigForm_OverwriteCaption = "Remplacer la configuration existante ?"
     ConfigForm_ResetSuccess = "Le fichier 'config.ini' a été réinitialisé avec les valeurs par défaut."
     ConfigForm_ResetSuccessCaption = "Réinitialisation Effectuée"
@@ -112,7 +119,7 @@
     Log_ScriptFinished = "'{0}' ('{1}') terminé."
     Log_ErrorsOccurred = "Des erreurs se sont produites durant l'exécution."
     Log_CapturedError = "ERREUR CAPTURÉE : '{0}'"
-    Error_FatalScriptError = "ERREUR FATALE DU SCRIPT (bloc principal) : '{0}' \n'{1}'"
+    Error_FatalScriptError = "ERREUR FATALE DU SCRIPT (bloc principal) : '{0}' `n'{1}'"
     System_ConfigCriticalError = "Échec critique : config.ini."
 
     # Gestion Utilisateur Cible
@@ -242,7 +249,7 @@
     Error_User_InterpreterNotFound = "Interpréteur '{0}' introuvable pour la méthode '{1}'."
     Error_User_ProcessManagementFailed = "Échec de la gestion du processus '{0}' (Méthode: '{1}', Chemin: '{2}', Args: '{3}'): '{4}'. StackTrace: '{5}'"
     Error_User_ExeNotFound = "Fichier exécutable pour le processus '{0}' (mode direct) INTROUVABLE."
-    Error_User_FatalScriptError = "ERREUR FATALE DU SCRIPT UTILISATEUR '{0}': '{1}' \n'{2}'"
+    Error_User_FatalScriptError = "ERREUR FATALE DU SCRIPT UTILISATEUR '{0}': '{1}' `n'{2}'"
     Error_User_VarExpansionFailed = "Erreur lors de l'expansion des variables pour le processus '{0}': '{1}'"
 
     Action_User_CloseTaskConfigured = "- Fermeture de l'application prévue à {1}."
@@ -322,7 +329,7 @@
     Install_ExtractingArchive = "Extraction de l'archive..."
     Install_AutologonFilesMissing = "Les fichiers requis ('{0}', Eula.txt) n'ont pas été trouvés après l'extraction."
     Install_AutologonExtractionFailed = "AVERTISSEMENT : Échec de la préparation de l'outil Autologon. L'archive téléchargée est peut-être corrompue."
-    Install_AutologonDownloadFailedPrompt = "Le téléchargement a échoué. Souhaitez-vous rechercher le fichier Autologon.zip manuellement ?\n\nPage officielle : https://learn.microsoft.com/sysinternals/downloads/autologon"
+    Install_AutologonDownloadFailedPrompt = "Le téléchargement a échoué. Souhaitez-vous rechercher le fichier Autologon.zip manuellement ?`n`nPage officielle : https://learn.microsoft.com/sysinternals/downloads/autologon"
     Install_AutologonUnsupportedArchitecture = "ERREUR : Architecture de processeur non supportée ('{0}'). Impossible de configurer Autologon."
     Install_EulaConsentMessage = "Acceptez-vous les termes de la licence de l'outil Autologon de Sysinternals ?"
     Install_EulaConsentCaption = "Consentement EULA requis"
@@ -384,8 +391,8 @@ Voulez-vous continuer l'installation maintenant sans configurer Autologon ?
     Install_InstallationCompleteSuccess = "Installation et lancement initial terminés !"
     Install_InstallationCompleteWithErrors = "Installation terminée avec des erreurs lors du lancement initial des scripts. Vérifiez les messages ci-dessus."
     Install_CriticalErrorDuringInstallation = "Une erreur critique est survenue durant l'installation : '{0}'"
-    Install_SilentMode_CompletedSuccessfully = "Installation de WindowsOrchestrator terminée avec succès !\n\nTous les journaux ont été enregistrés dans le dossier Logs."
-    Install_SilentMode_CompletedWithErrors = "Installation de WindowsOrchestrator terminée avec des erreurs.\n\nVeuillez consulter les fichiers journaux dans le dossier Logs pour plus de détails."
+    Install_SilentMode_CompletedSuccessfully = "Installation de WindowsOrchestrator terminée avec succès !`n`nTous les journaux ont été enregistrés dans le dossier Logs."
+    Install_SilentMode_CompletedWithErrors = "Installation de WindowsOrchestrator terminée avec des erreurs.`n`nVeuillez consulter les fichiers journaux dans le dossier Logs pour plus de détails."
 
     # Uninstall
     Uninstall_StartMessage = "Début de la désinstallation complète de WindowsOrchestrator..."
@@ -416,8 +423,8 @@ Voulez-vous continuer l'installation maintenant sans configurer Autologon ?
     Uninstall_AutologonToolNotFound_Interactive = "[AVERTISSEMENT] L'outil Autologon.exe est introuvable. La désactivation automatique ne peut être effectuée. Si vous souhaitez désactiver la connexion automatique, veuillez le faire manuellement."
     Uninstall_AutologonDisablePrompt = "Veuillez cliquer sur 'Disable' dans la fenêtre de l'outil Autologon qui va s'ouvrir pour finaliser le nettoyage."
     Uninstall_AutologonNotActive = "INFO : L'ouverture de session automatique n'est pas active. Aucun nettoyage nécessaire."
-    Uninstall_SilentMode_CompletedSuccessfully = "Désinstallation de WindowsOrchestrator terminée avec succès !\n\nTous les journaux ont été enregistrés dans le dossier Logs."
-    Uninstall_SilentMode_CompletedWithErrors = "Désinstallation de WindowsOrchestrator terminée avec des erreurs.\n\nVeuillez consulter les fichiers journaux dans le dossier Logs pour plus de détails."
+    Uninstall_SilentMode_CompletedSuccessfully = "Désinstallation de WindowsOrchestrator terminée avec succès !`n`nTous les journaux ont été enregistrés dans le dossier Logs."
+    Uninstall_SilentMode_CompletedWithErrors = "Désinstallation de WindowsOrchestrator terminée avec des erreurs.`n`nVeuillez consulter les fichiers journaux dans le dossier Logs pour plus de détails."
 
     # ------------------------------------------------------------------------------
     # 6. NOTIFICATIONS (Gotify) & COMMUNS

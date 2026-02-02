@@ -1,4 +1,4 @@
-# ENTWICKLER-LEITFADEN - WindowsOrchestrator 1.73
+# ENTWICKLER-LEITFADEN - WindowsOrchestrator 1.74
 
 ---
 
@@ -42,6 +42,7 @@ Enthält Schritt-für-Schritt-Anleitungen, Assistenten-Screenshots und Fehlerbeh
         3.3.1. [EnableBackup: Der Kill-Schalter](#331-enablebackup-der-kill-schalter)
         3.3.2. [DatabaseKeepDays: Datumsbasierter Löschalgorithmus](#332-databasekeepdays-datumsbasierter-löschalgorithmus)
         3.3.3. [Zeitliche differentielle Logik](#333-zeitliche-differentielle-logik)
+        3.3.4. [Logik zur Protokollwartung (Log Trimming)](#334-logik-zur-protokollwartung-log-trimming)
     3.4. [Abschnitt [Installation]: Bereitstellung und Resilienz](#34-abschnitt-installation-bereitstellung-und-resilienz)
         3.4.1. [SilentMode: Auswirkungskette](#341-silentmode-auswirkungskette)
         3.4.2. [AutologonDownloadUrl: Link-Rot-Resilienz](#342-autologondownloadurl-link-rot-resilienz)
@@ -84,7 +85,8 @@ Enthält Schritt-für-Schritt-Anleitungen, Assistenten-Screenshots und Fehlerbeh
             [D. Vorabprüfungen](#d-vorabprüfungen)
         4.6.2. [Close-AppByTitle.ps1: Saubere Schließung via API](#462-close-appbytitleps1-saubere-schließung-via-api)
             [C#-P/Invoke-Injektion: Vollständiger Code](#c-pinvoke-injektion-vollständiger-code)
-            [Retry-Logik mit Timeout](#retry-logik-mit-timeout)
+            [Retry-Logik mit Timeout](#retry-logik-mit-timeout) 
+        4.6.3. [reducelog.ps1: Modul zur Protokollreduktion](#463-reducelogps1--modul-zur-protokollreduktion)
 5. [Verwaltung externer Abhängigkeiten und Sicherheit](#5-verwaltung-externer-abhängigkeiten-und-sicherheit)
     5.1. [Microsoft Sysinternals Autologon-Tool](#51-microsoft-sysinternals-autologon-tool)
         5.1.1. [Download- und Architekturauswahlmechanismus](#511-download-und-architekturauswahlmechanismus)
@@ -556,6 +558,14 @@ Um zu vermeiden, dass der Datenträger und das Netzwerk mit unnötigen Kopien ge
     *   **Konsequenz**: Der Orchestrator führt ein **tägliches differentielles Backup** basierend auf Zeit durch. Es vergleicht keine Hashes (MD5/SHA) aus Performancegründen.
 *   **SQLite-Paare-Integrität**: Eine Ausnahme zu dieser Regel existiert für `.db`-Dateien. Wenn eine `.db`-Datei für das Backup qualifiziert ist, erzwingt das Skript die Einbeziehung ihrer Begleitdateien `.db-wal` und `.db-shm` (auch wenn älter), um die transaktionale Kopieintegrität zu garantieren.
 
+#### 3.3.4. Logik zur Protokollwartung (Log Trimming)
+
+Obwohl sich diese Funktion im Abschnitt `[DatabaseBackup]` befindet, unterscheidet sie sich technisch von der Dateikopie.
+*   **`EnableLogReduction`**: Aktiviert den Wartungsprozess.
+*   **`LogReductionBaseDir`**: Definiert das relative Stammverzeichnis. Der Orchestrator löst diesen Pfad (`Join-Path`) relativ zum eigenen Stammverzeichnis auf, um die Portabilität zu gewährleisten.
+*   **`LogReductionFiles`**: CSV-Liste (durch Kommas getrennt). Unterstützt PowerShell-Platzhalter (z.B. `Error_*.log`), um Dateien mit sich ändernden Namen (native Rotation) für die Kürzung auszuwählen.
+*   **`LogReductionLines`**: Ganze Zahl, die als Parameter `-Tail` an `Get-Content` übergeben wird.
+
 ### 3.4. Abschnitt [Installation]: Bereitstellung und Resilienz
 
 Diese Parameter beeinflussen ausschließlich das Verhalten der Skripte `install.ps1`, `uninstall.ps1` und ihrer Launcher.
@@ -598,6 +608,7 @@ Die Ordnerstruktur wurde so gedacht, um Verantwortlichkeiten klar zu trennen: wa
 ├── config.ini                     # [GENERIERT] Master-Konfigurationsdatei (erstellt post-Installation).
 ├── Install.bat                    # [BENUTZER] Installationseinstiegspunkt (Launcher).
 ├── Uninstall.bat                  # [BENUTZER] Deinstallationseinstiegspunkt (Launcher).
+├── reducelog.ps1                  # [MODULE] Skript zur Protokollwartung (v1.74).
 │
 ├── management/                    # [CORE] Technischer Kern (Geschäftslogik). Nicht modifizieren.
 │   ├── modules/
@@ -1009,7 +1020,7 @@ Diese Skripte führen spezifische und kritische Aufgaben aus: Datenbackup und sa
 
 #### 4.6.1. `Invoke-DatabaseBackup.ps1`: Autonomes Backup
 
-Dieses Skript ist so konzipiert, dass es robust gegenüber Abstürzen und effizient bei großen Datenmengen ist.
+**Wartungszyklus (v1.74)**: Das Skript führt nun eine **Protokollwartungsphase** nach dem Beenden der Anwendung (Watchdog) und vor der Sicherungskopie durch. Es ruft das externe Skript `reducelog.ps1` auf, wenn `EnableLogReduction=true` ist.
 
 ##### A. Verriegelungsmechanismus (Lock-Datei)
 Um zu vermeiden, dass zwei Backups gleichzeitig starten (z. B.: wenn das vorherige sehr langsam ist oder stecken bleibt), implementiert das Skript einen Datei-Semaphor-Mechanismus.
@@ -1134,6 +1145,17 @@ if ($script:foundWindowHandle -ne [System.IntPtr]::Zero) {
     [System.Windows.Forms.SendKeys]::SendWait("x{ENTER}")
 }
 ```
+
+#### 4.6.3. `reducelog.ps1`: Modul zur Protokollreduktion
+
+Dieses Skript ist ein "leises" Dienstprogramm, das vom Sicherungsmodul aufgerufen werden soll, kann aber auch eigenständig verwendet werden.
+
+*   **Einzige Aufgabe**: Kürzen von zu großen Textdateien, um eine Festplattenüberlastung zu vermeiden (`Get-Content -Tail N | Set-Content`).
+*   **Robustheit**:
+    *   Verwendet `-LiteralPath`, um Dateinamen mit Sonderzeichen (Eckige Klammern) zu verarbeiten.
+    *   Verarbeitet Platzhalter (`*`), um Dateigruppen zu verarbeiten.
+    *   Fängt Dateizugriffsfehler (Sperrung) ab, ohne den Gesamtprozess zu blockieren.
+*   **Kodierung**: Erzwingt das Umschreiben in **UTF-8**, um heterogene Protokolle zu standardisieren.
 
 ---
 
@@ -1480,13 +1502,13 @@ Jede zukünftige Entwicklung an diesem Projekt muss imperativ die folgenden Rege
 
 ### 8.4. Credits
 
-Dieses Projekt (v1.73) ist das Ergebnis einer hybriden Mensch-KI-Zusammenarbeit:
+Dieses Projekt (v1.74) ist das Ergebnis einer hybriden Mensch-KI-Zusammenarbeit:
 
-*   **Christophe Lévêque**: Produktleitung und Geschäftsspezifikationen.
-*   **Ronan Davalan**: Projektleiter, Hauptarchitekt, Qualitätssicherung (QA).
-*   **Google Gemini**: KI-Architekt, Planer, technischer Redakteur.
-*   **Grok (xAI)**: Haupt-KI-Entwickler (Implementierung).
-*   **Claude (Anthropic)**: Technischer KI-Berater (Code-Review und P/Invoke-Lösungen).
+*   **Produktleitung & Spezifikationen**: Ronan Davalan
+*   **Hauptarchitekt & QA**: Ronan Davalan
+*   **KI-Architekt & Planung**: Google Gemini
+*   **Haupt-KI-Entwickler**: Grok (xAI)
+*   **Technischer KI-Berater**: Claude (Anthropic)
 
 ### 8.5. Schnelle diagnostische PowerShell-Befehle
 

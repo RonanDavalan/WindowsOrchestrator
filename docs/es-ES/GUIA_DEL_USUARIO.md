@@ -1,4 +1,4 @@
-# Guía del Usuario - WindowsOrchestrator 1.73
+# Guía del Usuario - WindowsOrchestrator 1.74
 
 📘 **[GUÍA DEL DESARROLLADOR](GUIA_DEL_DESARROLLADOR.md)**
 *Destinado a administradores de sistemas.*
@@ -52,6 +52,7 @@
             [GroupBox: Aplicación principal y ciclo diario](#groupbox-aplicación-principal-y-ciclo-diario)
         4.4.3. [Pestaña "Avanzado" - Subpestaña "Copia de seguridad"](#443-pestaña-avanzado---subpestaña-copia-de-seguridad)
             [GroupBox: Copia de seguridad de bases de datos (Opcional)](#groupbox-copia-de-seguridad-de-bases-de-datos-opcional)
+            [Mantenimiento de Logs (Nuevo en v1.74)](#mantenimiento-de-logs-nuevo-en-v174)
         4.4.4. [Pestaña "Avanzado" - Subpestaña "Opciones y Cuenta"](#444-pestaña-avanzado---subpestaña-opciones-y-cuenta)
             [GroupBox: Personalizar para otro usuario](#groupbox-personalizar-para-otro-usuario)
             [GroupBox: Opciones de instalación](#groupbox-opciones-de-instalación)
@@ -73,6 +74,7 @@
         5.1.1. [Cronología típica de un día](#511-cronología-típica-de-un-día)
             [Fase 1: Uso normal (00:00 → Hora de cierre)](#fase-1-uso-normal-0000--hora-de-cierre)
             [Fase 2: Cierre de la aplicación (ejemplo: 02:50)](#fase-2-cierre-de-la-aplicación-ejemplo-0250)
+            [Fase 2 bis: Mantenimiento de los logs (Opcional - v1.74)](#fase-2-bis--mantenimiento-de-los-logs-opcional-v174)
             [Fase 3: Copia de seguridad de datos (ejemplo: 02:57)](#fase-3-copia-de-seguridad-de-datos-ejemplo-0257)
             [Fase 4: Reinicio programado (ejemplo: 02:59)](#fase-4-reinicio-programado-ejemplo-0259)
             [Fase 5: Arranque en frío (00:00+)](#fase-5-arranque-en-frío-0000)
@@ -448,6 +450,18 @@ Los campos siguientes están en gris hasta que la casilla esté marcada.
 
 "Duración de retención de las copias de seguridad (en días)" indica cuántos días se retienen las copias. Las copias más antiguas se eliminan automáticamente. Ejemplo: `10`.
 
+##### GroupBox: Mantenimiento de Logs (Nuevo en v1.74)
+
+Esta sección permite gestionar el tamaño de los archivos de registro de su aplicación para evitar la saturación del disco.
+
+La casilla "Activar el script de reducción de logs" activa el módulo de limpieza (`reducelog.ps1`) que se ejecutará justo antes de la copia de seguridad, una vez que la aplicación se haya cerrado.
+
+"Carpeta de logs (BaseDir)" define la carpeta raíz donde se buscarán los archivos. Es una ruta relativa desde la carpeta del Orquestador. Ejemplo: `..\..` para subir dos niveles.
+
+"Archivos a procesar" es una lista de nombres de archivos o patrones (comodines), separados por comas. Ejemplo: `AllMqtt.log, error_*.txt`.
+
+"Líneas a conservar" define el tamaño máximo del archivo. El script solo conservará las N últimas líneas (las más recientes) y eliminará el principio del archivo. Ejemplo: `1000`.
+
 #### 4.4.4. Pestaña "Avanzado" - Subpestaña "Opciones y Cuenta"
 
 ![Opciones de Instalación](../../assets/es-ES/asistente-config-05-opciones-instalacion.png)
@@ -560,6 +574,10 @@ El sistema funciona normalmente. La aplicación empresarial está activa. Ningun
 ##### Fase 2: Cierre de la aplicación (ejemplo: 02:50)
 
 La tarea `WindowsOrchestrator-User-CloseApp` se ejecuta si está configurada. La acción por defecto consiste en buscar la ventana "MiApp" y enviarle la secuencia de teclas `{ESC}{ESC}x{ENTER}` (Escape x2, x, Enter). El tiempo de espera máximo es de 60 segundos con intentos cada 5 segundos. El resultado se registra en `config_utilisateur_ps.txt`.
+
+##### Fase 2 bis: Mantenimiento de los logs (Opcional - v1.74)
+
+Si la reducción de logs está activada, el sistema ejecuta el script `reducelog.ps1` inmediatamente después de que se cierra la aplicación y antes de la guardado. Trunca los archivos de registro seleccionados para conservar solo las últimas líneas, liberando espacio en disco.
 
 ##### Fase 3: Copia de seguridad de datos (ejemplo: 02:57)
 

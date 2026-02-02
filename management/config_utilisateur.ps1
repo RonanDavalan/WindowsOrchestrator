@@ -15,13 +15,13 @@
     PS C:\Path\To\Scripts\> .\config_utilisateur.ps1
 .NOTES
     Projet      : WindowsOrchestrator
-    Version     : 1.73
+    Version     : 1.74
     Licence     : GNU GPLv3
 
     --- CRÉDITS & RÔLES ---
     Ce projet est le fruit d'une collaboration hybride Humain-IA :
 
-    Direction Produit & Spécifications  : Christophe Lévêque
+    Direction Produit & Spécifications  : Ronan Davalan
     Architecte Principal & QA           : Ronan Davalan
     Architecte IA & Planification       : Google Gemini
     Développeur IA Principal            : Grok (xAI)

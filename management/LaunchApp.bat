@@ -32,7 +32,7 @@ IF "%APP_NAME%"=="" (
 SET "TARGET_EXE=%APP_ROOT%\\%APP_NAME%.exe"
 
 IF EXIST "%TARGET_EXE%" (
-    start "Lancement %APP_NAME%" /MIN /D "%APP_ROOT%" "%TARGET_EXE%" tf 00 W
+    start "Lancement %APP_NAME%" /MIN /D "%APP_ROOT%" "%TARGET_EXE%" tb 00 W
 ) ELSE (
     ECHO ERREUR: Executable introuvable : %TARGET_EXE%
     PAUSE

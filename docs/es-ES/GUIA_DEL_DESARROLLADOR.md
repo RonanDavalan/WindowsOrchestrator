@@ -1,4 +1,4 @@
-# GUÍA DEL DESARROLLADOR - WindowsOrchestrator 1.73
+# GUÍA DEL DESARROLLADOR - WindowsOrchestrator 1.74
 
 ---
 
@@ -42,6 +42,7 @@ Contiene procedimientos paso a paso, capturas de pantalla del asistente y guías
         3.3.1. [EnableBackup: El Interruptor de Seguridad](#331-enablebackup-el-interruptor-de-seguridad)
         3.3.2. [DatabaseKeepDays: Algoritmo de Purga por Fecha](#332-databasekeepdays-algoritmo-de-purge-por-fecha)
         3.3.3. [Lógica Diferencial Temporal](#333-lógica-diferencial-temporal)
+        3.3.4. [Lógica de mantenimiento de registros (Log Trimming)](#334-logica-de-mantenimiento-de-registros-log-trimming)
     3.4. [Sección [Installation]: Despliegue y Resiliencia](#34-sección-installation-despliegue-y-resiliencia)
         3.4.1. [SilentMode: Cadena de Impacto](#341-silentmode-cadena-de-impacto)
         3.4.2. [AutologonDownloadUrl: Resiliencia Link Rot](#342-autologondownloadurl-resiliencia-link-rot)
@@ -85,6 +86,7 @@ Contiene procedimientos paso a paso, capturas de pantalla del asistente y guías
         4.6.2. [Close-AppByTitle.ps1: Cierre Limpio vía API](#462-close-appbytitleps1-cierre-limpio-vía-api)
             [Inyección C# (P/Invoke): Código Completo](#inyección-c-pinvoke-código-completo)
             [Lógica de Reintento con Timeout](#lógica-de-reintento-con-timeout)
+        4.6.3. [reducelog.ps1: Módulo de reducción de registros](#463-reducelogps1--modulo-de-reduccion-de-registros)
 5. [Gestión de Dependencias Externas y Seguridad](#5-gestión-de-dependencias-externas-y-seguridad)
     5.1. [Herramienta Microsoft Sysinternals Autologon](#51-herramienta-microsoft-sysinternals-autologon)
         5.1.1. [Mecanismo de Descarga y Selección de Arquitectura](#511-mecanismo-de-descarga-y-selección-de-arquitectura)
@@ -556,6 +558,14 @@ Para evitar saturar el disco y la red con copias innecesarias (especialmente par
     *   **Consecuencia**: El orquestador realiza un **respaldo diferencial diario** basado en tiempo. No compara hashes (MD5/SHA) por razones de rendimiento.
 *   **Integridad de Pares (SQLite)**: Una excepción a esta regla existe para archivos `.db`. Si un archivo `.db` está calificado para respaldo, el script fuerza la inclusión de sus archivos compañeros `.db-wal` y `.db-shm` (incluso si más antiguos), garantizando la integridad de copia transaccional.
 
+#### 3.3.4. Lógica de mantenimiento de registros (Log Trimming)
+
+Aunque se encuentra en la sección `[DatabaseBackup]`, esta función es técnicamente diferente de la copia de archivos.
+*   **`EnableLogReduction`**: Activa el subproceso de mantenimiento.
+*   **`LogReductionBaseDir`**: Define el directorio raíz relativo. El orquestador resuelve esta ruta (`Join-Path`) relativa a su propia raíz para garantizar la portabilidad.
+*   **`LogReductionFiles`**: Lista CSV (separada por comas). Admite comodines de PowerShell (por ejemplo, `Error_*.log`), lo que permite seleccionar archivos con nombres que cambian (rotación nativa) para recortarlos.
+*   **`LogReductionLines`**: Entero que se pasa como parámetro `-Tail` a `Get-Content`.
+
 ### 3.4. Sección [Installation]: Despliegue y Resiliencia
 
 Estos parámetros influyen exclusivamente en el comportamiento de los scripts `install.ps1`, `uninstall.ps1` y sus lanzadores.
@@ -598,6 +608,7 @@ La estructura de carpetas ha sido pensada para separar claramente responsabilida
 ├── config.ini                     # [GENERADO] Archivo de configuración maestro (creado post-instalación).
 ├── Install.bat                    # [USUARIO] Punto de entrada de instalación (Lanzador).
 ├── Uninstall.bat                  # [USUARIO] Punto de entrada de desinstalación (Lanzador).
+├── reducelog.ps1                  # [MÓDULO] Script de mantenimiento de registros (v1.74).
 │
 ├── management/                    # [CORE] Núcleo técnico (Lógica de Negocio). No modificar.
 │   ├── modules/
@@ -1009,7 +1020,7 @@ Estos scripts ejecutan tareas específicas y críticas: respaldo de datos y cier
 
 #### 4.6.1. `Invoke-DatabaseBackup.ps1`: Respaldo Autónomo
 
-Este script está diseñado para ser robusto contra fallos y eficiente en volúmenes de datos grandes.
+**Ciclo de mantenimiento (v1.74)**: El script ahora ejecuta una fase de **Mantenimiento de registros** después de que la aplicación se cierre (Watchdog) y antes de la copia de seguridad. Llama al script externo `reducelog.ps1` si `EnableLogReduction=true`.
 
 ##### A. Mecanismo de Bloqueo (Lock File)
 Para evitar que dos respaldos se lancen simultáneamente (ej.: si el anterior es muy lento o se atasca), el script implementa un mecanismo de semáforo de archivo.
@@ -1134,6 +1145,17 @@ if ($script:foundWindowHandle -ne [System.IntPtr]::Zero) {
     [System.Windows.Forms.SendKeys]::SendWait("x{ENTER}")
 }
 ```
+
+#### 4.6.3. `reducelog.ps1`: Módulo de reducción de registros
+
+Este script es una utilidad "silenciosa" diseñada para ser llamada por el motor de copia de seguridad, pero también se puede utilizar de forma autónoma.
+
+*   **Responsabilidad única**: Recortar archivos de texto demasiado grandes para evitar la saturación del disco (`Get-Content -Tail N | Set-Content`).
+*   **Robustez**:
+    *   Utiliza `-LiteralPath` para manejar nombres de archivo con caracteres especiales (corchetes).
+    *   Maneja comodines (`*`) para procesar grupos de archivos.
+    *   Captura errores de acceso a archivos (bloqueo) sin bloquear el proceso general.
+*   **Codificación**: Fuerza la reescritura en **UTF-8** para estandarizar los registros heterogéneos.
 
 ---
 
@@ -1480,13 +1502,13 @@ Todo desarrollo futuro en este proyecto debe respetar imperativamente las siguie
 
 ### 8.4. Créditos
 
-Este proyecto (v1.73) es el resultado de una colaboración híbrida Humano-IA:
+Este proyecto (v1.74) es el resultado de una colaboración híbrida entre humanos e IA:
 
-*   **Christophe Lévêque**: Dirección de producto y especificaciones de negocio.
-*   **Ronan Davalan**: Jefe de proyecto, arquitecto principal, control de calidad (QA).
-*   **Google Gemini**: Arquitecto de IA, planificador, redactor técnico.
-*   **Grok (xAI)**: Desarrollador principal de IA (implementación).
-*   **Claude (Anthropic)**: Consultor técnico de IA (revisión de código y soluciones P/Invoke).
+*   **Gestión de productos y especificaciones**: Ronan Davalan
+*   **Arquitecto principal y control de calidad**: Ronan Davalan
+*   **Arquitecto de IA y planificación**: Google Gemini
+*   **Desarrollador de IA principal**: Grok (xAI)
+*   **Consultor técnico de IA**: Claude (Anthropic)
 
 ### 8.5. Comandos Rápidos de Diagnóstico en PowerShell
 

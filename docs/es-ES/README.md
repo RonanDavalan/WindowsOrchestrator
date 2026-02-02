@@ -1,7 +1,7 @@
-# WindowsOrchestrator 1.73
+# WindowsOrchestrator 1.74
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Versión-v1.73-2ea44f" alt="Versión">
+  <img src="https://img.shields.io/badge/Version-v1.74-2ea44f" alt="Version">
   <img src="https://img.shields.io/badge/Licencia-GPLv3-blue.svg" alt="Licencia">
   <img src="https://img.shields.io/badge/Plataforma-Windows_10_|_11-0078D6" alt="SO Soportados">
   <img src="https://img.shields.io/badge/Arquitectura-x86_|_x64_|_ARM64-blueviolet" alt="Arquitectura CPU">
@@ -67,6 +67,12 @@ El orquestador prioriza la estabilidad y el uso de los mecanismos nativos de Win
 *   **Lógica diferencial**: Copia solo los archivos modificados en las últimas 24 horas.
 *   **Soporte para archivos emparejados**: Ideal para bases de datos (ej: copia simultánea de `.db`, `.db-wal`, `.db-shm`).
 *   **Política de retención**: Purga automática de archivos que superan una antigüedad definida (por defecto: 30 días).
+
+#### **Mantenimiento de registros (Recorte de logs)**
+*   **Módulo de reducción** : Script autónomo (`reducelog.ps1`) para prevenir la saturación del disco causada por registros de aplicaciones voluminosos.
+*   **Recorte inteligente** : Recorta los archivos objetivo para conservar solo las últimas N líneas (configurable).
+*   **Soporte de comodines** : Acepta patrones genéricos (ej: `*.log`, `error_*.txt`) para dirigir dinámicamente múltiples archivos.
+*   **Integración segura** : Se ejecuta durante la ventana de mantenimiento, con la aplicación cerrada, antes de la copia de seguridad.
 
 ### Gestión del entorno del sistema
 *   **Windows Update**: Bloqueo del servicio y desactivación del reinicio forzado post-actualización.

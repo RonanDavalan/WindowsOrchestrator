@@ -1,4 +1,4 @@
-# User Guide - WindowsOrchestrator 1.73
+# User Guide - WindowsOrchestrator 1.74
 
 📘 **[DEVELOPER GUIDE](DEVELOPER_GUIDE.md)**
 *Intended for system administrators.*
@@ -52,6 +52,7 @@
             [Main Application and Daily Cycle GroupBox](#main-application-and-daily-cycle-groupbox)
         4.4.3. [Advanced Tab - Backup Sub-Tab](#443-advanced-tab---backup-sub-tab)
             [Database Backup GroupBox (Optional)](#database-backup-groupbox-optional)
+            [Log Maintenance (New in v1.74)](#log-maintenance-new-in-v174)
         4.4.4. [Advanced Tab - Options & Account Sub-Tab](#444-advanced-tab---options--account-sub-tab)
             [Customize for Another User GroupBox](#customize-for-another-user-groupbox)
             [Installation Options GroupBox](#installation-options-groupbox)
@@ -73,6 +74,7 @@
         5.1.1. [Typical Day Timeline](#511-typical-day-timeline)
             [Phase 1: Normal Usage (00:00 → Closure Time)](#phase-1-normal-usage-0000--closure-time)
             [Phase 2: Application Closure (Example: 02:50)](#phase-2-application-closure-example-0250)
+            [Phase 2 bis: Log Maintenance (Optional - v1.74)](#phase-2-bis--log-maintenance-optional-v174)
             [Phase 3: Data Backup (Example: 02:57)](#phase-3-data-backup-example-0257)
             [Phase 4: Scheduled Reboot (Example: 02:59)](#phase-4-scheduled-reboot-example-0259)
             [Phase 5: Cold Boot (00:00+)](#phase-5-cold-boot-0000)
@@ -448,6 +450,18 @@ The following fields are grayed out until the checkbox is checked.
 
 "Backup retention period (in days)" indicates how many days backups are kept. Older backups are automatically deleted. Example: `10`.
 
+##### GroupBox: Log Maintenance (New in v1.74)
+
+This section allows you to manage the size of your application's log files to prevent disk saturation.
+
+The "Enable log reduction script" checkbox activates the cleaning module (`reducelog.ps1`), which will run just before the backup, once the application is closed.
+
+"Log directory (BaseDir)" defines the root directory where the files are searched. This is a relative path from the Orchestrator directory. Example: `..\..` to go up two levels.
+
+"Files to process" is a list of file names or patterns (wildcards), separated by commas. Example: `AllMqtt.log, error_*.txt`.
+
+"Lines to keep" defines the maximum size of the file. The script will only keep the N last lines (the most recent) and delete the beginning of the file. Example: `1000`.
+
 #### 4.4.4. Advanced Tab - Options & Account Sub-Tab
 
 ![Installation Options](../../assets/en-US/config-wizard-05-install-options.png)
@@ -563,6 +577,10 @@ The system operates normally. The business application is active. No orchestrato
 ##### Phase 2: Application Closure (Example: 02:50)
 
 The `WindowsOrchestrator-User-CloseApp` task executes if configured. The default action consists of searching for the "MyApp" window and sending the key sequence `{ESC}{ESC}x{ENTER}` (Escape x2, x, Enter). The maximum wait time is 60 seconds with attempts every 5 seconds. The result is logged in `config_utilisateur_ps.txt`.
+
+##### Phase 2 bis: Log Maintenance (Optional - v1.74)
+
+If log reduction is enabled, the system executes the `reducelog.ps1` script immediately after the application is closed and before saving. It truncates the targeted log files to keep only the last lines, freeing up disk space.
 
 ##### Phase 3: Data Backup (Example: 02:57)
 

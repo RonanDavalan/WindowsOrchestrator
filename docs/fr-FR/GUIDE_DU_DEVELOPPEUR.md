@@ -1,4 +1,4 @@
-# Guide du développeur - WindowsOrchestrator 1.73
+# Guide du développeur - WindowsOrchestrator 1.74
 
 ---
 
@@ -42,6 +42,7 @@ Contient les procédures pas-à-pas, les captures d'écran de l'assistant et les
         3.3.1. [EnableBackup : le *kill switch*](#331-enablebackup--le-kill-switch)
         3.3.2. [DatabaseKeepDays : algorithme de purge par date](#332-databasekeepdays--algorithme-de-purge-par-date)
         3.3.3. [Logique différentielle temporelle](#333-logique-différentielle-temporelle)
+        3.3.4. [Logique de maintenance des logs (Log Trimming)](#334-logique-de-maintenance-des-logs-log-trimming)
     3.4. [Section [Installation] : déploiement et résilience](#34-section-installation--déploiement-et-résilience)
         3.4.1. [SilentMode : chaîne d'impact](#341-silentmode--chaîne-dimpact)
         3.4.2. [AutologonDownloadUrl : résilience *link rot*](#342-autologondownloadurl--résilience-link-rot)
@@ -85,6 +86,7 @@ Contient les procédures pas-à-pas, les captures d'écran de l'assistant et les
         4.6.2. [Close-AppByTitle.ps1 : fermeture propre par API](#462-close-appbytitleps1--fermeture-propre-par-api)
             [Injection C# (P/Invoke) : code complet](#injection-c-pinvoke--code-complet)
             [Logique de *retry* avec *timeout*](#logique-de-retry-avec-timeout)
+        4.6.3. [reducelog.ps1 : module de réduction de logs](#463-reducelogps1--module-de-réduction-de-logs)
 5. [Gestion des dépendances externes et sécurité](#5-gestion-des-dépendances-externes-et-sécurité)
     5.1. [Outil Microsoft Sysinternals Autologon](#51-outil-microsoft-sysinternals-autologon)
         5.1.1. [Mécanisme de téléchargement et sélection d'architecture](#511-mécanisme-de-téléchargement-et-sélection-darchitecture)
@@ -540,6 +542,14 @@ Pour éviter de saturer le disque et le réseau avec des copies inutiles (surtou
     *   **Conséquence** : l'orchestrateur effectue une sauvegarde **différentielle journalière** basée sur le temps. Il ne compare pas les hachages (MD5/SHA) pour des raisons de performance.
 *   **Intégrité des paires (SQLite)** : une exception à cette règle existe pour les fichiers `.db`. Si un fichier `.db` est qualifié pour la sauvegarde, le script force l'inclusion de ses fichiers compagnons `.db-wal` et `.db-shm` (même s'ils sont plus vieux), garantissant l'intégrité transactionnelle de la copie.
 
+#### 3.3.4. Logique de maintenance des logs (Log Trimming)
+
+Bien que située dans la section `[DatabaseBackup]`, cette fonctionnalité est techniquement distincte de la copie de fichiers.
+*   **`EnableLogReduction`** : Active le sous-processus de maintenance.
+*   **`LogReductionBaseDir`** : Définit la racine relative. L'orchestrateur résout ce chemin (`Join-Path`) par rapport à sa propre racine pour garantir la portabilité.
+*   **`LogReductionFiles`** : Liste CSV (séparée par des virgules). Supporte les *wildcards* PowerShell (ex: `Error_*.log`), permettant de cibler des fichiers dont le nom change (rotation native) pour les tronquer.
+*   **`LogReductionLines`** : Entier passé au paramètre `-Tail` de `Get-Content`.
+
 ### 3.4. Section `[Installation]` : déploiement et résilience
 
 Ces paramètres influencent exclusivement le comportement des scripts `install.ps1`, `uninstall.ps1` et de leurs lanceurs.
@@ -582,6 +592,7 @@ La structure des dossiers a été pensée pour séparer clairement les responsab
 ├── config.ini                     # [GÉNÉRÉ] Fichier de configuration maître (créé post-install).
 ├── Install.bat                    # [USER] Point d'entrée pour l'installation (lanceur).
 ├── Uninstall.bat                  # [USER] Point d'entrée pour la désinstallation (lanceur).
+├── reducelog.ps1                  # [MODULE] Script de maintenance des logs (v1.74).
 │
 ├── management/                    # [CORE] Cœur technique (logique métier). Ne pas modifier.
 │   ├── modules/
@@ -927,7 +938,7 @@ Ces scripts exécutent des tâches spécifiques et critiques : la sauvegarde des
 
 #### 4.6.1. `Invoke-DatabaseBackup.ps1` : sauvegarde autonome
 
-Ce script est conçu pour être robuste face aux pannes et efficace sur les gros volumes de données.
+**Cycle de maintenance (v1.74)** : Le script exécute désormais une phase de **Maintenance des Logs** après la fermeture de l'application (Watchdog) et avant la copie de sauvegarde. Il appelle le script externe `reducelog.ps1` si `EnableLogReduction=true`.
 
 ##### A. Mécanisme de verrouillage (*lock file*)
 Pour éviter que deux sauvegardes ne se lancent simultanément (ex : si la précédente est très lente ou bloquée), le script implémente un mécanisme de sémaphore fichier.
@@ -1051,6 +1062,17 @@ if ($script:foundWindowHandle -ne [System.IntPtr]::Zero) {
     [System.Windows.Forms.SendKeys]::SendWait("x{ENTER}")
 }
 ```
+
+#### 4.6.3. `reducelog.ps1` : module de réduction de logs
+
+Ce script est un utilitaire "silencieux" conçu pour être appelé par le moteur de sauvegarde, mais peut aussi être utilisé de manière autonome.
+
+*   **Responsabilité unique** : Tronquer les fichiers textes trop volumineux pour éviter la saturation disque (`Get-Content -Tail N | Set-Content`).
+*   **Robustesse** :
+    *   Utilise `-LiteralPath` pour gérer les noms de fichiers avec caractères spéciaux (crochets).
+    *   Gère les *Wildcards* (`*`) pour traiter des groupes de fichiers.
+    *   Capture les erreurs d'accès fichier (verrouillage) sans bloquer le processus global.
+*   **Encodage** : Force la réécriture en **UTF-8** pour standardiser les logs hétérogènes.
 
 ---
 
@@ -1400,13 +1422,13 @@ Tout développement futur sur ce projet doit impérativement respecter les règl
 
 ### 8.4. Crédits
 
-Ce projet (v1.73) est le résultat d'une collaboration hybride Humain-IA :
+Ce projet (v1.74) est le résultat d'une collaboration hybride Humain-IA :
 
-*   **Christophe Lévêque** : direction produit et spécifications métier.
-*   **Ronan Davalan** : chef de projet, architecte principal, assurance qualité (QA).
-*   **Google Gemini** : architecte IA, planificateur, rédacteur technique.
-*   **Grok (xAI)** : développeur IA principal (implémentation).
-*   **Claude (Anthropic)** : consultant technique IA (revue de code et solutions P/Invoke).
+*   **Direction Produit & Spécifications** : Ronan Davalan
+*   **Architecte Principal & QA** : Ronan Davalan
+*   **Architecte IA & Planification** : Google Gemini
+*   **Développeur IA Principal** : Grok (xAI)
+*   **Consultant Technique IA** : Claude (Anthropic)
 
 ### 8.5. Commandes PowerShell de diagnostic rapide
 
