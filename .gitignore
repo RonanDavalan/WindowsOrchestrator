@@ -13,3 +13,6 @@
 *.tmp
 *~
 clean-mirror/
+
+# Fichiers de configuration Claude Code (locaux, jamais à versionner)
+.claude/
