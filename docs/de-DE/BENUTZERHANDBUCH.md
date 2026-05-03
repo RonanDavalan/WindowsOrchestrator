@@ -970,7 +970,7 @@ Kernmodul: `management\modules\WindowsOrchestratorUtils\WindowsOrchestratorUtils
 
 ### 9.4. Support und Ressourcen
 
-GitHub Issues: [Link zum GitHub-Repository des Projekts]
+GitHub Issues: <https://github.com/RonanDavalan/WindowsOrchestrator/issues>
 
 Entwicklerdokumentation: `docs/de-DE/ENTWICKLER_LEITFADEN.md`
 

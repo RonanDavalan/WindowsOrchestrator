@@ -79,10 +79,9 @@ Enthält Schritt-für-Schritt-Anleitungen, Assistenten-Screenshots und Fehlerbeh
         4.5.2. [config_utilisateur.ps1 (USER-Kontext)](#452-config_utilisateurps1-user-kontext)
     4.6. [Spezialisierte Module](#46-spezialisierte-module)
         4.6.1. [Invoke-DatabaseBackup.ps1: Autonomes Backup](#461-invoke-databasebackupps1-autonomes-backup)
-            [A. Verriegelungsmechanismus (Lock-Datei)](#a-verriegelungsmechanismus-lock-datei)
             [B. Zeitliche differentielle Logik](#b-zeitliche-differentielle-logik)
             [C. Verwaltung gepaarter Dateien (SQLite)](#c-verwaltung-gepaarter-dateien-sqlite)
-            [D. Vorabprüfungen](#d-vorabprüfungen)
+            [D. Watchdog-Schleife und MonitorTimeout](#d-watchdog-schleife-und-monitortimeout)
         4.6.2. [Close-AppByTitle.ps1: Saubere Schließung via API](#462-close-appbytitleps1-saubere-schließung-via-api)
             [C#-P/Invoke-Injektion: Vollständiger Code](#c-pinvoke-injektion-vollständiger-code)
             [Retry-Logik mit Timeout](#retry-logik-mit-timeout) 
@@ -357,7 +356,7 @@ Dieser Abschnitt steuert ausschließlich das Verhalten des Skripts `config_syste
 Dieser Parameter bestimmt die Zugriffsstrategie zum System. Der Code implementiert eine strenge Umschaltlogik:
 
 *   **`Standard`**:
-    *   **Technische Aktion**: Erzwingt den Registrierungswert `AutoAdminLogon` auf `"0"` in `HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon`.
+    *   **Technische Aktion**: Modifiziert den Registry-Schlüssel `AutoAdminLogon` **nicht**. Der Orchestrator wendet ein Nicht-Einmischungsprinzip an: Der bestehende Registry-Zustand wird unverändert beibehalten.
     *   **Ergebnis**: Der PC stoppt am Windows-Anmeldebildschirm (LogonUI). Der Benutzer muss sein Passwort eingeben oder Windows Hello verwenden.
     *   **Anwendungsfall**: Verwaltungsarbeitsstationen, Server, die bei jedem physischen Zugriff eine starke Authentifizierung erfordern.
 
@@ -538,14 +537,13 @@ Diese boolesche Variable fungiert als Hauptschalter.
 
 #### 3.3.2. `DatabaseKeepDays`: Datumsbasierter Löschalgorithmus
 
-Die Aufbewahrungsverwaltung stützt sich nicht auf Dateimetadaten (Erstellungs-/Änderungsdatum der Backup-Datei), die bei Kopien geändert werden können, sondern auf eine strenge Benennungskonvention.
+Die Aufbewahrungsverwaltung stützt sich auf die `LastWriteTime`-Metadaten des Dateisystems und eine konsistente Benennungskonvention.
 
-*   **Benennungsformat**: Dateien, die vom Orchestrator generiert werden, folgen dem Muster: `YYYYMMDD_HHMMSS_OriginalName.ext`.
+*   **Benennungsformat**: Dateien, die vom Orchestrator generiert werden, folgen dem Muster: `Basisname_yyyy-MM-dd.ext` (z. B. `database_2025-03-15.db`).
 *   **Algorithmus**:
     1.  Das Skript listet Dateien in `DatabaseDestinationPath` auf.
-    2.  Es wendet eine Regex `^(\d{8})_` an, um die ersten 8 Ziffern (das Datum) zu extrahieren.
-    3.  Es konvertiert diese Zeichenkette in ein `DateTime`-Objekt.
-    4.  Wenn `DateiDatum < (HeuteDatum - DatabaseKeepDays)`, wird die Datei über `Remove-Item -Force` gelöscht.
+    2.  Es filtert Dateien, deren `LastWriteTime` älter als `(Get-Date).AddDays(-$DatabaseKeepDays)` ist.
+    3.  Dateien, die diesem Kriterium entsprechen, werden über `Remove-Item -Force` gelöscht.
 
 #### 3.3.3. Zeitliche differentielle Logik
 
@@ -1022,14 +1020,6 @@ Diese Skripte führen spezifische und kritische Aufgaben aus: Datenbackup und sa
 
 **Wartungszyklus (v1.74)**: Das Skript führt nun eine **Protokollwartungsphase** nach dem Beenden der Anwendung (Watchdog) und vor der Sicherungskopie durch. Es ruft das externe Skript `reducelog.ps1` auf, wenn `EnableLogReduction=true` ist.
 
-##### A. Verriegelungsmechanismus (Lock-Datei)
-Um zu vermeiden, dass zwei Backups gleichzeitig starten (z. B.: wenn das vorherige sehr langsam ist oder stecken bleibt), implementiert das Skript einen Datei-Semaphor-Mechanismus.
-1.  Prüft die Existenz von `.backup_running.lock` im Zielordner.
-2.  **Anti-Blockierungs-Sicherheit**: Es prüft das Alter der Lock-Datei. Wenn sie mehr als 60 Minuten alt ist (willkürlicher Wert, der einen wahrscheinlichen Absturz des vorherigen Skripts annimmt), löscht es die Lock und erzwingt die Ausführung.
-3.  Erstellt die Lock-Datei.
-4.  Führt das Backup aus.
-5.  Löscht die Lock-Datei im `Finally`-Block.
-
 ##### B. Zeitliche differentielle Logik
 Es verwendet nicht das Archiv-Bit (unzuverlässig) noch MD5-Hashing (zu langsam für GB Daten).
 *   **Filter**: `Where-Object { $_.LastWriteTime -gt (Get-Date).AddHours(-24) }`
@@ -1055,10 +1045,6 @@ while ((Get-Date) -lt $timeout) {
 }
 ```
 Wenn die Anwendung nach dem Timeout blockiert bleibt, kann die Sicherung abgebrochen werden, um Korruptionen zu vermeiden.
-
-##### E. Vorabprüfungen
-*   **Schreibtest**: Versucht, eine temporäre Datei im Ziel zu erstellen/löschen, um NTFS-/Netzwerkberechtigungen vor dem Start zu validieren.
-*   **Datenträgerplatz**: Berechnet die gesamte erforderliche Größe und vergleicht sie mit dem freien Speicherplatz des Ziellaufwerks. Wirft eine explizite Ausnahme, wenn der Speicherplatz unzureichend ist.
 
 ---
 
@@ -1260,7 +1246,7 @@ Hier ist der genaue Lebenszyklus einer vom Orchestrator verwalteten Produktionsm
           │  Kontext: SYSTEM (Hintergrund)
           │  Skript: Invoke-DatabaseBackup.ps1
           │  Aktion: Differentielle Scannung modifizierter Dateien (< 24h).
-          │  Sicherheit: Verwaltung der .backup_running.lock-Sperre.
+          │  Aktion: Differenzielles Backup modifizierter Dateien (< 24h).
           │
 02:59:00 ─┼─ BEGINN AUFGABE: WindowsOrchestrator-SystemScheduledReboot
           │  Kontext: SYSTEM
@@ -1303,7 +1289,7 @@ Der Parameter `SessionStartupMode` in `config.ini` modifiziert die Zugriffsstrat
 
 | Modus | `Standard` | `Autologon` |
 | :--- | :--- | :--- |
-| **Registry-Schlüssel** | `HKLM\...\Winlogon` `AutoAdminLogon = "0"` | `HKLM\...\Winlogon` `AutoAdminLogon = "1"` |
+| **Registry-Schlüssel** | Keine Änderung (Nicht-Einmischungsprinzip). | `HKLM\...\Winlogon` `AutoAdminLogon = "1"` |
 | **Boot-Verhalten** | Stoppt am Windows-Anmeldebildschirm (LogonUI). | Öffnet den Windows-Desktop automatisch. |
 | **Anmeldedaten-Verwaltung** | Manuell durch Benutzer bei jedem Boot. | Automatisch über LSA-Geheimnisse (konfiguriert durch externes Tool). |
 | **App-Start** | Zum Zeitpunkt, wenn der Benutzer sich anmeldet (Trigger `AtLogon`). | Sofort nach Boot (Automatischer `AtLogon`-Trigger). |

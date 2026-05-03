@@ -969,7 +969,7 @@ Module central : `management\modules\WindowsOrchestratorUtils\WindowsOrchestrato
 
 ### 9.4. Support et ressources
 
-GitHub Issues : [Lien vers le dépôt GitHub du projet]
+GitHub Issues : <https://github.com/RonanDavalan/WindowsOrchestrator/issues>
 
 Documentation développeur : `docs/fr-FR/GUIDE_DU_DEVELOPPEUR.md`
 

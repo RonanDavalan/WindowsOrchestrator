@@ -79,10 +79,9 @@ Contient les procédures pas-à-pas, les captures d'écran de l'assistant et les
         4.5.2. [config_utilisateur.ps1 (contexte USER)](#452-config_utilisateurps1-contexte-user)
     4.6. [Les modules spécialisés](#46-les-modules-spécialisés)
         4.6.1. [Invoke-DatabaseBackup.ps1 : sauvegarde autonome](#461-invoke-databasebackupps1--sauvegarde-autonome)
-            [A. Mécanisme de verrouillage (*lock file*)](#a-mécanisme-de-verrouillage-lock-file)
             [B. Logique différentielle temporelle](#b-logique-différentielle-temporelle)
             [C. Gestion des fichiers appairés (SQLite)](#c-gestion-des-fichiers-appairés-sqlite)
-            [D. Vérifications préalables](#d-vérifications-préalables)
+            [D. Boucle Watchdog et MonitorTimeout](#d-boucle-watchdog-et-monitortimeout)
         4.6.2. [Close-AppByTitle.ps1 : fermeture propre par API](#462-close-appbytitleps1--fermeture-propre-par-api)
             [Injection C# (P/Invoke) : code complet](#injection-c-pinvoke--code-complet)
             [Logique de *retry* avec *timeout*](#logique-de-retry-avec-timeout)
@@ -341,7 +340,7 @@ Cette section pilote exclusivement le comportement du script `config_systeme.ps1
 Ce paramètre détermine la stratégie d'accès au système. Le code implémente une logique de bascule stricte :
 
 *   **`Standard`** :
-    *   **Action technique** : force la valeur de registre `AutoAdminLogon` à `"0"` dans `HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon`.
+    *   **Action technique** : ne modifie **pas** la clé de registre `AutoAdminLogon`. L'orchestrateur applique un principe de non-interférence : l'état existant du registre est préservé tel quel.
     *   **Résultat** : le PC démarre sur l'écran de connexion Windows (Logon UI). L'utilisateur doit saisir son mot de passe ou utiliser Windows Hello.
     *   **Cas d'usage** : postes d'administration, serveurs nécessitant une authentification forte à chaque accès physique.
 
@@ -522,14 +521,13 @@ Cette variable booléenne agit comme un disjoncteur principal.
 
 #### 3.3.2. `DatabaseKeepDays` : algorithme de purge par date
 
-La gestion de la rétention ne se base pas sur les métadonnées de fichier (date de création/modification du fichier de sauvegarde), qui peuvent être altérées lors de copies, mais sur une convention de nommage stricte.
+La gestion de la rétention s'appuie sur les métadonnées `LastWriteTime` du système de fichiers et une convention de nommage cohérente.
 
-*   **Format de nommage** : les fichiers générés par l'orchestrateur suivent le modèle : `YYYYMMDD_HHMMSS_NomOriginal.ext`.
+*   **Format de nommage** : les fichiers générés par l'orchestrateur suivent le modèle : `NomBase_yyyy-MM-dd.ext` (ex. : `database_2025-03-15.db`).
 *   **Algorithme** :
     1.  Le script liste les fichiers dans `DatabaseDestinationPath`.
-    2.  Il applique une regex `^(\d{8})_` pour extraire les 8 premiers chiffres (la date).
-    3.  Il convertit cette chaîne en objet `DateTime`.
-    4.  Si `DateFichier < (DateDuJour - DatabaseKeepDays)`, le fichier est supprimé via `Remove-Item -Force`.
+    2.  Il filtre les fichiers dont le `LastWriteTime` est antérieur à `(Get-Date).AddDays(-$DatabaseKeepDays)`.
+    3.  Les fichiers correspondant à ce critère sont supprimés via `Remove-Item -Force`.
 
 #### 3.3.3. Logique différentielle temporelle
 
@@ -940,14 +938,6 @@ Ces scripts exécutent des tâches spécifiques et critiques : la sauvegarde des
 
 **Cycle de maintenance (v1.74)** : Le script exécute désormais une phase de **Maintenance des Logs** après la fermeture de l'application (Watchdog) et avant la copie de sauvegarde. Il appelle le script externe `reducelog.ps1` si `EnableLogReduction=true`.
 
-##### A. Mécanisme de verrouillage (*lock file*)
-Pour éviter que deux sauvegardes ne se lancent simultanément (ex : si la précédente est très lente ou bloquée), le script implémente un mécanisme de sémaphore fichier.
-1.  Vérifie l'existence de `.backup_running.lock` dans le dossier de destination.
-2.  **Sécurité anti-blocage** : il vérifie l'âge du fichier *lock*. S'il a plus de 60 minutes (valeur arbitraire considérant un crash probable du script précédent), il supprime le *lock* et force l'exécution.
-3.  Crée le fichier *lock*.
-4.  Exécute la sauvegarde.
-5.  Supprime le fichier *lock* dans le bloc `Finally`.
-
 ##### B. Logique différentielle temporelle
 Il n'utilise pas le bit d'archive (peu fiable) ni le hachage MD5 (trop lent pour des Go de données).
 *   **Filtre** : `Where-Object { $_.LastWriteTime -gt (Get-Date).AddHours(-24) }`
@@ -972,10 +962,6 @@ while ((Get-Date) -lt $timeout) {
 }
 ```
 Si l'application reste bloquée après le timeout, la sauvegarde peut être annulée pour éviter les corruptions.
-
-##### D. Vérifications préalables
-*   **Test d'écriture** : tente de créer/supprimer un fichier temporaire sur la destination pour valider les permissions NTFS/réseau avant de commencer.
-*   **Espace disque** : calcule la taille totale requise et la compare à l'espace libre du lecteur de destination. Lève une exception explicite si l'espace est insuffisant.
 
 ---
 
@@ -1178,7 +1164,7 @@ Voici le cycle de vie exact d'une machine de production, basé sur les valeurs p
           │  Contexte : SYSTEM (arrière-plan)
           │  Script : Invoke-DatabaseBackup.ps1
           │  Action : copie différentielle des fichiers modifiés (< 24h).
-          │  Sécurité : gestion du verrou .backup_running.lock.
+          │  Action : sauvegarde différentielle des fichiers modifiés (< 24h).
           │
 02:59:00 ─┼─ DÉBUT TÂCHE : WindowsOrchestrator-SystemScheduledReboot
           │  Contexte : SYSTEM
@@ -1221,7 +1207,7 @@ Le paramètre `SessionStartupMode` dans `config.ini` modifie la stratégie d'acc
 
 | Mode | `Standard` | `Autologon` |
 | :--- | :--- | :--- |
-| **Clé registre** | `HKLM\...\Winlogon` `AutoAdminLogon = "0"` | `HKLM\...\Winlogon` `AutoAdminLogon = "1"` |
+| **Clé registre** | Aucune modification (principe de non-interférence). | `HKLM\...\Winlogon` `AutoAdminLogon = "1"` |
 | **Comportement boot** | S'arrête sur l'écran de connexion (LogonUI). | Ouvre le bureau Windows automatiquement. |
 | **Gestion identifiants** | Manuelle par l'utilisateur à chaque *boot*. | Automatique via Secrets LSA (configuré par l'outil externe). |
 | **Lancement app** | Au moment où l'utilisateur se loggue (déclencheur `AtLogon`). | Immédiat après le *boot* (déclencheur `AtLogon` automatique). |

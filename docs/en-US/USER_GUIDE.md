@@ -974,7 +974,7 @@ Core module: `management\modules\WindowsOrchestratorUtils\WindowsOrchestratorUti
 
 ### 9.4. Support and Resources
 
-GitHub Issues: [Link to the project's GitHub repository]
+GitHub Issues: <https://github.com/RonanDavalan/WindowsOrchestrator/issues>
 
 Developer documentation: `docs/en-US/DEVELOPER_GUIDE.md`
 

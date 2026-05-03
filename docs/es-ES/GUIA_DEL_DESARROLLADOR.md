@@ -79,10 +79,9 @@ Contiene procedimientos paso a paso, capturas de pantalla del asistente y guías
         4.5.2. [config_utilisateur.ps1 (Contexto USER)](#452-config_utilisateurps1-contexto-user)
     4.6. [Módulos Especializados](#46-módulos-especializados)
         4.6.1. [Invoke-DatabaseBackup.ps1: Respaldo Autónomo](#461-invoke-databasebackupps1-respaldo-autónomo)
-            [A. Mecanismo de Bloqueo (Lock File)](#a-mecanismo-de-bloqueo-lock-file)
             [B. Lógica Diferencial Temporal](#b-lógica-diferencial-temporal)
             [C. Gestión de Archivos Emparejados (SQLite)](#c-gestión-de-archivos-emparejados-sqlite)
-            [D. Verificaciones Previas](#d-verificaciones-previas)
+            [D. Bucle Watchdog y MonitorTimeout](#d-bucle-watchdog-y-monitortimeout)
         4.6.2. [Close-AppByTitle.ps1: Cierre Limpio vía API](#462-close-appbytitleps1-cierre-limpio-vía-api)
             [Inyección C# (P/Invoke): Código Completo](#inyección-c-pinvoke-código-completo)
             [Lógica de Reintento con Timeout](#lógica-de-reintento-con-timeout)
@@ -357,7 +356,7 @@ Esta sección controla exclusivamente el comportamiento del script `config_syste
 Este parámetro determina la estrategia de acceso al sistema. El código implementa una lógica de conmutación estricta:
 
 *   **`Standard`**:
-    *   **Acción Técnica**: Fuerza el valor del registro `AutoAdminLogon` a `"0"` en `HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon`.
+    *   **Acción Técnica**: **No** modifica la clave de registro `AutoAdminLogon`. El orquestador aplica un principio de no interferencia: el estado existente del registro se preserva tal cual.
     *   **Resultado**: La PC se detiene en la pantalla de inicio de sesión de Windows (LogonUI). El usuario debe ingresar su contraseña o usar Windows Hello.
     *   **Caso de uso**: Estaciones de administración, servidores que requieren autenticación fuerte en cada acceso físico.
 
@@ -538,14 +537,13 @@ Esta variable booleana actúa como el conmutador principal.
 
 #### 3.3.2. `DatabaseKeepDays`: Algoritmo de Purga por Fecha
 
-La gestión de retención no se basa en metadatos de archivo (fecha de creación/modificación del archivo de respaldo), que pueden alterarse durante copias, sino en una convención de nomenclatura estricta.
+La gestión de retención se basa en los metadatos `LastWriteTime` del sistema de archivos y una convención de nomenclatura coherente.
 
-*   **Formato de Nomenclatura**: Los archivos generados por el orquestador siguen el patrón: `YYYYMMDD_HHMMSS_NombreOriginal.ext`.
+*   **Formato de Nomenclatura**: Los archivos generados por el orquestador siguen el patrón: `NombreBase_yyyy-MM-dd.ext` (ej.: `database_2025-03-15.db`).
 *   **Algoritmo**:
     1.  El script lista archivos en `DatabaseDestinationPath`.
-    2.  Aplica una Regex `^(\d{8})_` para extraer los primeros 8 dígitos (la fecha).
-    3.  Convierte esta cadena en un objeto `DateTime`.
-    4.  Si `FechaArchivo < (FechaHoy - DatabaseKeepDays)`, el archivo se elimina vía `Remove-Item -Force`.
+    2.  Filtra archivos cuyo `LastWriteTime` es anterior a `(Get-Date).AddDays(-$DatabaseKeepDays)`.
+    3.  Los archivos que cumplen esta condición se eliminan vía `Remove-Item -Force`.
 
 #### 3.3.3. Lógica Diferencial Temporal
 
@@ -1022,14 +1020,6 @@ Estos scripts ejecutan tareas específicas y críticas: respaldo de datos y cier
 
 **Ciclo de mantenimiento (v1.74)**: El script ahora ejecuta una fase de **Mantenimiento de registros** después de que la aplicación se cierre (Watchdog) y antes de la copia de seguridad. Llama al script externo `reducelog.ps1` si `EnableLogReduction=true`.
 
-##### A. Mecanismo de Bloqueo (Lock File)
-Para evitar que dos respaldos se lancen simultáneamente (ej.: si el anterior es muy lento o se atasca), el script implementa un mecanismo de semáforo de archivo.
-1.  Verifica la existencia de `.backup_running.lock` en la carpeta de destino.
-2.  **Seguridad Anti-Bloqueo**: Verifica la edad del archivo lock. Si tiene más de 60 minutos (valor arbitrario considerando un crash probable del script anterior), lo elimina y fuerza la ejecución.
-3.  Crea el archivo lock.
-4.  Ejecuta el respaldo.
-5.  Elimina el archivo lock en el bloque `Finally`.
-
 ##### B. Lógica Diferencial Temporal
 No utiliza el bit de archivo (no confiable) ni hashing MD5 (demasiado lento para GB de datos).
 *   **Filtro**: `Where-Object { $_.LastWriteTime -gt (Get-Date).AddHours(-24) }`
@@ -1055,10 +1045,6 @@ while ((Get-Date) -lt $timeout) {
 }
 ```
 Si la aplicación permanece bloqueada después del timeout, el respaldo puede cancelarse para evitar corrupciones.
-
-##### E. Verificaciones Previas
-*   **Prueba de Escritura**: Intenta crear/eliminar un archivo temporal en el destino para validar permisos NTFS/Red antes de comenzar.
-*   **Espacio en Disco**: Calcula el tamaño total requerido y lo compara con el espacio libre de la unidad de destino. Lanza una excepción explícita si el espacio es insuficiente.
 
 ---
 
@@ -1260,7 +1246,7 @@ Aquí está el ciclo de vida exacto de una máquina gestionada por el orquestado
           │  Contexto: SYSTEM (Fondo)
           │  Script: Invoke-DatabaseBackup.ps1
           │  Acción: Escaneo diferencial de archivos modificados (< 24h).
-          │  Seguridad: Gestión del bloqueo .backup_running.lock.
+          │  Acción: Respaldo diferencial de archivos modificados (< 24h).
           │
 02:59:00 ─┼─ INICIO TAREA: WindowsOrchestrator-SystemScheduledReboot
           │  Contexto: SYSTEM
@@ -1303,7 +1289,7 @@ El parámetro `SessionStartupMode` en `config.ini` modifica la estrategia de acc
 
 | Modo | `Standard` | `Autologon` |
 | :--- | :--- | :--- |
-| **Clave de Registro** | `HKLM\...\Winlogon` `AutoAdminLogon = "0"` | `HKLM\...\Winlogon` `AutoAdminLogon = "1"` |
+| **Clave de Registro** | Sin modificación (principio de no interferencia). | `HKLM\...\Winlogon` `AutoAdminLogon = "1"` |
 | **Comportamiento de Boot** | Se detiene en la pantalla de inicio de sesión de Windows (LogonUI). | Abre el escritorio de Windows automáticamente. |
 | **Gestión de Credenciales** | Manual por usuario en cada boot. | Automática vía secretos LSA (configurado por herramienta externa). |
 | **Lanzamiento de App** | Al momento en que el usuario se conecta (Trigger `AtLogon`). | Inmediatamente después del boot (Trigger `AtLogon` automático). |
