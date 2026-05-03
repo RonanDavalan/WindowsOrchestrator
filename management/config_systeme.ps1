@@ -66,7 +66,7 @@ $ScriptInternalBuild = "Build-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
     $BaseLogPathForRotationUser = Join-Path -Path $TargetLogDir -ChildPath "config_utilisateur_log"
 $DefaultMaxLogs = 7
 
-$tempConfigFile = Join-Path -Path $ScriptDir -ChildPath "config.ini"
+$tempConfigFile = Join-Path -Path $ScriptDir -ChildPath "..\config.ini"
 $tempIniContent = Get-IniContent -FilePath $tempConfigFile
 $rotationEnabledByConfig = $true
 if ($null -ne $tempIniContent -and $tempIniContent.ContainsKey("Logging") -and $tempIniContent["Logging"].ContainsKey("EnableLogRotation")) {
